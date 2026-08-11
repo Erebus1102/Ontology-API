@@ -1,0 +1,87 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# DRI operating update received after the Week 1 review.
+# The proposed CEO validation path remains a pending-confirmation decision until
+# a CEO ConfirmationEvent is attached.
+
+tkos:graph-candidate-and-dispute {
+  tkos:source-dri-product1-validation-update-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-dri-product1-validation-update-2026-08-11" ;
+    tkos:externalSourceIdentifier "conversation://current-thread/2026-08-11#product1-validation-update" ;
+    tkos:displayName "DRI 对产品 1.0 产出与 CEO 验证路径的更新" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:org-tokenking a tkos:OrganizationalUnit ;
+    tkos:objectId "org-tokenking" ; tkos:displayName "词元云集" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:org-fangdongdong a tkos:OrganizationalUnit ;
+    tkos:objectId "org-fangdongdong" ; tkos:displayName "房懂懂" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:progress-product1-mvp-week-2026-08-11 a tkos:OutcomeProgressSnapshot ;
+    tkos:objectId "progress-product1-mvp-week-2026-08-11" ;
+    tkos:displayName "产品 1.0 四组件处于 MVP 产出阶段" ;
+    tkos:scopeDescription "CEO Agent、CO Agent、Ontology 与 TokenHub 均处于 MVP 产出阶段，预计本周产出。当前更新未提供各组件的完成比例、可访问地址、集成状态或调用日志。" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:milestone-product1-mvp-output-week-2026-08-11 a tkos:Milestone ;
+    tkos:objectId "milestone-product1-mvp-output-week-2026-08-11" ;
+    tkos:displayName "产品 1.0 四组件 MVP 本周产出" ;
+    tkos:scopeDescription "CEO Agent、CO Agent、Ontology 与 TokenHub 的 MVP 预计在本周产出；具体日期、演示环境、验收人与组件联调顺序待补充。" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 .
+
+  tkos:decision-ceo-agent-priority-dual-scenario-validation a tkos:StrategicDecision ;
+    tkos:objectId "decision-ceo-agent-priority-dual-scenario-validation" ;
+    tkos:displayName "采用 CEO Agent 优先的词元云集与房懂懂双场景验证路径" ;
+    tkos:scopeDescription "验证优先以 CEO Agent 为入口，在词元云集与房懂懂两个场景推进；两个场景按灯塔项目工作计划的同一阶段节奏组织，关联产品 1.0 网页版本与 FE Context 能力。" ;
+    tkos:informedBy tkos:issue-product1-lighthouse-synchronous-delivery, tkos:research-product1-lighthouse-validation-options-week1 ;
+    tkos:reviewCondition "产品 1.0 MVP 未按本周产出；任一场景无法锁定真实事项、材料或参与者；王总侧无法进入使用；双场景反馈显示方法、产品或 FE Context 不能支撑战略决策闭环。" ;
+    tkos:hasStatus tkos:DecisionPendingConfirmation ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-wang-ceo-agent-first-use a tkos:ContextGap ;
+    tkos:objectId "gap-wang-ceo-agent-first-use" ;
+    tkos:displayName "王总尚未开始使用 CEO Agent" ;
+    tkos:scopeDescription "当前尚无王总实际使用、使用场景、使用频率、会议反馈、体验评分或质量评分。双场景验证需要先锁定房懂懂的真实事项、输入材料、会议节点和反馈机制。" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-product1-mvp-acceptance a tkos:ContextGap ;
+    tkos:objectId "gap-product1-mvp-acceptance" ;
+    tkos:displayName "产品 1.0 MVP 的组件级验收与联调状态待记录" ;
+    tkos:scopeDescription "当前只有本周 MVP 产出预期。需要记录 CEO Agent、CO Agent、Ontology、TokenHub 的各自验收标准、联调依赖、线上入口、调用链路、日志、故障处理与实际产出时间。" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:outcome-native-agent-1-0-launch-2026-08 tkos:hasProgressSnapshot tkos:progress-product1-mvp-week-2026-08-11 ;
+    tkos:hasSuccessCriterion tkos:criterion-native-agent-1-0-launch-2026-08 .
+  tkos:mission-fe-m3-reusable-capability tkos:hasMilestone tkos:milestone-product1-mvp-output-week-2026-08-11 ;
+    tkos:hasContextGap tkos:gap-product1-mvp-acceptance .
+  tkos:mission-fe-m2-lighthouse-context-loop tkos:hasContextGap tkos:gap-wang-ceo-agent-first-use .
+}
+
+tkos:graph-decision-provenance {
+  tkos:assertion-product1-mvp-output-week-2026-08-11 a tkos:AttributedAssertion ;
+    tkos:objectId "assertion-product1-mvp-output-week-2026-08-11" ;
+    tkos:displayName "产品 1.0 四组件预计本周产出" ;
+    tkos:scopeDescription "刘人豪更新：产品 1.0 的 CEO Agent、CO Agent、Ontology 与 TokenHub 都处于 MVP 产出阶段，预计本周产出。" ;
+    tkos:assertedBy tkos:person-liurenhao ; tkos:assertionMode "dri_operating_update" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:assertion-ceo-agent-priority-dual-scenario-2026-08-11 a tkos:AttributedAssertion ;
+    tkos:objectId "assertion-ceo-agent-priority-dual-scenario-2026-08-11" ;
+    tkos:displayName "CEO Agent 优先的双场景验证路径" ;
+    tkos:scopeDescription "刘人豪更新：CEO 验证路径采用 CEO Agent 优先，制定词元云集和房懂懂场景做验证；两条线按灯塔项目工作计划保持一致。" ;
+    tkos:assertedBy tkos:person-liurenhao ; tkos:assertionMode "dri_operating_update" ;
+    tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}

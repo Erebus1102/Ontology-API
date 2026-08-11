@@ -1,0 +1,75 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+tkos:graph-candidate-and-dispute {
+  tkos:source-ceoagent-endpoint-check-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-ceoagent-endpoint-check-2026-08-11" ;
+    tkos:externalSourceIdentifier "https://meeting-green-phi.vercel.app/" ;
+    tkos:displayName "CEO Agent 网页入口 HTTP 可访问性检查" ;
+    tkos:recordedAt "2026-08-11T14:31:45+08:00"^^xsd:dateTime .
+
+  tkos:source-dri-ceoagent-scenarios-update-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-dri-ceoagent-scenarios-update-2026-08-11" ;
+    tkos:externalSourceIdentifier "conversation://current-thread/2026-08-11#ceoagent-and-scenarios" ;
+    tkos:displayName "DRI 对 CEO Agent 入口、组件状态与首批验证场景的更新" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:evidence-ceoagent-web-endpoint-available-2026-08-11 a tkos:Evidence ;
+    tkos:objectId "evidence-ceoagent-web-endpoint-available-2026-08-11" ;
+    tkos:displayName "CEO Agent 网页入口可访问" ;
+    tkos:scopeDescription "对 https://meeting-green-phi.vercel.app/ 的只读 HTTP HEAD 检查于 2026-08-11 返回 200。该证据支持网页入口当前可达；不覆盖功能正确性、身份认证、组件联调、真实使用或业务质量。" ;
+    tkos:sourcedFrom tkos:source-ceoagent-endpoint-check-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T14:31:45+08:00"^^xsd:dateTime .
+
+  tkos:progress-product1-component-availability-2026-08-11 a tkos:OutcomeProgressSnapshot ;
+    tkos:objectId "progress-product1-component-availability-2026-08-11" ;
+    tkos:displayName "产品 1.0 组件可用性快照" ;
+    tkos:scopeDescription "CEO Agent 已提供网页入口并完成可访问性检查。CO Agent、Ontology、TokenHub 当前没有可用于蒸馏的产出材料、入口或运行记录。" ;
+    tkos:sourcedFrom tkos:source-dri-ceoagent-scenarios-update-2026-08-11, tkos:source-ceoagent-endpoint-check-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T14:31:45+08:00"^^xsd:dateTime .
+
+  tkos:issue-tokenking-work-method-construction a tkos:StrategicIssue ;
+    tkos:objectId "issue-tokenking-work-method-construction" ;
+    tkos:displayName "词元云集工作方法建设" ;
+    tkos:scopeDescription "DRI 指定的首批词元云集验证场景。需在实际运行中明确 CEO Agent 如何承接 Outcome-Mission-DRI、战略议题、判断、Decision 与 Review 的工作方法。" ;
+    tkos:sourcedFrom tkos:source-dri-ceoagent-scenarios-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-fangdongdong-business-ontology-design-choice a tkos:StrategicIssue ;
+    tkos:objectId "issue-fangdongdong-business-ontology-design-choice" ;
+    tkos:displayName "房懂懂业务本体设计选择" ;
+    tkos:scopeDescription "DRI 指定的首批房懂懂验证场景。需围绕真实业务材料形成候选经营对象、关系、Context 边界与设计选择，并由项目授权人员确认事实与选择。" ;
+    tkos:sourcedFrom tkos:source-dri-ceoagent-scenarios-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-product1-other-components-evidence a tkos:ContextGap ;
+    tkos:objectId "gap-product1-other-components-evidence" ;
+    tkos:displayName "CO Agent、Ontology 与 TokenHub 的产出证据缺失" ;
+    tkos:scopeDescription "需要补充三个组件的产品入口或制品、版本、联调状态、接口契约、运行日志、错误与回写记录，才能验证产品 1.0 的联合上线和实际运行。" ;
+    tkos:sourcedFrom tkos:source-dri-ceoagent-scenarios-update-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:outcome-native-agent-1-0-launch-2026-08 tkos:supportedByEvidence tkos:evidence-ceoagent-web-endpoint-available-2026-08-11 ;
+    tkos:hasProgressSnapshot tkos:progress-product1-component-availability-2026-08-11 .
+  tkos:decision-ceo-agent-priority-dual-scenario-validation tkos:informedBy tkos:issue-tokenking-work-method-construction, tkos:issue-fangdongdong-business-ontology-design-choice .
+  tkos:mission-fe-m3-reusable-capability tkos:hasContextGap tkos:gap-product1-other-components-evidence .
+  tkos:mission-fe-m1-internal-context-loop tkos:informedBy tkos:issue-tokenking-work-method-construction .
+  tkos:mission-fe-m2-lighthouse-context-loop tkos:informedBy tkos:issue-fangdongdong-business-ontology-design-choice .
+}
+
+tkos:graph-decision-provenance {
+  tkos:assertion-ceoagent-entry-and-first-scenarios-2026-08-11 a tkos:AttributedAssertion ;
+    tkos:objectId "assertion-ceoagent-entry-and-first-scenarios-2026-08-11" ;
+    tkos:displayName "CEO Agent 入口与首批双场景" ;
+    tkos:scopeDescription "刘人豪更新：CEO Agent 入口为 https://meeting-green-phi.vercel.app/；首批词元云集场景为工作方法建设，首批房懂懂场景为业务本体设计选择。" ;
+    tkos:assertedBy tkos:person-liurenhao ; tkos:assertionMode "dri_operating_update" ;
+    tkos:sourcedFrom tkos:source-dri-ceoagent-scenarios-update-2026-08-11 ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}

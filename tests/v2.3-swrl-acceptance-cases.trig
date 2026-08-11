@@ -1,0 +1,41 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+
+# 四个场景均只保留 MissionReadyForAcceptance 的 SWRL 前提。
+# 本夹具验证推导语义，不承担 Mission Card 的 SHACL 完整性校验。
+
+tkos:swrl-complete {
+  tkos:mission-swrl-complete a tkos:Mission ;
+    tkos:supportedByEvidence tkos:evidence-swrl-complete ;
+    tkos:isReviewedBy tkos:review-swrl-complete ;
+    tkos:confirmedBy tkos:confirmation-swrl-complete .
+  tkos:evidence-swrl-complete a tkos:Evidence .
+  tkos:review-swrl-complete a tkos:MissionReview ;
+    tkos:hasReviewConclusion tkos:Continue .
+  tkos:confirmation-swrl-complete a tkos:ConfirmationEvent .
+}
+
+tkos:swrl-missing-evidence {
+  tkos:mission-swrl-missing-evidence a tkos:Mission ;
+    tkos:isReviewedBy tkos:review-swrl-missing-evidence ;
+    tkos:confirmedBy tkos:confirmation-swrl-missing-evidence .
+  tkos:review-swrl-missing-evidence a tkos:MissionReview ;
+    tkos:hasReviewConclusion tkos:Continue .
+  tkos:confirmation-swrl-missing-evidence a tkos:ConfirmationEvent .
+}
+
+tkos:swrl-missing-review {
+  tkos:mission-swrl-missing-review a tkos:Mission ;
+    tkos:supportedByEvidence tkos:evidence-swrl-missing-review ;
+    tkos:confirmedBy tkos:confirmation-swrl-missing-review .
+  tkos:evidence-swrl-missing-review a tkos:Evidence .
+  tkos:confirmation-swrl-missing-review a tkos:ConfirmationEvent .
+}
+
+tkos:swrl-missing-confirmation {
+  tkos:mission-swrl-missing-confirmation a tkos:Mission ;
+    tkos:supportedByEvidence tkos:evidence-swrl-missing-confirmation ;
+    tkos:isReviewedBy tkos:review-swrl-missing-confirmation .
+  tkos:evidence-swrl-missing-confirmation a tkos:Evidence .
+  tkos:review-swrl-missing-confirmation a tkos:MissionReview ;
+    tkos:hasReviewConclusion tkos:Continue .
+}

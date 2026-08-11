@@ -1,0 +1,55 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+# V2.1 runtime graph contract. Graph IRIs are stable deployment partitions,
+# not ontology modules or replacements for ontology-release versioning.
+
+tkos:graph-registry {
+  tkos:graph-confirmed-enterprise a tkos:KnowledgeGraphPartition ;
+    dct:title "已确认企业事实图"@zh ;
+    tkos:governedBy tkos:policy-confirmed-enterprise .
+  tkos:graph-candidate-and-dispute a tkos:KnowledgeGraphPartition ;
+    dct:title "候选事实与争议图"@zh ;
+    tkos:governedBy tkos:policy-candidate-research .
+  tkos:graph-decision-provenance a tkos:KnowledgeGraphPartition ;
+    dct:title "决策记录与学习图"@zh ;
+    tkos:governedBy tkos:policy-decision-provenance .
+  tkos:graph-sensitive-persona a tkos:KnowledgeGraphPartition ;
+    dct:title "敏感个人记录图"@zh ;
+    tkos:governedBy tkos:policy-sensitive-persona .
+  tkos:graph-derived-context a tkos:KnowledgeGraphPartition ;
+    dct:title "推导结果与 Context Pack 图"@zh ;
+    tkos:governedBy tkos:policy-context-runtime .
+
+  tkos:policy-confirmed-enterprise a tkos:Policy ; odrl:permission tkos:permission-confirmed-read .
+  tkos:policy-candidate-research a tkos:Policy ; odrl:permission tkos:permission-research-read .
+  tkos:policy-decision-provenance a tkos:Policy ; odrl:permission tkos:permission-decision-review .
+  tkos:policy-sensitive-persona a tkos:Policy ; odrl:permission tkos:permission-persona-approved-use .
+  tkos:policy-context-runtime a tkos:Policy ; odrl:permission tkos:permission-context-resolver .
+}
+
+tkos:graph-confirmed-enterprise {
+  # 已确认、当前有效的企业事实、Outcome、Mission、Evidence 和 Review。
+  tkos:graph-confirmed-enterprise dct:title "已确认企业事实图"@zh .
+}
+
+tkos:graph-candidate-and-dispute {
+  # 候选 Assertion、争议和 ContextGap；不作为正式口径直接进入 Agent 输出。
+  tkos:graph-candidate-and-dispute dct:title "候选事实与争议图"@zh .
+}
+
+tkos:graph-decision-provenance {
+  # DecisionRecord、AttributedAssertion、DecisionLearning、ConfirmationEvent、RevisionEvent。
+  tkos:graph-decision-provenance dct:title "决策记录与学习图"@zh .
+}
+
+tkos:graph-sensitive-persona {
+  # 与特定 Person 关联的敏感判断记录；仅在用途和主体满足应用策略时读取。
+  tkos:graph-sensitive-persona dct:title "敏感个人记录图"@zh .
+}
+
+tkos:graph-derived-context {
+  # 物化推导、IntentAssessment 和 ContextPack；每个 ContextPack 记录 usedAt 与 Release ID。
+  tkos:graph-derived-context dct:title "推导结果与 Context Pack 图"@zh .
+}

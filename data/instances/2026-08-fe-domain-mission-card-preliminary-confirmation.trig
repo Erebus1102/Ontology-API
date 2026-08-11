@@ -1,0 +1,31 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# The DRI's 2026-08-11 confirmation covers the distilled structure of the card.
+# It does not close the three operating gates represented by ContextGap instances.
+
+tkos:graph-decision-provenance {
+  tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-dri-preliminary-confirmation-fe-card-2026-08-11" ;
+    tkos:displayName "DRI 对 FE Domain Mission Card 蒸馏结构的初步确认" ;
+    tkos:externalSourceIdentifier "conversation://current-thread/2026-08-11#confirmation" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:confirmation-person-liurenhao-from-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:person-liurenhao ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-company-outcome-fe-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:company-outcome-tkos-real-strategy-loop-2026-08 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-domain-fe-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:domain-fe-2026-08 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-domain-outcome-fe-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:domain-outcome-fe-real-context-loop-2026-08 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-portfolio-fe-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:portfolio-fe-2026-08 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-mission-fe-m1-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-fe-m1-internal-context-loop ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-mission-fe-m2-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-fe-m2-lighthouse-context-loop ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-mission-fe-m3-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-fe-m3-reusable-capability ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-mission-outcome-fe-m1-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-outcome-fe-m1-internal-loop ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-mission-outcome-fe-m2-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-outcome-fe-m2-lighthouse-loop ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-mission-outcome-fe-m3-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-outcome-fe-m3-reusable-capability ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-assignment-fe-m1-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:assignment-fe-m1-liurenhao ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-assignment-fe-m2-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:assignment-fe-m2-liurenhao ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-assignment-fe-m3-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:assignment-fe-m3-liurenhao ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-rationale-fe-m1-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:rationale-fe-m1 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-rationale-fe-m2-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:rationale-fe-m2 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+  tkos:confirmation-rationale-fe-m3-card a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:rationale-fe-m3 ; tkos:confirmedByActor tkos:person-liurenhao ; tkos:confirmedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-dri-preliminary-confirmation-fe-card-2026-08-11 .
+}

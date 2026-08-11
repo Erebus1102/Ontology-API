@@ -1,0 +1,32 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# 脱敏运行时场景；所有名称均为测试数据，不代表真实企业事项。
+
+tkos:graph-confirmed-enterprise {
+  tkos:domain-growth a tkos:Domain ; tkos:objectId "domain-growth" ; tkos:displayName "增长域" .
+  tkos:domain-outcome-growth a tkos:DomainOutcome ; tkos:objectId "domain-outcome-growth" ; tkos:displayName "提升有效增长" ; tkos:hasSuccessCriterion tkos:criterion-growth ; tkos:hasStatus tkos:OutcomeRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:mission-outcome-growth a tkos:MissionOutcome ; tkos:objectId "mission-outcome-growth" ; tkos:displayName "验证增长路径" ; tkos:hasSuccessCriterion tkos:criterion-growth ; tkos:hasStatus tkos:OutcomeRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:delivers tkos:domain-outcome-growth .
+  tkos:criterion-growth a tkos:SuccessCriterion ; tkos:criterionStatement "核心路径在本周期获得可复核证据" .
+  tkos:source-review a tkos:SourceRecord ; tkos:objectId "source-review" ; tkos:externalSourceIdentifier "test://weekly-review/2026-08-10" ; tkos:recordedAt "2026-08-10T12:00:00Z"^^xsd:dateTime .
+  tkos:evidence-current a tkos:Evidence ; tkos:objectId "evidence-current" ; tkos:displayName "本周期验证数据" ; tkos:sourcedFrom tkos:source-review ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-10T00:00:00Z"^^xsd:dateTime .
+  tkos:evidence-expired a tkos:Evidence ; tkos:objectId "evidence-expired" ; tkos:displayName "过期历史数据" ; tkos:sourcedFrom tkos:source-review ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-07-01T00:00:00Z"^^xsd:dateTime ; tkos:validUntil "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:review-growth a tkos:MissionReview ; tkos:objectId "review-growth" ; tkos:displayName "本周期复盘" ; tkos:sourcedFrom tkos:source-review ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:hasReviewConclusion tkos:Continue .
+  tkos:rationale-growth a tkos:MissionRationale ; tkos:objectId "rationale-growth" ; tkos:displayName "任务缘由" ; tkos:sourcedFrom tkos:source-review ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:mission-growth a tkos:Mission ; tkos:objectId "mission-growth" ; tkos:displayName "验证增长路径的经营任务" ; tkos:belongsTo tkos:domain-growth ; tkos:expects tkos:mission-outcome-growth ; tkos:contributesTo tkos:domain-outcome-growth ; tkos:hasRationale tkos:rationale-growth ; tkos:hasCriterion tkos:criterion-growth ; tkos:hasScope tkos:scope-growth ; tkos:hasKeyPath tkos:keypath-growth ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:supportedByEvidence tkos:evidence-current, tkos:evidence-expired ; tkos:isReviewedBy tkos:review-growth ; tkos:informedBy tkos:learning-growth, tkos:assertion-sensitive .
+  tkos:scope-growth a tkos:MissionScope ; tkos:displayName "本周期增长路径验证范围" .
+  tkos:keypath-growth a tkos:KeyPath ; tkos:displayName "验证—复盘—调整" .
+}
+
+tkos:graph-candidate-and-dispute {
+  tkos:evidence-candidate a tkos:Evidence ; tkos:objectId "evidence-candidate" ; tkos:displayName "尚待确认的外部线索" ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T00:00:00Z"^^xsd:dateTime .
+  tkos:mission-growth tkos:supportedByEvidence tkos:evidence-candidate .
+}
+
+tkos:graph-decision-provenance {
+  tkos:learning-growth a tkos:DecisionLearning ; tkos:objectId "learning-growth" ; tkos:displayName "增长路径复盘学习" ; tkos:sourcedFrom tkos:source-review ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-10T00:00:00Z"^^xsd:dateTime .
+}
+
+tkos:graph-sensitive-persona {
+  tkos:assertion-sensitive a tkos:AttributedAssertion ; tkos:objectId "assertion-sensitive" ; tkos:displayName "一号位历史判断偏好" ; tkos:sourcedFrom tkos:source-review ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-10T00:00:00Z"^^xsd:dateTime .
+}

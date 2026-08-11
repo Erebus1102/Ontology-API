@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://ontology.tokenking.ai/tkos#"
+  xml:base="https://ontology.tokenking.ai/tkos#"
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:owl="http://www.w3.org/2002/07/owl#"
+  xmlns:swrl="http://www.w3.org/2003/11/swrl#">
+
+  <owl:Ontology rdf:about=""/>
+  <owl:Class rdf:about="#Mission"/>
+  <owl:Class rdf:about="#Evidence"/>
+  <owl:Class rdf:about="#MissionReview"/>
+  <owl:Class rdf:about="#ReviewConclusion"/>
+  <owl:Class rdf:about="#ConfirmationEvent"/>
+  <owl:Class rdf:about="#MissionReadyForAcceptance"/>
+  <owl:ObjectProperty rdf:about="#supportedByEvidence"/>
+  <owl:ObjectProperty rdf:about="#isReviewedBy"/>
+  <owl:ObjectProperty rdf:about="#hasReviewConclusion"/>
+  <owl:ObjectProperty rdf:about="#confirmedBy"/>
+
+  <swrl:Variable rdf:about="#varMission"/>
+  <swrl:Variable rdf:about="#varEvidence"/>
+  <swrl:Variable rdf:about="#varReview"/>
+  <swrl:Variable rdf:about="#varConclusion"/>
+  <swrl:Variable rdf:about="#varConfirmation"/>
+  <swrl:Imp rdf:about="#Rule_MissionReadyForAcceptance">
+    <swrl:head rdf:parseType="Collection">
+      <swrl:ClassAtom>
+        <swrl:classPredicate rdf:resource="#MissionReadyForAcceptance"/>
+        <swrl:argument1 rdf:resource="#varMission"/>
+      </swrl:ClassAtom>
+    </swrl:head>
+    <swrl:body rdf:parseType="Collection">
+      <swrl:ClassAtom><swrl:classPredicate rdf:resource="#Mission"/><swrl:argument1 rdf:resource="#varMission"/></swrl:ClassAtom>
+      <swrl:IndividualPropertyAtom><swrl:propertyPredicate rdf:resource="#supportedByEvidence"/><swrl:argument1 rdf:resource="#varMission"/><swrl:argument2 rdf:resource="#varEvidence"/></swrl:IndividualPropertyAtom>
+      <swrl:ClassAtom><swrl:classPredicate rdf:resource="#Evidence"/><swrl:argument1 rdf:resource="#varEvidence"/></swrl:ClassAtom>
+      <swrl:IndividualPropertyAtom><swrl:propertyPredicate rdf:resource="#isReviewedBy"/><swrl:argument1 rdf:resource="#varMission"/><swrl:argument2 rdf:resource="#varReview"/></swrl:IndividualPropertyAtom>
+      <swrl:IndividualPropertyAtom><swrl:propertyPredicate rdf:resource="#hasReviewConclusion"/><swrl:argument1 rdf:resource="#varReview"/><swrl:argument2 rdf:resource="#varConclusion"/></swrl:IndividualPropertyAtom>
+      <swrl:ClassAtom><swrl:classPredicate rdf:resource="#ReviewConclusion"/><swrl:argument1 rdf:resource="#varConclusion"/></swrl:ClassAtom>
+      <swrl:IndividualPropertyAtom><swrl:propertyPredicate rdf:resource="#confirmedBy"/><swrl:argument1 rdf:resource="#varMission"/><swrl:argument2 rdf:resource="#varConfirmation"/></swrl:IndividualPropertyAtom>
+      <swrl:ClassAtom><swrl:classPredicate rdf:resource="#ConfirmationEvent"/><swrl:argument1 rdf:resource="#varConfirmation"/></swrl:ClassAtom>
+    </swrl:body>
+  </swrl:Imp>
+
+  <owl:NamedIndividual rdf:about="#mission"><rdf:type rdf:resource="#Mission"/><supportedByEvidence rdf:resource="#evidence"/><isReviewedBy rdf:resource="#review"/><confirmedBy rdf:resource="#confirmation"/></owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="#evidence"><rdf:type rdf:resource="#Evidence"/></owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="#review"><rdf:type rdf:resource="#MissionReview"/><hasReviewConclusion rdf:resource="#continue"/></owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="#continue"><rdf:type rdf:resource="#ReviewConclusion"/></owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="#confirmation"><rdf:type rdf:resource="#ConfirmationEvent"/></owl:NamedIndividual>
+</rdf:RDF>

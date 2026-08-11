@@ -1,0 +1,382 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+# First real-business distillation. Every assertion is retained in the candidate
+# graph until its required business confirmation has been recorded.
+
+tkos:graph-candidate-and-dispute {
+  tkos:source-fe-domain-mission-card-2026-08 a tkos:SourceRecord ;
+    tkos:objectId "source-fe-domain-mission-card-2026-08" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:2026-08-fe-domain-mission-card-v2" ;
+    tkos:displayName "8 月 FE Domain Mission Card（CEO 对齐版 v2.0）" ;
+    tkos:version "CEO 对齐版 v2.0" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-tkos-enterprise-persona-scheme-r508 a tkos:SourceRecord ;
+    tkos:objectId "source-tkos-enterprise-persona-scheme-r508" ;
+    tkos:externalSourceIdentifier "https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c#revision-508" ;
+    tkos:displayName "TKOS 企业事项与个人决策本体方案（第 508 版）" ;
+    tkos:version "revision-508" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-dri-real-issue-brief-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-dri-real-issue-brief-2026-08-11" ;
+    tkos:externalSourceIdentifier "conversation://current-thread/2026-08-11#real-issue-brief" ;
+    tkos:displayName "DRI 提供的 FE 真实议题与当前 Outcome" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-august-outcome-mission-baseline-v1-1 a tkos:SourceRecord ;
+    tkos:objectId "source-august-outcome-mission-baseline-v1-1" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:2026-08-outcome-mission-v1.1" ;
+    tkos:displayName "2026 年 8 月 Outcome-Mission 展开纲领（正式版 v1.1）" ;
+    tkos:version "v1.1" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-lighthouse-project-plan-v10 a tkos:SourceRecord ;
+    tkos:objectId "source-lighthouse-project-plan-v10" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:lighthouse-work-plan-v10" ;
+    tkos:displayName "灯塔项目工作计划 v10" ;
+    tkos:version "v10" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-product1-lighthouse-synchronous-delivery a tkos:StrategicIssue ;
+    tkos:objectId "issue-product1-lighthouse-synchronous-delivery" ;
+    tkos:displayName "是否在本季度同时完成产品 1.0 上线和灯塔项目交付" ;
+    tkos:scopeDescription "用户指定 FE 为责任锚点。该事项涉及 Agents 的产品上线、Transformation 的灯塔采用与价值验证，以及 FE 的企业 Context、追溯和运行能力，应通过公司级 Mission Portfolio 明确资源取舍、风险控制与验收路径。" ;
+    tkos:supersedes tkos:issue-q3-channel-expansion-investment ;
+    tkos:informedBy tkos:outcome-lighthouse-ceo-agent-routine-use-2026-08, tkos:outcome-native-agent-1-0-launch-2026-08 ;
+    tkos:researchedBy tkos:research-product1-lighthouse-schedule-and-delivery ;
+    tkos:sourcedFrom tkos:source-dri-real-issue-brief-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:outcome-lighthouse-ceo-agent-routine-use-2026-08 a tkos:Outcome ;
+    tkos:objectId "outcome-lighthouse-ceo-agent-routine-use-2026-08" ;
+    tkos:displayName "让灯塔项目常态化高质量使用 CEO Agent" ;
+    tkos:scopeDescription "DRI 在 2026-08-11 提供的当前 8 月 Outcome。其所属层级、常态化频率、高质量标准、事实确认人和验收材料尚待补充。" ;
+    tkos:hasSuccessCriterion tkos:criterion-lighthouse-ceo-agent-routine-use-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-dri-real-issue-brief-2026-08-11 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-lighthouse-ceo-agent-routine-use-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-lighthouse-ceo-agent-routine-use-2026-08" ;
+    tkos:displayName "灯塔项目 CEO Agent 常态化高质量使用验收口径" ;
+    tkos:criterionStatement "至少覆盖集团一号位在战略会议、研究、督导等核心场景的持续使用；灯塔一号位与至少一个关键角色进入真实使用；核心入口调用统一 Context 并回写结果；形成采用、ACT 或闭环改善证据。使用频率、质量阈值与事实确认人仍待项目侧确认。" ;
+    tkos:sourcedFrom tkos:source-dri-real-issue-brief-2026-08-11, tkos:source-august-outcome-mission-baseline-v1-1, tkos:source-lighthouse-project-plan-v10 .
+
+  tkos:outcome-native-agent-1-0-launch-2026-08 a tkos:Outcome ;
+    tkos:objectId "outcome-native-agent-1-0-launch-2026-08" ;
+    tkos:displayName "产品 1.0 网页版本上线" ;
+    tkos:scopeDescription "产品 1.0 由网页版本的 CEO Agent、CO Agent、Ontology 与 TokenHub 组成并联合上线。灯塔项目工作计划中的“原生 Agent 1.0 上线”保留为相关既有计划表述。" ;
+    tkos:hasSuccessCriterion tkos:criterion-native-agent-1-0-launch-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-lighthouse-project-plan-v10 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:criterion-native-agent-1-0-launch-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-native-agent-1-0-launch-2026-08" ;
+    tkos:displayName "原生 Agent 1.0 上线验收口径" ;
+    tkos:criterionStatement "网页版本的 CEO Agent、CO Agent、Ontology 与 TokenHub 可联合访问和运行；CEO Agent 支持战略会议、研究、督导和专家团等场景；核心入口可调用统一 Context 并回写结果；上线后的真实使用、采纳、失败与反馈进入产品迭代闭环。" ;
+    tkos:sourcedFrom tkos:source-dri-real-issue-brief-2026-08-11, tkos:source-lighthouse-project-plan-v10, tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:research-product1-lighthouse-schedule-and-delivery a tkos:StrategicResearch ;
+    tkos:objectId "research-product1-lighthouse-schedule-and-delivery" ;
+    tkos:displayName "产品 1.0 与灯塔交付的既有排期和交付范围研究" ;
+    tkos:scopeDescription "灯塔计划采用三阶段路径：一号位 Agent MVP 部署与陪跑后进入原生 Agent 1.0 上线；灯塔项目覆盖模块 3-7，交付目标组织与运行机制方案、一号位 Agent、管理者网络、任务推进与督导 Agent、Agent Foundry、TokenHub 及相关培训。8 月公司基线要求灯塔形成首轮采用与价值验证，一号位 Application 在真实会议和经营事项中持续使用。" ;
+    tkos:sourcedFrom tkos:source-lighthouse-project-plan-v10, tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-q3-channel-expansion-investment a tkos:StrategicIssue ;
+    tkos:objectId "issue-q3-channel-expansion-investment" ;
+    tkos:displayName "是否在本季度追加渠道扩张投入" ;
+    tkos:scopeDescription "飞书方案第十章提出的首个验证议题。用户将该材料指定为 FE-M1 的真实议题材料；当前材料未给出具体 Domain、基线数据、备选投入方案、正式 Decision 或验收责任分工。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r508 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:person-liurenhao a tkos:Person ;
+    tkos:objectId "person-liurenhao" ;
+    tkos:displayName "刘人豪" ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-person-liurenhao-from-card ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:role-directly-responsible a tkos:DirectlyResponsibleRole ;
+    tkos:objectId "role-directly-responsible" ;
+    tkos:displayName "直接责任角色" .
+
+  tkos:company-outcome-tkos-real-strategy-loop-2026-08 a tkos:CompanyOutcome ;
+    tkos:objectId "company-outcome-tkos-real-strategy-loop-2026-08" ;
+    tkos:displayName "TKOS 在词元云集自身和灯塔项目中进入真实战略运行" ;
+    tkos:scopeDescription "TKOS 围绕真实战略问题，在词元云集自身和灯塔项目中进入真实运行，并让战略议题从研究、判断、Decision 到组织承接形成闭环。" ;
+    tkos:hasSuccessCriterion tkos:criterion-company-outcome-tkos-real-strategy-loop-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-company-outcome-fe-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-company-outcome-tkos-real-strategy-loop-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-company-outcome-tkos-real-strategy-loop-2026-08" ;
+    tkos:displayName "两条真实战略闭环进入运行" ;
+    tkos:criterionStatement "词元云集自身与灯塔项目各至少形成一条真实战略决策闭环，并完成从研究、判断、Decision 到组织承接。" ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:domain-fe-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-fe-2026-08" ;
+    tkos:displayName "Domain 05 · Foundry & Engine（FE）" ;
+    tkos:hasOutcome tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasPortfolio tkos:portfolio-fe-2026-08 ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-domain-fe-card ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-outcome-fe-real-context-loop-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-fe-real-context-loop-2026-08" ;
+    tkos:displayName "FE 支撑两条真实战略决策闭环" ;
+    tkos:scopeDescription "到 8 月 29 日，TKOS 已在词元云集自身和灯塔项目中各跑通至少 1 个真实战略决策闭环；CEO Agent 与承接 DRI 在议题研究、判断、Decision 和执行承接中持续使用同一份正确、连续、可追溯的企业经营 Context。" ;
+    tkos:supports tkos:company-outcome-tkos-real-strategy-loop-2026-08 ;
+    tkos:isDeliveredBy tkos:mission-outcome-fe-m1-internal-loop, tkos:mission-outcome-fe-m2-lighthouse-loop, tkos:mission-outcome-fe-m3-reusable-capability ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-domain-outcome-fe-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-fe-real-context-loop-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-fe-real-context-loop-2026-08" ;
+    tkos:displayName "两条业务闭环 Green 且共同机制被真实消费" ;
+    tkos:criterionStatement "FE-M1 与 FE-M2 的真实业务闭环均达到 Green，且 FE-M3 沉淀的最小能力被两条闭环真实消费。" ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:portfolio-fe-2026-08 a tkos:MissionPortfolio ;
+    tkos:objectId "portfolio-fe-2026-08" ;
+    tkos:displayName "8 月 FE Mission Portfolio" ;
+    tkos:contains tkos:mission-fe-m1-internal-context-loop, tkos:mission-fe-m2-lighthouse-context-loop, tkos:mission-fe-m3-reusable-capability ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-portfolio-fe-card ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-fe-m1-internal-context-loop a tkos:Mission ;
+    tkos:objectId "FE-M1" ;
+    tkos:displayName "词元云集的一条真实战略决策闭环由连续企业 Context 支撑运行" ;
+    tkos:belongsTo tkos:domain-fe-2026-08 ;
+    tkos:inPortfolio tkos:portfolio-fe-2026-08 ;
+    tkos:hasResponsibleAssignment tkos:assignment-fe-m1-liurenhao ;
+    tkos:expects tkos:mission-outcome-fe-m1-internal-loop ;
+    tkos:contributesTo tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasRationale tkos:rationale-fe-m1 ;
+    tkos:hasScope tkos:scope-fe-m1 ;
+    tkos:hasCriterion tkos:criterion-fe-m1-green ;
+    tkos:hasKeyPath tkos:keypath-fe-m1 ;
+    tkos:hasMilestone tkos:milestone-fe-m1-scenario, tkos:milestone-fe-m1-first-consumption, tkos:milestone-fe-m1-loop, tkos:milestone-fe-m1-green ;
+    tkos:dependsOn tkos:dependency-fe-m1-method-product-ceo-receiver ;
+    tkos:hasRisk tkos:risk-fe-m1-issue-unlocked, tkos:risk-fe-m1-no-product-consumption, tkos:risk-fe-m1-context-conflict, tkos:risk-fe-m1-capacity ;
+    tkos:hasContextGap tkos:gap-fe-m1-real-issue ;
+    tkos:hasStatus tkos:MissionEstablished ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-mission-fe-m1-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-outcome-fe-m1-internal-loop a tkos:MissionOutcome ;
+    tkos:objectId "mission-outcome-FE-M1" ;
+    tkos:displayName "词元云集内部真实战略议题闭环" ;
+    tkos:scopeDescription "一个正在发生的真实战略议题完成议题进入、研究与判断、Decision、DRI 承接；CEO Agent 与承接 DRI 通过 Product 获得同一份已确认企业 Context，Decision 理由、Evidence、Hypothesis、风险与 Re-open 条件可追溯、可再次调用。" ;
+    tkos:delivers tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-fe-m1-green ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-mission-outcome-fe-m1-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-fe-m2-lighthouse-context-loop a tkos:Mission ;
+    tkos:objectId "FE-M2" ;
+    tkos:displayName "灯塔项目的一条真实战略决策闭环由可迁移 Context 支撑运行" ;
+    tkos:belongsTo tkos:domain-fe-2026-08 ;
+    tkos:inPortfolio tkos:portfolio-fe-2026-08 ;
+    tkos:hasResponsibleAssignment tkos:assignment-fe-m2-liurenhao ;
+    tkos:expects tkos:mission-outcome-fe-m2-lighthouse-loop ;
+    tkos:contributesTo tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasRationale tkos:rationale-fe-m2 ;
+    tkos:hasScope tkos:scope-fe-m2 ;
+    tkos:hasCriterion tkos:criterion-fe-m2-green ;
+    tkos:hasKeyPath tkos:keypath-fe-m2 ;
+    tkos:hasMilestone tkos:milestone-fe-m2-authorisation, tkos:milestone-fe-m2-first-consumption, tkos:milestone-fe-m2-loop, tkos:milestone-fe-m2-conclusion ;
+    tkos:dependsOn tkos:dependency-fe-m2-lighthouse-method-product-m1-m3 ;
+    tkos:hasRisk tkos:risk-fe-m2-client-ready, tkos:risk-fe-m2-authorisation, tkos:risk-fe-m2-rebuild, tkos:risk-fe-m2-product ;
+    tkos:hasContextGap tkos:gap-fe-m2-client-issue-authorisation ;
+    tkos:hasStatus tkos:MissionEstablished ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-mission-fe-m2-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-outcome-fe-m2-lighthouse-loop a tkos:MissionOutcome ;
+    tkos:objectId "mission-outcome-FE-M2" ;
+    tkos:displayName "灯塔项目真实战略议题闭环与迁移结论" ;
+    tkos:scopeDescription "一个真实战略议题完成研究、判断、Decision 与组织承接；王总及授权参与者通过 Product 获得连续、可追溯的客户 Context，形成通用能力、客户特有 Context、临时文档或 RAG 的三类边界和可迁移结论。" ;
+    tkos:delivers tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-fe-m2-green ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-mission-outcome-fe-m2-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-fe-m2-lighthouse-context-loop tkos:informedBy tkos:issue-product1-lighthouse-synchronous-delivery ;
+    tkos:hasContextGap tkos:gap-product1-lighthouse-synchronous-delivery-facts ;
+    tkos:dependsOn tkos:dependency-product1-lighthouse-synchronous-delivery ;
+    tkos:hasRisk tkos:risk-product1-lighthouse-resource-conflict .
+
+  tkos:mission-fe-m3-reusable-capability a tkos:Mission ;
+    tkos:objectId "FE-M3" ;
+    tkos:displayName "两条真实闭环沉淀为最小可复用 FE 能力" ;
+    tkos:belongsTo tkos:domain-fe-2026-08 ;
+    tkos:inPortfolio tkos:portfolio-fe-2026-08 ;
+    tkos:hasResponsibleAssignment tkos:assignment-fe-m3-liurenhao ;
+    tkos:expects tkos:mission-outcome-fe-m3-reusable-capability ;
+    tkos:contributesTo tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasRationale tkos:rationale-fe-m3 ;
+    tkos:hasScope tkos:scope-fe-m3 ;
+    tkos:hasCriterion tkos:criterion-fe-m3-green ;
+    tkos:hasKeyPath tkos:keypath-fe-m3 ;
+    tkos:hasMilestone tkos:milestone-fe-m3-contract, tkos:milestone-fe-m3-internal, tkos:milestone-fe-m3-client, tkos:milestone-fe-m3-boundary ;
+    tkos:dependsOn tkos:dependency-fe-m3-m1-m2-product-method-confirmation ;
+    tkos:hasRisk tkos:risk-fe-m3-scope-growth, tkos:risk-fe-m3-model-conflict, tkos:risk-fe-m3-permission, tkos:risk-fe-m3-no-consumption ;
+    tkos:hasContextGap tkos:gap-fe-m3-resource-commitment ;
+    tkos:hasStatus tkos:MissionEstablished ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-mission-fe-m3-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-outcome-fe-m3-reusable-capability a tkos:MissionOutcome ;
+    tkos:objectId "mission-outcome-FE-M3" ;
+    tkos:displayName "两场景共同消费的最小可复用 FE 能力" ;
+    tkos:scopeDescription "词元云集和灯塔项目使用同一套核心经营对象、Context 组装、来源追溯和 Product 消费机制；新增同类战略议题时无需重新设计整套 Schema 与接口，能力边界与 9 月增量顺序由真实运行证据确定。" ;
+    tkos:delivers tkos:domain-outcome-fe-real-context-loop-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-fe-m3-green ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ;
+    tkos:confirmedBy tkos:confirmation-mission-outcome-fe-m3-card ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:mission-fe-m3-reusable-capability tkos:informedBy tkos:issue-product1-lighthouse-synchronous-delivery ;
+    tkos:hasContextGap tkos:gap-product1-lighthouse-synchronous-delivery-facts, tkos:gap-product1-name-scope-confirmation ;
+    tkos:dependsOn tkos:dependency-product1-lighthouse-synchronous-delivery ;
+    tkos:hasRisk tkos:risk-product1-lighthouse-resource-conflict .
+
+  tkos:assignment-fe-m1-liurenhao a tkos:RoleAssignment ;
+    tkos:objectId "assignment-FE-M1-liurenhao-2026-08" ; tkos:displayName "刘人豪承担 FE-M1 DRI" ;
+    tkos:assignmentHolder tkos:person-liurenhao ; tkos:assignmentRole tkos:role-directly-responsible ; tkos:assignmentScope tkos:mission-fe-m1-internal-context-loop ;
+    tkos:hasValidityInterval tkos:interval-fe-m1-liurenhao ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ; tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ; tkos:confirmedBy tkos:confirmation-assignment-fe-m1-card .
+  tkos:assignment-fe-m2-liurenhao a tkos:RoleAssignment ;
+    tkos:objectId "assignment-FE-M2-liurenhao-2026-08" ; tkos:displayName "刘人豪承担 FE-M2 DRI" ;
+    tkos:assignmentHolder tkos:person-liurenhao ; tkos:assignmentRole tkos:role-directly-responsible ; tkos:assignmentScope tkos:mission-fe-m2-lighthouse-context-loop ;
+    tkos:hasValidityInterval tkos:interval-fe-m2-liurenhao ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ; tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ; tkos:confirmedBy tkos:confirmation-assignment-fe-m2-card .
+  tkos:assignment-fe-m3-liurenhao a tkos:RoleAssignment ;
+    tkos:objectId "assignment-FE-M3-liurenhao-2026-08" ; tkos:displayName "刘人豪承担 FE-M3 DRI" ;
+    tkos:assignmentHolder tkos:person-liurenhao ; tkos:assignmentRole tkos:role-directly-responsible ; tkos:assignmentScope tkos:mission-fe-m3-reusable-capability ;
+    tkos:hasValidityInterval tkos:interval-fe-m3-liurenhao ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ; tkos:validUntil "2026-08-29T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ; tkos:confirmedBy tkos:confirmation-assignment-fe-m3-card .
+
+  tkos:interval-fe-m1-liurenhao a time:ProperInterval ; time:hasBeginning tkos:instant-fe-start ; time:hasEnd tkos:instant-fe-end .
+  tkos:interval-fe-m2-liurenhao a time:ProperInterval ; time:hasBeginning tkos:instant-fe-start ; time:hasEnd tkos:instant-fe-end .
+  tkos:interval-fe-m3-liurenhao a time:ProperInterval ; time:hasBeginning tkos:instant-fe-start ; time:hasEnd tkos:instant-fe-end .
+  tkos:instant-fe-start a time:Instant ; time:inXSDDateTime "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:instant-fe-end a time:Instant ; time:inXSDDateTime "2026-08-29T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:rationale-fe-m1 a tkos:MissionRationale ; tkos:objectId "rationale-FE-M1" ; tkos:displayName "用自身验证 TKOS" ;
+    tkos:scopeDescription "CEO、方法负责人、产品负责人和各 DRI 的工作 Context 易分散在文档、对话和个人 Agent 中，背景被重复解释，前序研究与 Decision 难以完整进入承接。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ; tkos:confirmedBy tkos:confirmation-rationale-fe-m1-card ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:scope-fe-m1 a tkos:MissionScope ; tkos:objectId "scope-FE-M1" ; tkos:displayName "FE-M1 边界" ;
+    tkos:scopeDescription "包括真实议题 Context 蒸馏与确认、必要关联、读取与必要写回、Product 消费接口、调用来源和 Decision 追溯；不承诺一次性 Demo、全公司完整本体、通用 Agent 平台或未经确认数据成为正式现实。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:criterion-fe-m1-green a tkos:SuccessCriterion ; tkos:objectId "criterion-FE-M1-green" ; tkos:displayName "FE-M1 Green" ;
+    tkos:criterionStatement "真实议题与验收口径锁定；Product 在关键环节真实调用 Context 并留有记录；关键 Context 经事实确认且可追溯；承接 DRI 继承前序判断与风险；形成业务增益记录和继续使用或调整结论。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:keypath-fe-m1 a tkos:KeyPath ; tkos:objectId "keypath-FE-M1" ; tkos:displayName "锁定场景后以最小 Context 驱动真实消费" ;
+    tkos:scopeDescription "先锁真实议题、参与角色和 Green 证据；候选 Context 经事实确认；Product 尽早消费；Decision 后写回理由、Evidence、风险、Hypothesis 与 Re-open 条件。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:rationale-fe-m2 a tkos:MissionRationale ; tkos:objectId "rationale-FE-M2" ; tkos:displayName "验证客户产品基础" ;
+    tkos:scopeDescription "将 Context 机制带入真实客户战略问题，识别可复用经营对象与关系、客户特有内容与暂由文档或 RAG 承载的内容，并在授权边界内支撑真实使用。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ; tkos:confirmedBy tkos:confirmation-rationale-fe-m2-card ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:scope-fe-m2 a tkos:MissionScope ; tkos:objectId "scope-FE-M2" ; tkos:displayName "FE-M2 边界" ;
+    tkos:scopeDescription "包括授权范围内的 Context 蒸馏、确认、消费、必要写回、核心关系映射、最小访问控制与迁移性复盘；不承诺独立完整本体、未经授权接入客户数据或带入内部公司 Context。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:criterion-fe-m2-green a tkos:SuccessCriterion ; tkos:objectId "criterion-FE-M2-green" ; tkos:displayName "FE-M2 Green" ;
+    tkos:criterionStatement "真实客户议题、授权范围、事实确认方式与验收口径锁定；Product 在客户流程真实消费 Context；客户事实经授权人员确认；前序研究与 Decision 可进入承接；形成通用、客户特有与文档-RAG 边界的迁移结论。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:keypath-fe-m2 a tkos:KeyPath ; tkos:objectId "keypath-FE-M2" ; tkos:displayName "从受控确认开始，在真实消费中识别迁移边界" ;
+    tkos:scopeDescription "先锁议题、授权边界和当前工作方式，再带入 M1 核心关系；受控人工确认后逐步自动化；将不可复用点归类为模型缺口、客户 Context、产品交互、方法流程或组织授权。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:rationale-fe-m3 a tkos:MissionRationale ; tkos:objectId "rationale-FE-M3" ; tkos:displayName "由真实消费倒推最小能力" ;
+    tkos:scopeDescription "M1 和 M2 需要稳定 Context；本周期沉淀两条闭环反复用到的部分，未被场景消费的架构需求留在下一阶段。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:PreliminarilyConfirmed ; tkos:confirmedBy tkos:confirmation-rationale-fe-m3-card ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:scope-fe-m3 a tkos:MissionScope ; tkos:objectId "scope-FE-M3" ; tkos:displayName "FE-M3 边界" ;
+    tkos:scopeDescription "包括最小经营对象与关系、Context Pack、读取与必要写回、来源确认状态与追溯、Product 消费接口、运行日志和最小权限隔离；不承诺完整 RBAC、字段级权限、全量自动更新或未被真实消费的 Schema 扩展。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:criterion-fe-m3-green a tkos:SuccessCriterion ; tkos:objectId "criterion-FE-M3-green" ; tkos:displayName "FE-M3 Green" ;
+    tkos:criterionStatement "核心对象与关系由 M1、M2 真实消费倒推，具备来源、状态和确认责任；读取、写回、追溯与消费接口在两个场景真实运行；客户差异由场景 Context 或扩展承载；形成复用、暂不建设与 9 月优先级清单。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:keypath-fe-m3 a tkos:KeyPath ; tkos:objectId "keypath-FE-M3" ; tkos:displayName "消费即入选" ;
+    tkos:scopeDescription "只有 M1、M2 的真实链路需要，或阻塞正确性、安全性、追溯的能力进入 8 月范围；固定最小核心关系与 Context 契约后允许场景扩展；每周用真实调用与断点更新能力边界。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:milestone-fe-m1-scenario a tkos:Milestone ; tkos:objectId "milestone-FE-M1-scenario" ; tkos:displayName "场景锁定" ; tkos:scopeDescription "真实议题、参与角色、事实确认人与 Green 证据共同确认；截止 2026-08-11。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m1-first-consumption a tkos:Milestone ; tkos:objectId "milestone-FE-M1-first-consumption" ; tkos:displayName "首次消费" ; tkos:scopeDescription "Product 在真实议题中读到已确认 Context，关键关系可追溯；截止 2026-08-15。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m1-loop a tkos:Milestone ; tkos:objectId "milestone-FE-M1-loop" ; tkos:displayName "闭环跑通" ; tkos:scopeDescription "形成真实 Decision 并进入 DRI 承接，前序 Context 完整传递；截止 2026-08-22。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m1-green a tkos:Milestone ; tkos:objectId "milestone-FE-M1-green" ; tkos:displayName "Green 验收" ; tkos:scopeDescription "业务增益、问题归因、Decision 记忆和复用结论齐备；截止 2026-08-29。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:milestone-fe-m2-authorisation a tkos:Milestone ; tkos:objectId "milestone-FE-M2-authorisation" ; tkos:displayName "场景与授权锁定" ; tkos:scopeDescription "真实议题、授权参与者、可用材料、事实确认方式明确；截止 2026-08-12。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m2-first-consumption a tkos:Milestone ; tkos:objectId "milestone-FE-M2-first-consumption" ; tkos:displayName "客户 Context 首次消费" ; tkos:scopeDescription "Product 在授权环境中读到正确 Context，无边界泄漏；截止 2026-08-18。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m2-loop a tkos:Milestone ; tkos:objectId "milestone-FE-M2-loop" ; tkos:displayName "客户闭环跑通" ; tkos:scopeDescription "真实 Decision 与承接完成，Context 连续传递；截止 2026-08-26。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m2-conclusion a tkos:Milestone ; tkos:objectId "milestone-FE-M2-conclusion" ; tkos:displayName "迁移结论" ; tkos:scopeDescription "通用、客户特有、文档-RAG 边界及继续投入建议确认；截止 2026-08-29。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:milestone-fe-m3-contract a tkos:Milestone ; tkos:objectId "milestone-FE-M3-contract" ; tkos:displayName "最小契约冻结" ; tkos:scopeDescription "两场景共同需要的对象、关系、Context 输入输出与确认责任明确；截止 2026-08-11。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m3-internal a tkos:Milestone ; tkos:objectId "milestone-FE-M3-internal" ; tkos:displayName "内部场景可用" ; tkos:scopeDescription "M1 真实消费核心 Context、追溯与调用记录；截止 2026-08-15。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m3-client a tkos:Milestone ; tkos:objectId "milestone-FE-M3-client" ; tkos:displayName "客户场景可用" ; tkos:scopeDescription "M2 在隔离边界内复用核心机制并承载客户 Context；截止 2026-08-20。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:milestone-fe-m3-boundary a tkos:Milestone ; tkos:objectId "milestone-FE-M3-boundary" ; tkos:displayName "能力边界验收" ; tkos:scopeDescription "复用清单、暂不建设清单、权限结论和 9 月优先级确认；截止 2026-08-29。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+
+  tkos:dependency-fe-m1-method-product-ceo-receiver a tkos:Dependency ; tkos:objectId "dependency-FE-M1" ; tkos:displayName "Method、Product、CEO 与承接 DRI" ; tkos:scopeDescription "Method 定义议题运行机制；Product 提供真实消费与调用证据；CEO 锁议题并确认事实与 Decision；承接 DRI 接住前序 Context 并反馈缺失。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:dependency-fe-m2-lighthouse-method-product-m1-m3 a tkos:Dependency ; tkos:objectId "dependency-FE-M2" ; tkos:displayName "灯塔项目授权、Method、Product、FE-M1 与 FE-M3" ; tkos:scopeDescription "灯塔项目授权人员确认议题、材料、权限和事实；Method 与 Product 支撑现场运行；M1、M3 提供可复用关系、Context 路径、追溯与最小权限。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:dependency-fe-m3-m1-m2-product-method-confirmation a tkos:Dependency ; tkos:objectId "dependency-FE-M3" ; tkos:displayName "M1、M2 真实消费与经营语义确认" ; tkos:scopeDescription "M1、M2 提供真实调用、断点、错误与业务增益证据；Product 确认消费契约与日志；Method 确认经营对象和 Decision-Evidence 语义；事实确认机制决定 Context 正式状态。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 .
+  tkos:dependency-product1-lighthouse-synchronous-delivery a tkos:Dependency ; tkos:objectId "dependency-product1-lighthouse-synchronous-delivery" ; tkos:displayName "产品上线、客户采用与 FE Context 同步依赖" ; tkos:scopeDescription "灯塔真实使用依赖一号位和关键角色投入、客户材料与事实确认、产品入口、统一 Context、权限与回写能力。FE-M2 依赖 Method、Product、CEO、承接 DRI；FE-M3 依赖 M1、M2 的真实消费证据。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08, tkos:source-august-outcome-mission-baseline-v1-1, tkos:source-lighthouse-project-plan-v10 .
+
+  tkos:risk-fe-m1-issue-unlocked a tkos:Risk ; tkos:objectId "risk-FE-M1-issue-unlocked" ; tkos:displayName "真实议题未锁定" ; tkos:scopeDescription "DRI 提交两个可选议题及验收成本；8 月 11 日仍未确定时升级 CEO 取舍。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m1-no-product-consumption a tkos:Risk ; tkos:objectId "risk-FE-M1-no-product-consumption" ; tkos:displayName "Product 未真实消费" ; tkos:scopeDescription "当天定位接口、交互或优先级缝隙；连续两个工作日未闭合时升级 CEO。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m1-context-conflict a tkos:Risk ; tkos:objectId "risk-FE-M1-context-conflict" ; tkos:displayName "Context 与经营现实冲突" ; tkos:scopeDescription "停止把争议内容作为正式事实输出，保留来源与候选状态；影响当前 Decision 时当日升级事实确认人或 CEO。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m1-capacity a tkos:Risk ; tkos:objectId "risk-FE-M1-capacity" ; tkos:displayName "研发容量不足" ; tkos:scopeDescription "砍掉未被本议题消费的 Schema、写回或权限范围；最小闭环仍受阻时升级资源或调整范围。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m2-client-ready a tkos:Risk ; tkos:objectId "risk-FE-M2-client-ready" ; tkos:displayName "客户议题或材料未就绪" ; tkos:scopeDescription "提交最小可运行场景和所需材料清单；8 月 12 日仍无法锁定时升级换场景或调整承诺。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m2-authorisation a tkos:Risk ; tkos:objectId "risk-FE-M2-authorisation" ; tkos:displayName "授权边界不清" ; tkos:scopeDescription "默认不接入、不输出争议数据，采用人工受控方案；影响真实运行时当日升级项目授权人或 CEO。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m2-rebuild a tkos:Risk ; tkos:objectId "risk-FE-M2-rebuild" ; tkos:displayName "客户差异导致大规模重建" ; tkos:scopeDescription "保留最小通用核心，将差异放入客户 Context 或临时文档承载；仍阻塞闭环时升级是否缩场景。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m2-product a tkos:Risk ; tkos:objectId "risk-FE-M2-product" ; tkos:displayName "Product 无法在客户环境消费" ; tkos:scopeDescription "明确交互、部署或接口断点并拉 Owner；连续两个工作日未闭合时升级 CEO。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m3-scope-growth a tkos:Risk ; tkos:objectId "risk-FE-M3-scope-growth" ; tkos:displayName "架构范围再次膨胀" ; tkos:scopeDescription "每项能力必须指向 M1、M2 的真实消费或阻塞证据，否则移出 8 月范围。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m3-model-conflict a tkos:Risk ; tkos:objectId "risk-FE-M3-model-conflict" ; tkos:displayName "两场景模型冲突" ; tkos:scopeDescription "保留最小通用核心，将差异放入场景扩展并记录 Hypothesis；冲突影响经营语义时升级 Method 或 CEO。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m3-permission a tkos:Risk ; tkos:objectId "risk-FE-M3-permission" ; tkos:displayName "权限实现阻塞运行" ; tkos:scopeDescription "先采用可审计人工受控方案保护数据边界；人工方案仍不安全时暂停场景并升级 CEO。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-fe-m3-no-consumption a tkos:Risk ; tkos:objectId "risk-FE-M3-no-consumption" ; tkos:displayName "接口上线但无人消费" ; tkos:scopeDescription "不得计为完成；回到 Product 真实调用断点共同修复；连续两个工作日无消费时升级优先级冲突。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:risk-product1-lighthouse-resource-conflict a tkos:Risk ; tkos:objectId "risk-product1-lighthouse-resource-conflict" ; tkos:displayName "产品 1.0 上线与灯塔交付的跨 Domain 资源冲突" ; tkos:scopeDescription "公司基线要求新增事项经过 Mission Portfolio 取舍，说明支持哪个 Outcome、替代哪项既有 Mission、由谁承担 DRI及所需资源。FE 卡片要求资源冲突时优先保护两条真实业务闭环，砍掉未被真实场景消费的能力范围。" ; tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1, tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-fe-m1-real-issue a tkos:ContextGap ; tkos:objectId "gap-FE-M1-real-issue" ; tkos:displayName "词元云集真实战略议题尚待锁定" ; tkos:scopeDescription "需明确议题、参与角色、事实确认人及 Decision-承接验收口径；卡片将其列为生效 Gate。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:gap-fe-m1-decision-facts a tkos:ContextGap ; tkos:objectId "gap-FE-M1-decision-facts" ; tkos:displayName "渠道扩张投入议题缺少决策事实集" ; tkos:scopeDescription "需补充所涉 Domain 与 Outcome、当前渠道表现基线、追加投入的备选方案与成本、关键风险、历史相关 Decision、事实确认人、承接 DRI 和正式验收口径。" ; tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r508 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:gap-product1-lighthouse-synchronous-delivery-facts a tkos:ContextGap ; tkos:objectId "gap-product1-lighthouse-synchronous-delivery-facts" ; tkos:displayName "产品 1.0 与灯塔交付同步完成议题缺少决策事实集" ; tkos:scopeDescription "需补充产品 1.0 的上线定义、灯塔项目交付定义、两项工作共享与冲突的资源、当前进展、关键依赖、可选节奏、风险、事实确认人、Decision 主体和复审条件。" ; tkos:sourcedFrom tkos:source-dri-real-issue-brief-2026-08-11 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:gap-product1-name-scope-confirmation a tkos:ContextGap ; tkos:objectId "gap-product1-name-scope-confirmation" ; tkos:displayName "产品 1.0 与原生 Agent 1.0 的版本映射" ; tkos:scopeDescription "DRI 已明确产品 1.0 为网页版本的 CEO Agent、CO Agent、Ontology 与 TokenHub 联合上线。灯塔计划中的“原生 Agent 1.0 上线”保留为相关既有计划表述，后续可按实际发布记录补充二者的版本演进关系。" ; tkos:sourcedFrom tkos:source-dri-real-issue-brief-2026-08-11, tkos:source-lighthouse-project-plan-v10, tkos:source-august-outcome-mission-baseline-v1-1 ; tkos:hasConfirmationStatus tkos:Archived ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:gap-fe-m2-client-issue-authorisation a tkos:ContextGap ; tkos:objectId "gap-FE-M2-client-issue-authorisation" ; tkos:displayName "灯塔真实议题与授权边界尚待锁定" ; tkos:scopeDescription "需明确真实议题、王总侧授权参与者、材料、数据边界和验收口径；卡片不虚构客户侧 DRI。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:gap-fe-m3-resource-commitment a tkos:ContextGap ; tkos:objectId "gap-FE-M3-resource-commitment" ; tkos:displayName "研发资源承诺尚待锁定" ; tkos:scopeDescription "需明确研发负责人、可用人天、Product 配合窗口和被砍范围；由刘人豪提出方案，CEO 处理冲突。" ; tkos:sourcedFrom tkos:source-fe-domain-mission-card-2026-08 ; tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}

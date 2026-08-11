@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://ontology.tokenking.ai/tkos#" xml:base="https://ontology.tokenking.ai/tkos#"
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:owl="http://www.w3.org/2002/07/owl#">
+  <owl:Class rdf:about="#MissionReadyForAcceptance"/>
+  <owl:NamedIndividual rdf:about="#mission"><rdf:type rdf:resource="#MissionReadyForAcceptance"/></owl:NamedIndividual>
+</rdf:RDF>

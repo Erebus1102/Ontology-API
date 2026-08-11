@@ -1,0 +1,27 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+tkos:test-positive {
+  tkos:person-alice a tkos:Person .
+  tkos:role-dri a tkos:DirectlyResponsibleRole .
+  tkos:domain-a a tkos:Domain .
+  tkos:criterion-a a tkos:SuccessCriterion ; tkos:criterionStatement "验收证据齐全" .
+  tkos:mission-outcome-a a tkos:MissionOutcome ; tkos:objectId "mission-outcome-a" ; tkos:displayName "正向任务结果" ; tkos:hasSuccessCriterion tkos:criterion-a ; tkos:hasStatus tkos:OutcomeRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:source-a a tkos:SourceRecord ; tkos:objectId "source-a" ; tkos:externalSourceIdentifier "feishu://test/source-a" ; tkos:recordedAt "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:evidence-a a tkos:Evidence ; tkos:objectId "evidence-a" ; tkos:sourcedFrom tkos:source-a ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:instant-a a <http://www.w3.org/2006/time#Instant> ; <http://www.w3.org/2006/time#inXSDDateTime> "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-a a <http://www.w3.org/2006/time#Interval> ; <http://www.w3.org/2006/time#hasBeginning> tkos:instant-a .
+  tkos:assignment-a a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-dri ; tkos:assignmentScope tkos:mission-a ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-a .
+  tkos:review-a a tkos:MissionReview ; tkos:objectId "review-a" ; tkos:sourcedFrom tkos:source-a ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:hasReviewConclusion tkos:Continue .
+  tkos:rationale-a a tkos:MissionRationale ; tkos:objectId "rationale-a" ; tkos:sourcedFrom tkos:source-a ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:confirmation-a a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-a ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-a a tkos:Mission ; tkos:objectId "mission-a" ; tkos:displayName "正向验收样例" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-a ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:supportedByEvidence tkos:evidence-a ; tkos:isReviewedBy tkos:review-a ; tkos:confirmedBy tkos:confirmation-a .
+}
+
+tkos:test-negative {
+  tkos:role-decision-maker a tkos:DecisionMakerRole .
+  tkos:instant-invalid a <http://www.w3.org/2006/time#Instant> ; <http://www.w3.org/2006/time#inXSDDateTime> "2026-09-01T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-invalid a <http://www.w3.org/2006/time#Interval> ; <http://www.w3.org/2006/time#hasBeginning> tkos:instant-invalid .
+  tkos:assignment-invalid a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-decision-maker ; tkos:assignmentScope tkos:domain-a ; tkos:validFrom "2026-09-01T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-invalid .
+  tkos:mission-invalid a tkos:Mission ; tkos:objectId "mission-invalid" ; tkos:displayName "负向责任样例" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-invalid ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime .
+}

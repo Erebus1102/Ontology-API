@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tkos-ontology-runtime"
+version = "0.1.0"
+description = "TKOS enterprise ontology artifacts and runtime foundations"
+requires-python = ">=3.9"
+dependencies = [
+  "rdflib>=7.1,<8",
+  "pyshacl>=0.30,<1",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.116,<1",
+  "uvicorn[standard]>=0.35,<1",
+]
+dev = [
+  "pytest>=8.3,<9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tkos_runtime"]

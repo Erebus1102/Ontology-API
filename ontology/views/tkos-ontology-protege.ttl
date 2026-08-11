@@ -1,0 +1,1195 @@
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix swrl: <http://www.w3.org/2003/11/swrl#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+tkos: a owl:Ontology ;
+    rdfs:label "TokenKing TKOS Operating Ontology"@en,
+        "词元云集 TKOS 经营本体"@zh ;
+    rdfs:comment "面向一号位 Agent 的共享核心本体。Operating、Decision Provenance 与 Governance 三个模块共享语义，通过命名图治理企业事实、候选判断、敏感个人记录、推导结果与 Context Pack。覆盖 Method Layer 1、Layer 2。"@zh ;
+    owl:imports skos:,
+        time:,
+        odrl:,
+        org:,
+        <http://www.w3.org/ns/prov-o#> ;
+    owl:versionInfo "2.3.0" ;
+    prov:wasDerivedFrom <https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c> .
+
+tkos:BusinessModel a owl:Class ;
+    rdfs:label "商业模式"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:CompanyCapability a owl:Class ;
+    rdfs:label "公司能力"@zh ;
+    rdfs:subClassOf tkos:CompanyReality .
+
+tkos:CompanyPolicy a owl:Class ;
+    rdfs:label "公司政策"@zh ;
+    rdfs:subClassOf tkos:CompanyConstitution .
+
+tkos:CompanyProfile a owl:Class ;
+    rdfs:label "公司概况"@zh ;
+    rdfs:subClassOf tkos:CompanyReality .
+
+tkos:CompanyPurpose a owl:Class ;
+    rdfs:label "公司使命"@zh ;
+    rdfs:subClassOf tkos:CompanyConstitution .
+
+tkos:CompanyVision a owl:Class ;
+    rdfs:label "公司愿景"@zh ;
+    rdfs:subClassOf tkos:CompanyConstitution .
+
+tkos:CompetitiveBarrier a owl:Class ;
+    rdfs:label "竞争壁垒"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:CoreValue a owl:Class ;
+    rdfs:label "核心价值观"@zh ;
+    rdfs:subClassOf tkos:CompanyConstitution .
+
+tkos:CultureObservation a owl:Class ;
+    rdfs:label "文化观察"@zh ;
+    rdfs:subClassOf tkos:CompanyReality .
+
+tkos:DecisionMakerRole a owl:Class ;
+    rdfs:label "决策者角色"@zh ;
+    rdfs:subClassOf tkos:Role .
+
+tkos:DecisionProvenanceModule a owl:Class ;
+    rdfs:label "决策溯源模块"@zh ;
+    rdfs:subClassOf tkos:OntologyModule .
+
+tkos:DirectlyResponsibleRole a owl:Class ;
+    rdfs:label "直接责任角色"@zh ;
+    rdfs:subClassOf tkos:Role .
+
+tkos:ExternalSignal a owl:Class ;
+    rdfs:label "外部信号"@zh ;
+    rdfs:subClassOf tkos:StrategicSignal .
+
+tkos:GovernanceModule a owl:Class ;
+    rdfs:label "治理模块"@zh ;
+    rdfs:subClassOf tkos:OntologyModule .
+
+tkos:InitiateMissionReview a owl:Class ;
+    rdfs:label "发起 Mission 复盘"@zh ;
+    rdfs:subClassOf tkos:OperatingAction .
+
+tkos:InternalSignal a owl:Class ;
+    rdfs:label "内部信号"@zh ;
+    rdfs:subClassOf tkos:StrategicSignal .
+
+tkos:KnowledgeGraphPartition a owl:Class ;
+    rdfs:label "知识图分区"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:LeadershipInsight a owl:Class ;
+    rdfs:label "领导洞见"@zh ;
+    rdfs:subClassOf tkos:StrategicSignal .
+
+tkos:ManagerAgent a owl:Class ;
+    rdfs:label "管理者 Agent"@zh ;
+    rdfs:subClassOf tkos:Agent .
+
+tkos:No1Agent a owl:Class ;
+    rdfs:label "一号位 Agent"@zh ;
+    rdfs:subClassOf tkos:Agent .
+
+tkos:OperatingDecision a owl:Class ;
+    rdfs:label "经营决策"@zh ;
+    rdfs:subClassOf tkos:Decision .
+
+tkos:OperatingModule a owl:Class ;
+    rdfs:label "经营模块"@zh ;
+    rdfs:subClassOf tkos:OntologyModule .
+
+tkos:OperatingPrinciple a owl:Class ;
+    rdfs:label "经营原则"@zh ;
+    rdfs:subClassOf tkos:CompanyConstitution .
+
+tkos:OrganizationalUnit a owl:Class ;
+    rdfs:label "组织单元"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:PerformanceFact a owl:Class ;
+    rdfs:label "经营事实"@zh ;
+    rdfs:subClassOf tkos:CompanyReality .
+
+tkos:Rule_DecisionReviewDueRequiresReview a swrl:Imp ;
+    rdfs:label "决策到复审条件将 Mission 标记为需要复盘"@zh ;
+    swrl:body ( [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varCondition ;
+                swrl:propertyPredicate tkos:hasRuleCondition ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varCondition ;
+                swrl:classPredicate tkos:DecisionReviewDueCondition ] ) ;
+    swrl:head ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:ReviewRequiredMission ] ) .
+
+tkos:Rule_DependencyUnsatisfiedRequiresReview a swrl:Imp ;
+    rdfs:label "关键依赖未满足将 Mission 标记为需要复盘"@zh ;
+    swrl:body ( [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varCondition ;
+                swrl:propertyPredicate tkos:hasRuleCondition ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varCondition ;
+                swrl:classPredicate tkos:DependencyUnsatisfiedCondition ] ) ;
+    swrl:head ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:ReviewRequiredMission ] ) .
+
+tkos:Rule_EvidenceInsufficientRequiresReview a swrl:Imp ;
+    rdfs:label "证据不足将 Mission 标记为需要复盘"@zh ;
+    swrl:body ( [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varCondition ;
+                swrl:propertyPredicate tkos:hasRuleCondition ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varCondition ;
+                swrl:classPredicate tkos:EvidenceInsufficientCondition ] ) ;
+    swrl:head ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:ReviewRequiredMission ] ) .
+
+tkos:Rule_HighRiskRequiresReview a swrl:Imp ;
+    rdfs:label "高风险将 Mission 标记为需要复盘"@zh ;
+    swrl:body ( [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varRisk ;
+                swrl:propertyPredicate tkos:hasRisk ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varRisk ;
+                swrl:classPredicate tkos:HighRisk ] ) ;
+    swrl:head ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:ReviewRequiredMission ] ) .
+
+tkos:Rule_MissionContributesToDomainOutcome a swrl:Imp ;
+    rdfs:label "MissionOutcome 的交付关系推导 Mission 对业务域目标的贡献"@zh ;
+    swrl:body ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:Mission ] [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varMissionOutcome ;
+                swrl:propertyPredicate tkos:expects ] [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMissionOutcome ;
+                swrl:argument2 tkos:varDomainOutcome ;
+                swrl:propertyPredicate tkos:delivers ] ) ;
+    swrl:head ( [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varDomainOutcome ;
+                swrl:propertyPredicate tkos:contributesTo ] ) .
+
+tkos:Rule_MissionReadyForAcceptance a swrl:Imp ;
+    rdfs:label "具备证据支持、复盘结论与确认事件的 Mission 进入可验收状态"@zh ;
+    swrl:body ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:Mission ] [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varEvidence ;
+                swrl:propertyPredicate tkos:supportedByEvidence ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varEvidence ;
+                swrl:classPredicate tkos:Evidence ] [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varReview ;
+                swrl:propertyPredicate tkos:isReviewedBy ] [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varReview ;
+                swrl:argument2 tkos:varConclusion ;
+                swrl:propertyPredicate tkos:hasReviewConclusion ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varConclusion ;
+                swrl:classPredicate tkos:ReviewConclusion ] [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varConfirmation ;
+                swrl:propertyPredicate tkos:confirmedBy ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varConfirmation ;
+                swrl:classPredicate tkos:ConfirmationEvent ] ) ;
+    swrl:head ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:MissionReadyForAcceptance ] ) .
+
+tkos:Rule_OutcomeDeviationRequiresReview a swrl:Imp ;
+    rdfs:label "目标偏离将 Mission 标记为需要复盘"@zh ;
+    swrl:body ( [ a swrl:IndividualPropertyAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:argument2 tkos:varCondition ;
+                swrl:propertyPredicate tkos:hasRuleCondition ] [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varCondition ;
+                swrl:classPredicate tkos:OutcomeDeviationCondition ] ) ;
+    swrl:head ( [ a swrl:ClassAtom ;
+                swrl:argument1 tkos:varMission ;
+                swrl:classPredicate tkos:ReviewRequiredMission ] ) .
+
+tkos:StrategyContent a owl:Class ;
+    rdfs:label "战略内容"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:assertedBy a owl:ObjectProperty ;
+    rdfs:label "由主体表达"@zh ;
+    rdfs:domain tkos:AttributedAssertion ;
+    rdfs:range tkos:Actor .
+
+tkos:assertionMode a owl:DatatypeProperty ;
+    rdfs:label "断言形成方式"@zh ;
+    rdfs:domain tkos:AttributedAssertion ;
+    rdfs:range xsd:string .
+
+tkos:assessesIntentFor a owl:ObjectProperty ;
+    rdfs:label "判定事项意图"@zh ;
+    rdfs:domain tkos:IntentAssessment ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:assignmentHolder a owl:ObjectProperty ;
+    rdfs:label "承担人"@zh ;
+    rdfs:domain tkos:RoleAssignment ;
+    rdfs:range tkos:Person .
+
+tkos:assignmentRole a owl:ObjectProperty ;
+    rdfs:label "承担角色"@zh ;
+    rdfs:domain tkos:RoleAssignment ;
+    rdfs:range tkos:Role .
+
+tkos:assignmentScope a owl:ObjectProperty ;
+    rdfs:label "承担范围"@zh ;
+    rdfs:domain tkos:RoleAssignment ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:challengesClaim a owl:ObjectProperty ;
+    rdfs:label "被挑战主张"@zh ;
+    rdfs:domain tkos:EvidenceChallenge ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:challengingEvidence a owl:ObjectProperty ;
+    rdfs:label "挑战证据"@zh ;
+    rdfs:domain tkos:EvidenceChallenge ;
+    rdfs:range tkos:Evidence .
+
+tkos:changeReason a owl:DatatypeProperty ;
+    rdfs:label "变更原因"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:string .
+
+tkos:confirmedAt a owl:DatatypeProperty ;
+    rdfs:label "确认时间"@zh ;
+    rdfs:domain tkos:ConfirmationEvent ;
+    rdfs:range xsd:dateTime .
+
+tkos:confirmedByActor a owl:ObjectProperty ;
+    rdfs:label "由主体确认"@zh ;
+    rdfs:domain tkos:Confirmation ;
+    rdfs:range tkos:Actor .
+
+tkos:confirmsEntity a owl:ObjectProperty ;
+    rdfs:label "确认对象"@zh ;
+    rdfs:domain tkos:ConfirmationEvent ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:contains a owl:ObjectProperty ;
+    rdfs:label "包含"@zh ;
+    rdfs:domain tkos:MissionPortfolio ;
+    rdfs:range tkos:Mission ;
+    owl:inverseOf tkos:inPortfolio .
+
+tkos:contributionSource a owl:ObjectProperty ;
+    rdfs:label "贡献来源结果"@zh ;
+    rdfs:domain tkos:OutcomeContribution ;
+    rdfs:range tkos:Outcome .
+
+tkos:contributionTarget a owl:ObjectProperty ;
+    rdfs:label "贡献目标结果"@zh ;
+    rdfs:domain tkos:OutcomeContribution ;
+    rdfs:range tkos:Outcome .
+
+tkos:criterionStatement a owl:DatatypeProperty ;
+    rdfs:label "成功标准陈述"@zh ;
+    rdfs:domain tkos:SuccessCriterion ;
+    rdfs:range xsd:string .
+
+tkos:decidedAs a owl:ObjectProperty ;
+    rdfs:label "确认成决策"@zh ;
+    rdfs:domain tkos:StrategicChoice ;
+    rdfs:range tkos:StrategicDecision .
+
+tkos:decisionMadeBy a owl:ObjectProperty ;
+    rdfs:label "决策主体"@zh ;
+    rdfs:domain tkos:DecisionRecord ;
+    rdfs:range tkos:Person .
+
+tkos:dependsOn a owl:ObjectProperty ;
+    rdfs:label "依赖"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:Dependency .
+
+tkos:derivedFromAssertion a owl:ObjectProperty ;
+    rdfs:label "由断言生成"@zh ;
+    rdfs:domain tkos:DecisionProfileView ;
+    rdfs:range tkos:AttributedAssertion .
+
+tkos:derivedFromDecisionRecord a owl:ObjectProperty ;
+    rdfs:label "由决策记录生成"@zh ;
+    rdfs:domain tkos:DecisionProfileView ;
+    rdfs:range tkos:DecisionRecord .
+
+tkos:derivedFromLearning a owl:ObjectProperty ;
+    rdfs:label "由学习生成"@zh ;
+    rdfs:domain tkos:DecisionProfileView ;
+    rdfs:range tkos:DecisionLearning .
+
+tkos:derivedFromRecord a owl:ObjectProperty ;
+    rdfs:label "源自决策记录"@zh ;
+    rdfs:domain tkos:DecisionLearning ;
+    rdfs:range tkos:DecisionRecord .
+
+tkos:displayName a owl:DatatypeProperty ;
+    rdfs:label "显示名称"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:string .
+
+tkos:externalSourceIdentifier a owl:DatatypeProperty ;
+    rdfs:label "外部来源标识"@zh ;
+    rdfs:domain tkos:SourceRecord ;
+    rdfs:range xsd:string .
+
+tkos:governedBy a owl:ObjectProperty ;
+    rdfs:label "受政策约束"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:Policy .
+
+tkos:hasApplicabilityCondition a owl:ObjectProperty ;
+    rdfs:label "具有适用条件"@zh ;
+    rdfs:domain tkos:DecisionLearning ;
+    rdfs:range tkos:RuleCondition .
+
+tkos:hasAuthorityBoundary a owl:ObjectProperty ;
+    rdfs:label "具有授权边界"@zh ;
+    rdfs:domain tkos:RoleAssignment ;
+    rdfs:range tkos:AuthorityBoundary .
+
+tkos:hasConfirmationStatus a owl:ObjectProperty ;
+    rdfs:label "具有确认状态"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:ConfirmationStatus .
+
+tkos:hasContextGap a owl:ObjectProperty ;
+    rdfs:label "具有上下文缺口"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:ContextGap .
+
+tkos:hasContextMember a owl:ObjectProperty ;
+    rdfs:label "包含上下文成员"@zh ;
+    rdfs:domain tkos:ContextPack ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:hasCriterion a owl:ObjectProperty ;
+    rdfs:label "具有成功标准"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:SuccessCriterion .
+
+tkos:hasDisconfirmingCondition a owl:ObjectProperty ;
+    rdfs:label "具有改判条件"@zh ;
+    rdfs:domain tkos:DecisionLearning ;
+    rdfs:range tkos:RuleCondition .
+
+tkos:hasDomainProgressSnapshot a owl:ObjectProperty ;
+    rdfs:label "具有业务域进展快照"@zh ;
+    rdfs:domain tkos:Domain ;
+    rdfs:range tkos:DomainProgressSnapshot .
+
+tkos:hasEvidenceSupport a owl:ObjectProperty ;
+    rdfs:label "具有证据支持关系"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:EvidenceSupport .
+
+tkos:hasKeyPath a owl:ObjectProperty ;
+    rdfs:label "具有关键路径"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:KeyPath .
+
+tkos:hasMilestone a owl:ObjectProperty ;
+    rdfs:label "具有里程碑"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:Milestone .
+
+tkos:hasOutcome a owl:ObjectProperty ;
+    rdfs:label "拥有目标"@zh ;
+    rdfs:domain tkos:Domain ;
+    rdfs:range tkos:DomainOutcome .
+
+tkos:hasOutcomeContribution a owl:ObjectProperty ;
+    rdfs:label "具有结果贡献关系"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:OutcomeContribution .
+
+tkos:hasPortfolio a owl:ObjectProperty ;
+    rdfs:label "拥有任务组合"@zh ;
+    rdfs:domain tkos:Domain ;
+    rdfs:range tkos:MissionPortfolio .
+
+tkos:hasProgressSnapshot a owl:ObjectProperty ;
+    rdfs:label "具有进展快照"@zh ;
+    rdfs:domain tkos:Outcome ;
+    rdfs:range tkos:OutcomeProgressSnapshot .
+
+tkos:hasPurpose a owl:ObjectProperty ;
+    rdfs:label "具有业务域目的"@zh ;
+    rdfs:domain tkos:Domain ;
+    rdfs:range tkos:DomainPurpose .
+
+tkos:hasRationale a owl:ObjectProperty ;
+    rdfs:label "具有缘由"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:MissionRationale .
+
+tkos:hasScope a owl:ObjectProperty ;
+    rdfs:label "具有边界"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:MissionScope .
+
+tkos:hasSuccessCriterion a owl:ObjectProperty ;
+    rdfs:label "具有成功标准"@zh ;
+    rdfs:domain tkos:Outcome ;
+    rdfs:range tkos:SuccessCriterion .
+
+tkos:hasValidityInterval a owl:ObjectProperty ;
+    rdfs:label "具有有效时间区间"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range time:Interval .
+
+tkos:informedBy a owl:ObjectProperty ;
+    rdfs:label "由经营上下文告知"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:intentConfidence a owl:DatatypeProperty ;
+    rdfs:label "意图置信度"@zh ;
+    rdfs:domain tkos:IntentAssessment ;
+    rdfs:range xsd:decimal .
+
+tkos:isProvenBy a owl:ObjectProperty ;
+    rdfs:label "由证据证明（兼容）"@zh ;
+    rdfs:comment "V1 兼容属性。V2 使用 EvidenceSupport 或 supportedByEvidence，避免把证据关系写成绝对证明。"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:Evidence ;
+    owl:deprecated true .
+
+tkos:judgedAs a owl:ObjectProperty ;
+    rdfs:label "形成判断"@zh ;
+    rdfs:domain tkos:StrategicResearch ;
+    rdfs:range tkos:Judgement .
+
+tkos:objectId a owl:DatatypeProperty,
+        owl:FunctionalProperty ;
+    rdfs:label "稳定对象标识"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:string .
+
+tkos:ownedBy a owl:ObjectProperty ;
+    rdfs:label "由 DRI 负责（兼容）"@zh ;
+    rdfs:comment "V1 兼容属性。V2 使用 hasResponsibleAssignment 关联带范围和有效期的 RoleAssignment。"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:DirectlyResponsibleIndividual ;
+    owl:deprecated true .
+
+tkos:produces a owl:ObjectProperty ;
+    rdfs:label "产出"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range [ a owl:Class ;
+            owl:unionOf ( tkos:Artifact tkos:Lesson ) ] .
+
+tkos:proves a owl:ObjectProperty ;
+    rdfs:label "证明成功标准"@zh ;
+    rdfs:domain tkos:Evidence ;
+    rdfs:range tkos:SuccessCriterion ;
+    owl:inverseOf tkos:criterionProvenBy .
+
+tkos:raises a owl:ObjectProperty ;
+    rdfs:label "提出议题"@zh ;
+    rdfs:domain tkos:StrategicSignal ;
+    rdfs:range tkos:StrategicIssue .
+
+tkos:recordedAt a owl:DatatypeProperty ;
+    rdfs:label "记录时间"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:dateTime .
+
+tkos:recordsDecision a owl:ObjectProperty ;
+    rdfs:label "记录决策"@zh ;
+    rdfs:domain tkos:DecisionRecord ;
+    rdfs:range tkos:Decision .
+
+tkos:requires a owl:ObjectProperty ;
+    rdfs:label "需要"@zh ;
+    rdfs:domain tkos:OperatingAction ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:researchedBy a owl:ObjectProperty ;
+    rdfs:label "由研究支撑"@zh ;
+    rdfs:domain tkos:StrategicIssue ;
+    rdfs:range tkos:StrategicResearch .
+
+tkos:reviewCondition a owl:DatatypeProperty ;
+    rdfs:label "复审条件"@zh ;
+    rdfs:domain tkos:Decision ;
+    rdfs:range xsd:string .
+
+tkos:revisedTo a owl:ObjectProperty ;
+    rdfs:label "修订结果"@zh ;
+    rdfs:domain tkos:RevisionEvent ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:revisionKind a owl:DatatypeProperty ;
+    rdfs:label "修订类型"@zh ;
+    rdfs:domain tkos:RevisionEvent ;
+    rdfs:range xsd:string .
+
+tkos:revisionOf a owl:ObjectProperty ;
+    rdfs:label "修订对象"@zh ;
+    rdfs:domain tkos:RevisionEvent ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:scopeDescription a owl:DatatypeProperty ;
+    rdfs:label "适用范围说明"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:string .
+
+tkos:selectedAs a owl:ObjectProperty ;
+    rdfs:label "形成选择"@zh ;
+    rdfs:domain tkos:Judgement ;
+    rdfs:range tkos:StrategicChoice .
+
+tkos:sourcedFrom a owl:ObjectProperty ;
+    rdfs:label "来源于"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:SourceRecord .
+
+tkos:supersedes a owl:ObjectProperty,
+        owl:TransitiveProperty ;
+    rdfs:label "替代前一版本"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:supportedClaim a owl:ObjectProperty ;
+    rdfs:label "被支持主张"@zh ;
+    rdfs:domain tkos:EvidenceSupport ;
+    rdfs:range tkos:BusinessEntity .
+
+tkos:supportingEvidence a owl:ObjectProperty ;
+    rdfs:label "支持证据"@zh ;
+    rdfs:domain tkos:EvidenceSupport ;
+    rdfs:range tkos:Evidence .
+
+tkos:triggers a owl:ObjectProperty ;
+    rdfs:label "触发经营动作"@zh ;
+    rdfs:domain tkos:RuleCondition ;
+    rdfs:range tkos:OperatingAction .
+
+tkos:usedAt a owl:DatatypeProperty ;
+    rdfs:label "上下文使用时间"@zh ;
+    rdfs:domain tkos:ContextPack ;
+    rdfs:range xsd:dateTime .
+
+tkos:usesStep a owl:ObjectProperty ;
+    rdfs:label "使用步骤"@zh ;
+    rdfs:domain tkos:WorkPattern ;
+    rdfs:range tkos:OperatingAction .
+
+tkos:validFrom a owl:DatatypeProperty ;
+    rdfs:label "生效时间"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:dateTime .
+
+tkos:validUntil a owl:DatatypeProperty ;
+    rdfs:label "失效时间"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:dateTime .
+
+tkos:version a owl:DatatypeProperty ;
+    rdfs:label "版本"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range xsd:string .
+
+tkos:viewAsOf a owl:DatatypeProperty ;
+    rdfs:label "画像视图截至时间"@zh ;
+    rdfs:domain tkos:DecisionProfileView ;
+    rdfs:range xsd:dateTime .
+
+tkos:viewGeneratedAt a owl:DatatypeProperty ;
+    rdfs:label "画像视图生成时间"@zh ;
+    rdfs:domain tkos:DecisionProfileView ;
+    rdfs:range xsd:dateTime .
+
+tkos:Adjust a owl:NamedIndividual,
+        tkos:ReviewConclusion ;
+    rdfs:label "调整"@zh .
+
+tkos:Archived a owl:NamedIndividual,
+        tkos:ConfirmationStatus ;
+    rdfs:label "已归档"@zh .
+
+tkos:Artifact a owl:Class ;
+    rdfs:label "产出物"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:AuthorityBoundary a owl:Class ;
+    rdfs:label "授权边界"@zh ;
+    rdfs:subClassOf tkos:Policy .
+
+tkos:Candidate a owl:NamedIndividual,
+        tkos:ConfirmationStatus ;
+    rdfs:label "候选"@zh .
+
+tkos:Close a owl:NamedIndividual,
+        tkos:ReviewConclusion ;
+    rdfs:label "关闭"@zh .
+
+tkos:Confirmed a owl:NamedIndividual,
+        tkos:ConfirmationStatus ;
+    rdfs:label "已确认"@zh .
+
+tkos:ContextGap a owl:Class ;
+    rdfs:label "上下文缺口"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:Continue a owl:NamedIndividual,
+        tkos:ReviewConclusion ;
+    rdfs:label "继续"@zh .
+
+tkos:DecisionCandidate a owl:NamedIndividual,
+        tkos:DecisionStatus ;
+    rdfs:label "候选"@zh .
+
+tkos:DecisionEffective a owl:NamedIndividual,
+        tkos:DecisionStatus ;
+    rdfs:label "有效"@zh .
+
+tkos:DecisionExpired a owl:NamedIndividual,
+        tkos:DecisionStatus ;
+    rdfs:label "已失效"@zh .
+
+tkos:DecisionPendingConfirmation a owl:NamedIndividual,
+        tkos:DecisionStatus ;
+    rdfs:label "待确认"@zh .
+
+tkos:DecisionReviewDueCondition a owl:Class ;
+    rdfs:label "决策到期复审条件"@zh ;
+    rdfs:subClassOf tkos:RuleCondition .
+
+tkos:DecisionSuperseded a owl:NamedIndividual,
+        tkos:DecisionStatus ;
+    rdfs:label "已替代"@zh .
+
+tkos:DecisionUnderReview a owl:NamedIndividual,
+        tkos:DecisionStatus ;
+    rdfs:label "待复审"@zh .
+
+tkos:Dependency a owl:Class ;
+    rdfs:label "依赖"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:DependencyUnsatisfiedCondition a owl:Class ;
+    rdfs:label "关键依赖未满足条件"@zh ;
+    rdfs:subClassOf tkos:RuleCondition .
+
+tkos:DirectlyResponsibleIndividual a owl:Class ;
+    rdfs:label "直接责任人（DRI，兼容）"@zh ;
+    rdfs:comment "V1 兼容类型。V2 以 RoleAssignment 表达人员在 Mission、Decision 或组织中的 DRI 承担关系与有效期。"@zh ;
+    rdfs:subClassOf tkos:Actor ;
+    owl:deprecated true .
+
+tkos:DomainProgressSnapshot a owl:Class ;
+    rdfs:label "业务域进展快照"@zh ;
+    rdfs:subClassOf tkos:ProgressSnapshot .
+
+tkos:DomainPurpose a owl:Class ;
+    rdfs:label "业务域目的"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:Escalate a owl:NamedIndividual,
+        tkos:ReviewConclusion ;
+    rdfs:label "向上请求判断"@zh .
+
+tkos:EvidenceInsufficientCondition a owl:Class ;
+    rdfs:label "证据不足条件"@zh ;
+    rdfs:subClassOf tkos:RuleCondition .
+
+tkos:Expired a owl:NamedIndividual,
+        tkos:ConfirmationStatus ;
+    rdfs:label "已失效"@zh .
+
+tkos:HighRisk a owl:Class ;
+    rdfs:label "高风险"@zh ;
+    rdfs:subClassOf tkos:Risk .
+
+tkos:HumanActor a owl:Class ;
+    rdfs:label "人员主体"@zh ;
+    rdfs:subClassOf tkos:Actor .
+
+tkos:KeyPath a owl:Class ;
+    rdfs:label "关键路径"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:Lesson a owl:Class ;
+    rdfs:label "教训"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:Milestone a owl:Class ;
+    rdfs:label "里程碑"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:MissionAdjusted a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "已调整"@zh .
+
+tkos:MissionClosed a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "已关闭"@zh .
+
+tkos:MissionCommitted a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "承诺"@zh .
+
+tkos:MissionEstablished a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "建立"@zh .
+
+tkos:MissionPaused a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "已暂停"@zh .
+
+tkos:MissionRationale a owl:Class ;
+    rdfs:label "任务缘由"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:MissionReadyForAcceptance a owl:Class ;
+    rdfs:label "可验收 Mission"@zh ;
+    rdfs:subClassOf tkos:Mission .
+
+tkos:MissionRunning a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "运行"@zh .
+
+tkos:MissionScope a owl:Class ;
+    rdfs:label "任务边界"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:MissionUnderReview a owl:NamedIndividual,
+        tkos:MissionStatus ;
+    rdfs:label "复盘中"@zh .
+
+tkos:OutcomeAchieved a owl:NamedIndividual,
+        tkos:OutcomeStatus ;
+    rdfs:label "已达成"@zh .
+
+tkos:OutcomeAdjusted a owl:NamedIndividual,
+        tkos:OutcomeStatus ;
+    rdfs:label "已调整"@zh .
+
+tkos:OutcomeClosed a owl:NamedIndividual,
+        tkos:OutcomeStatus ;
+    rdfs:label "已关闭"@zh .
+
+tkos:OutcomeDefined a owl:NamedIndividual,
+        tkos:OutcomeStatus ;
+    rdfs:label "已定义"@zh .
+
+tkos:OutcomeDeviationCondition a owl:Class ;
+    rdfs:label "目标偏离条件"@zh ;
+    rdfs:subClassOf tkos:RuleCondition .
+
+tkos:OutcomeProgressSnapshot a owl:Class ;
+    rdfs:label "目标进展快照"@zh ;
+    rdfs:subClassOf tkos:ProgressSnapshot .
+
+tkos:OutcomeRunning a owl:NamedIndividual,
+        tkos:OutcomeStatus ;
+    rdfs:label "运行中"@zh .
+
+tkos:OutcomeUnderAcceptance a owl:NamedIndividual,
+        tkos:OutcomeStatus ;
+    rdfs:label "验收中"@zh .
+
+tkos:Pause a owl:NamedIndividual,
+        tkos:ReviewConclusion ;
+    rdfs:label "暂停"@zh .
+
+tkos:PreliminarilyConfirmed a owl:NamedIndividual,
+        tkos:ConfirmationStatus ;
+    rdfs:label "初步确认"@zh .
+
+tkos:StrategicDecision a owl:Class ;
+    rdfs:label "战略决策"@zh ;
+    rdfs:subClassOf tkos:Decision .
+
+tkos:WorkPattern a owl:Class ;
+    rdfs:label "工作模式"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:belongsTo a owl:ObjectProperty ;
+    rdfs:label "归属业务域"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:Domain .
+
+tkos:confirmedBy a owl:ObjectProperty ;
+    rdfs:label "由确认记录确认"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:Confirmation .
+
+tkos:criterionProvenBy a owl:ObjectProperty ;
+    rdfs:label "由证据证明"@zh ;
+    rdfs:domain tkos:SuccessCriterion ;
+    rdfs:range tkos:Evidence .
+
+tkos:delivers a owl:FunctionalProperty,
+        owl:ObjectProperty ;
+    rdfs:label "交付业务域目标"@zh ;
+    rdfs:domain tkos:MissionOutcome ;
+    rdfs:range tkos:DomainOutcome ;
+    owl:inverseOf tkos:isDeliveredBy .
+
+tkos:hasResponsibleAssignment a owl:ObjectProperty ;
+    rdfs:label "具有责任承担"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:RoleAssignment .
+
+tkos:hasReviewConclusion a owl:ObjectProperty ;
+    rdfs:label "具有复盘结论"@zh ;
+    rdfs:domain tkos:MissionReview ;
+    rdfs:range tkos:ReviewConclusion .
+
+tkos:hasRisk a owl:ObjectProperty ;
+    rdfs:label "具有风险"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:Risk .
+
+tkos:inPortfolio a owl:ObjectProperty ;
+    rdfs:label "属于任务组合"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:MissionPortfolio .
+
+tkos:isReviewedBy a owl:ObjectProperty ;
+    rdfs:label "由复盘评估"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:MissionReview .
+
+tkos:supportedByEvidence a owl:ObjectProperty ;
+    rdfs:label "由证据支持"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:Evidence .
+
+tkos:supports a owl:ObjectProperty ;
+    rdfs:label "支撑公司目标"@zh ;
+    rdfs:domain tkos:DomainOutcome ;
+    rdfs:range tkos:CompanyOutcome ;
+    owl:inverseOf tkos:isSupportedBy .
+
+tkos:Agent a owl:Class ;
+    rdfs:label "智能体"@zh ;
+    rdfs:subClassOf tkos:Actor .
+
+tkos:ContextPack a owl:Class ;
+    rdfs:label "上下文包"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:EvidenceChallenge a owl:Class ;
+    rdfs:label "证据挑战关系"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:IntentAssessment a owl:Class ;
+    rdfs:label "意图判定"@zh ;
+    rdfs:subClassOf tkos:AttributedAssertion .
+
+tkos:Judgement a owl:Class ;
+    rdfs:label "判断"@zh ;
+    rdfs:subClassOf tkos:AttributedAssertion .
+
+tkos:MissionReview a owl:Class ;
+    rdfs:label "Mission 复盘"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:Person a owl:Class ;
+    rdfs:label "人员"@zh ;
+    rdfs:subClassOf tkos:HumanActor .
+
+tkos:ProgressSnapshot a owl:Class ;
+    rdfs:label "进展快照"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:Risk a owl:Class ;
+    rdfs:label "风险"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:SourceRecord a owl:Class ;
+    rdfs:label "来源记录"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:StrategicChoice a owl:Class ;
+    rdfs:label "战略选择"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:StrategicIssue a owl:Class ;
+    rdfs:label "战略议题"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:StrategicResearch a owl:Class ;
+    rdfs:label "战略研究"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:contributesTo a owl:ObjectProperty ;
+    rdfs:label "贡献于业务域目标"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:DomainOutcome .
+
+tkos:expects a owl:ObjectProperty ;
+    rdfs:label "预期实现"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:MissionOutcome .
+
+tkos:isDeliveredBy a owl:ObjectProperty ;
+    rdfs:label "由任务目标交付"@zh ;
+    rdfs:domain tkos:DomainOutcome ;
+    rdfs:range tkos:MissionOutcome .
+
+tkos:isSupportedBy a owl:ObjectProperty ;
+    rdfs:label "由业务域目标支撑"@zh ;
+    rdfs:domain tkos:CompanyOutcome ;
+    rdfs:range tkos:DomainOutcome .
+
+tkos:varConclusion a swrl:Variable .
+
+tkos:varConfirmation a swrl:Variable .
+
+tkos:varDomainOutcome a swrl:Variable .
+
+tkos:varEvidence a swrl:Variable .
+
+tkos:varMissionOutcome a swrl:Variable .
+
+tkos:varReview a swrl:Variable .
+
+tkos:varRisk a swrl:Variable .
+
+tkos:CompanyOutcome a owl:Class ;
+    rdfs:label "公司目标"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty tkos:isSupportedBy ;
+            owl:someValuesFrom tkos:DomainOutcome ],
+        tkos:Outcome ;
+    owl:disjointWith tkos:DomainOutcome,
+        tkos:MissionOutcome .
+
+tkos:Confirmation a owl:Class ;
+    rdfs:label "确认记录"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:ConfirmationEvent a owl:Class ;
+    rdfs:label "确认事件"@zh ;
+    rdfs:subClassOf tkos:Confirmation .
+
+tkos:EvidenceSupport a owl:Class ;
+    rdfs:label "证据支持关系"@zh ;
+    rdfs:comment "将证据与其支持的主张或验收标准连接，并记录范围、强度、来源和时间的关系对象。"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:MissionPortfolio a owl:Class ;
+    rdfs:label "任务组合"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:OntologyModule a owl:Class ;
+    rdfs:label "本体模块"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:OutcomeContribution a owl:Class ;
+    rdfs:label "结果贡献关系"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:Policy a owl:Class ;
+    rdfs:label "政策与约束"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:RevisionEvent a owl:Class ;
+    rdfs:label "修订事件"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:Role a owl:Class ;
+    rdfs:label "组织角色"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:hasStatus a owl:ObjectProperty ;
+    rdfs:label "具有生命周期状态"@zh ;
+    rdfs:domain tkos:BusinessEntity ;
+    rdfs:range tkos:LifecycleStatus .
+
+tkos:CompanyReality a owl:Class ;
+    rdfs:label "公司现实"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:Decision a owl:Class ;
+    rdfs:label "决策"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:allValuesFrom tkos:DecisionStatus ;
+            owl:onProperty tkos:hasStatus ],
+        tkos:ContextAsset .
+
+tkos:DecisionLearning a owl:Class ;
+    rdfs:label "决策学习"@zh ;
+    rdfs:subClassOf tkos:AttributedAssertion .
+
+tkos:DecisionRecord a owl:Class ;
+    rdfs:label "决策记录"@zh ;
+    rdfs:comment "真实发生的决策事件记录，连接决策主体、输入、选择、确认与时间。"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:OperatingAction a owl:Class ;
+    rdfs:label "经营动作"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:StrategicSignal a owl:Class ;
+    rdfs:label "战略信号"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:hasRuleCondition a owl:ObjectProperty ;
+    rdfs:label "具有规则条件"@zh ;
+    rdfs:domain tkos:Mission ;
+    rdfs:range tkos:RuleCondition .
+
+tkos:Actor a owl:Class ;
+    rdfs:label "主体"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:CompanyConstitution a owl:Class ;
+    rdfs:label "公司宪法"@zh ;
+    rdfs:subClassOf tkos:Policy .
+
+tkos:DecisionProfileView a owl:Class ;
+    rdfs:label "决策画像视图"@zh ;
+    rdfs:comment "由当前有效的归属断言、决策记录与决策学习生成的可撤销、可重算视图，不作为人员稳定事实。"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:LifecycleStatus a owl:Class ;
+    rdfs:label "生命周期状态"@zh .
+
+tkos:ReviewRequiredMission a owl:Class ;
+    rdfs:label "需要复盘的 Mission"@zh ;
+    rdfs:subClassOf tkos:Mission .
+
+tkos:SuccessCriterion a owl:Class ;
+    rdfs:label "成功标准"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:AttributedAssertion a owl:Class ;
+    rdfs:label "归属断言"@zh ;
+    rdfs:comment "带有表达或确认主体、来源与时间的主张。用于保存明确表达的判断，并与系统推断区分。"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:ConfirmationStatus a owl:Class ;
+    rdfs:label "确认状态"@zh ;
+    rdfs:subClassOf tkos:LifecycleStatus ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:oneOf ( tkos:Candidate tkos:PreliminarilyConfirmed tkos:Confirmed tkos:Expired tkos:Archived ) ] .
+
+tkos:Domain a owl:Class ;
+    rdfs:label "业务域"@zh ;
+    rdfs:comment "持续承担一类经营结果的责任空间。"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:RoleAssignment a owl:Class ;
+    rdfs:label "角色承担"@zh ;
+    rdfs:comment "人员在组织、Mission 或 Decision 范围内，于明确有效期承担的角色关系。"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:DecisionStatus a owl:Class ;
+    rdfs:label "Decision 状态"@zh ;
+    rdfs:subClassOf tkos:LifecycleStatus ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:oneOf ( tkos:DecisionCandidate tkos:DecisionPendingConfirmation tkos:DecisionEffective tkos:DecisionUnderReview tkos:DecisionSuperseded tkos:DecisionExpired ) ] .
+
+tkos:Evidence a owl:Class ;
+    rdfs:label "证据"@zh ;
+    rdfs:subClassOf tkos:ContextAsset .
+
+tkos:MissionOutcome a owl:Class ;
+    rdfs:label "任务目标"@zh ;
+    rdfs:subClassOf tkos:Outcome .
+
+tkos:Outcome a owl:Class ;
+    rdfs:label "结果目标"@zh ;
+    rdfs:comment "一个周期结束时需要发生的可验证状态变化。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:allValuesFrom tkos:OutcomeStatus ;
+            owl:onProperty tkos:hasStatus ],
+        tkos:BusinessEntity .
+
+tkos:OutcomeStatus a owl:Class ;
+    rdfs:label "Outcome 状态"@zh ;
+    rdfs:subClassOf tkos:LifecycleStatus ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:oneOf ( tkos:OutcomeDefined tkos:OutcomeRunning tkos:OutcomeUnderAcceptance tkos:OutcomeAchieved tkos:OutcomeAdjusted tkos:OutcomeClosed ) ] .
+
+tkos:ReviewConclusion a owl:Class ;
+    rdfs:label "复盘结论"@zh ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:oneOf ( tkos:Continue tkos:Adjust tkos:Pause tkos:Close tkos:Escalate ) ] .
+
+tkos:MissionStatus a owl:Class ;
+    rdfs:label "Mission 状态"@zh ;
+    rdfs:subClassOf tkos:LifecycleStatus ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:oneOf ( tkos:MissionEstablished tkos:MissionCommitted tkos:MissionRunning tkos:MissionUnderReview tkos:MissionAdjusted tkos:MissionPaused tkos:MissionClosed ) ] .
+
+tkos:RuleCondition a owl:Class ;
+    rdfs:label "规则条件"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:varCondition a swrl:Variable .
+
+tkos:DomainOutcome a owl:Class ;
+    rdfs:label "业务域目标"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty tkos:supports ;
+            owl:someValuesFrom tkos:CompanyOutcome ],
+        [ a owl:Restriction ;
+            owl:onProperty tkos:isDeliveredBy ;
+            owl:someValuesFrom tkos:MissionOutcome ],
+        tkos:Outcome ;
+    owl:disjointWith tkos:MissionOutcome .
+
+tkos:varMission a swrl:Variable .
+
+tkos:ContextAsset a owl:Class ;
+    rdfs:label "上下文资产"@zh ;
+    rdfs:comment "可被引用、验证、复用与治理的经营信息资产。"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
+tkos:Mission a owl:Class ;
+    rdfs:label "Mission"@en,
+        "经营任务"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass tkos:DomainOutcome ;
+            owl:onProperty tkos:contributesTo ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom tkos:MissionStatus ;
+            owl:onProperty tkos:hasStatus ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:RoleAssignment ;
+            owl:onProperty tkos:hasResponsibleAssignment ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:Domain ;
+            owl:onProperty tkos:belongsTo ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:MissionOutcome ;
+            owl:onProperty tkos:expects ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        tkos:BusinessEntity .
+
+tkos:BusinessEntity a owl:Class ;
+    rdfs:label "经营对象"@zh ;
+    rdfs:comment "可被识别、描述、关联和治理的 TKOS 经营对象。"@zh .
+

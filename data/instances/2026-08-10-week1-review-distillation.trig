@@ -1,0 +1,99 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Distillation of the 2026-08-10 Week 1 Domain DRI review.
+# Meeting statements are attributed assertions. Progress, risk and gaps remain
+# candidate facts until their respective DRI / fact confirmer records confirmation.
+
+tkos:graph-candidate-and-dispute {
+  tkos:source-week1-domain-dri-review-2026-08-10 a tkos:SourceRecord ;
+    tkos:objectId "source-week1-domain-dri-review-2026-08-10" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:0810-week1-review" ;
+    tkos:displayName "0810 TKOS Domain DRI 复盘会议 Week 1 纪要" ;
+    tkos:recordedAt "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:person-liuminghua a tkos:Person ;
+    tkos:objectId "person-liuminghua" ; tkos:displayName "刘明华" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+  tkos:person-baitiantian a tkos:Person ;
+    tkos:objectId "person-baitiantian" ; tkos:displayName "白田田" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+  tkos:person-sunmingze a tkos:Person ;
+    tkos:objectId "person-sunmingze" ; tkos:displayName "孙铭泽" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:progress-fe-week1-2026-08-10 a tkos:DomainProgressSnapshot ;
+    tkos:objectId "progress-fe-week1-2026-08-10" ;
+    tkos:displayName "FE Week 1 本体与验证准备进展" ;
+    tkos:scopeDescription "刘人豪报告：本体设计初步 Demo 已搭建并完成验证，当日计划推动一版供团队直接使用；本周需与 Method、Product 共同评审本体正式设计方案、评测方案与 Demo，并确定公司内部和灯塔项目的具体验证场景。" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:research-product1-lighthouse-validation-options-week1 a tkos:StrategicResearch ;
+    tkos:objectId "research-product1-lighthouse-validation-options-week1" ;
+    tkos:displayName "产品 1.0 与灯塔真实使用的验证方案研究" ;
+    tkos:scopeDescription "会议识别两种候选验证方式：其一，灰度提供产品并收集自然使用反馈；其二，选定明确的真实经营场景，将产品嵌入任务执行过程，获取定向反馈并优化主链。讨论进一步提出内部与王总侧可采取两条验证线，以及王总侧以一至两个真实事件切入、陪跑引入新工作方法。会议未确定最终方案。" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:risk-product1-lighthouse-three-week-window a tkos:HighRisk ;
+    tkos:objectId "risk-product1-lighthouse-three-week-window" ;
+    tkos:displayName "三周窗口内缺少外部场景与验证计划" ;
+    tkos:scopeDescription "刘人豪指出：距月底约三周，场景确定后产品链路仍长；公司内部场景较易获取，王总侧需要数据蒸馏、场景验证和时间协调，三方尚未拉通计划，难以获得足量有效反馈。刘明华将其认定为 Method、Product、FE 的共同风险，要求三方反推时间线并主动提出需约的时间与输入。" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-product1-lighthouse-validation-plan a tkos:ContextGap ;
+    tkos:objectId "gap-product1-lighthouse-validation-plan" ;
+    tkos:displayName "产品 1.0 与灯塔验证方案和时间线尚未确定" ;
+    tkos:scopeDescription "需要确定灰度反馈、单议题端到端追踪、双线验证或其组合；明确内部与王总侧的真实议题、材料、数据蒸馏、会前会中会后链路、反馈频率、体验与质量评价方式，以及三方的时间安排。" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-product1-lighthouse-actual-progress a tkos:ContextGap ;
+    tkos:objectId "gap-product1-lighthouse-actual-progress" ;
+    tkos:displayName "产品上线与灯塔使用的实际完成度缺失" ;
+    tkos:scopeDescription "会议给出目标、风险与计划，未提供产品 1.0 网页版本各组件的已上线状态、可访问地址、调用日志、王总与关键角色的实际使用记录、客户反馈、体验评分、质量评分或 ACT 改善数据。" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:domain-fe-2026-08 tkos:hasDomainProgressSnapshot tkos:progress-fe-week1-2026-08-10 ;
+    tkos:hasContextGap tkos:gap-product1-lighthouse-validation-plan .
+  tkos:issue-product1-lighthouse-synchronous-delivery tkos:researchedBy tkos:research-product1-lighthouse-validation-options-week1 .
+  tkos:mission-fe-m2-lighthouse-context-loop tkos:hasRisk tkos:risk-product1-lighthouse-three-week-window ;
+    tkos:hasContextGap tkos:gap-product1-lighthouse-validation-plan, tkos:gap-product1-lighthouse-actual-progress .
+  tkos:mission-fe-m3-reusable-capability tkos:hasRisk tkos:risk-product1-lighthouse-three-week-window ;
+    tkos:hasContextGap tkos:gap-product1-lighthouse-validation-plan, tkos:gap-product1-lighthouse-actual-progress .
+}
+
+tkos:graph-decision-provenance {
+  tkos:assertion-week1-company-lighthouse-objective a tkos:AttributedAssertion ;
+    tkos:objectId "assertion-week1-company-lighthouse-objective" ;
+    tkos:displayName "月底前灯塔项目需要进入常态化运行" ;
+    tkos:scopeDescription "刘明华在 Week 1 复盘中提出：月底前需让 Method、Agents 与 Engine & Ontology 在灯塔项目中有效使用并进入持续运行；一号位能力也要在公司内部与王总侧高质量使用。" ;
+    tkos:assertedBy tkos:person-liuminghua ; tkos:assertionMode "meeting_statement" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:recordedAt "2026-08-10T09:25:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:assertion-week1-product-method-carrier a tkos:AttributedAssertion ;
+    tkos:objectId "assertion-week1-product-method-carrier" ;
+    tkos:displayName "产品承载 AI-native 战略决策闭环方法" ;
+    tkos:scopeDescription "刘明华提出：产品需要支持 M1-A 0.1 的协作过程，嵌入管理方法和既有工作方式；目标是物化高效战略决策闭环，而非单纯促成工具的自由使用。" ;
+    tkos:assertedBy tkos:person-liuminghua ; tkos:assertionMode "meeting_statement" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:recordedAt "2026-08-10T09:25:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+
+  tkos:assertion-week1-validation-options-unresolved a tkos:AttributedAssertion ;
+    tkos:objectId "assertion-week1-validation-options-unresolved" ;
+    tkos:displayName "验证路径尚待三方确定" ;
+    tkos:scopeDescription "刘人豪报告：验证方案与执行计划尚未确定；需要在面向真实经营议题的端到端追踪和更开放的常态使用之间形成方案，并解决短周期下有效反馈不足的问题。" ;
+    tkos:assertedBy tkos:person-liurenhao ; tkos:assertionMode "meeting_statement" ;
+    tkos:sourcedFrom tkos:source-week1-domain-dri-review-2026-08-10 ;
+    tkos:recordedAt "2026-08-10T09:25:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ; tkos:validFrom "2026-08-10T09:25:00+08:00"^^xsd:dateTime .
+}

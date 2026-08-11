@@ -1,0 +1,85 @@
+{
+  "@context": {
+    "sh": "http://www.w3.org/ns/shacl#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "tkos": "https://ontology.tokenking.ai/tkos#"
+  },
+  "@graph": [
+    {"@id":"tkos:MissionShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Mission"},"sh:property":[
+      {"sh:path":{"@id":"tkos:objectId"},"sh:minCount":1,"sh:maxCount":1,"sh:datatype":{"@id":"xsd:string"}},
+      {"sh:path":{"@id":"tkos:displayName"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:string"}},
+      {"sh:path":{"@id":"tkos:belongsTo"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Domain"}},
+      {"sh:path":{"@id":"tkos:hasResponsibleAssignment"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:RoleAssignment"}},
+      {"sh:path":{"@id":"tkos:expects"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:MissionOutcome"}},
+      {"sh:path":{"@id":"tkos:hasRationale"},"sh:minCount":1}, {"sh:path":{"@id":"tkos:hasScope"},"sh:minCount":1},
+      {"sh:path":{"@id":"tkos:hasCriterion"},"sh:minCount":1}, {"sh:path":{"@id":"tkos:hasKeyPath"},"sh:minCount":1},
+      {"sh:path":{"@id":"tkos:hasStatus"},"sh:minCount":1,"sh:class":{"@id":"tkos:MissionStatus"}},
+      {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1,"sh:class":{"@id":"tkos:ConfirmationStatus"}},
+      {"sh:path":{"@id":"tkos:validFrom"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}
+    ]},
+    {"@id":"tkos:MissionReadyForAcceptanceShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:MissionReadyForAcceptance"},"sh:property":[
+      {"sh:path":{"@id":"tkos:supportedByEvidence"},"sh:minCount":1,"sh:class":{"@id":"tkos:Evidence"}},
+      {"sh:path":{"@id":"tkos:isReviewedBy"},"sh:minCount":1,"sh:class":{"@id":"tkos:MissionReview"}},
+      {"sh:path":{"@id":"tkos:confirmedBy"},"sh:minCount":1,"sh:class":{"@id":"tkos:Confirmation"}}
+    ]},
+    {"@id":"tkos:OutcomeShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Outcome"},"sh:property":[
+      {"sh:path":{"@id":"tkos:objectId"},"sh:minCount":1,"sh:maxCount":1}, {"sh:path":{"@id":"tkos:displayName"},"sh:minCount":1},
+      {"sh:path":{"@id":"tkos:hasSuccessCriterion"},"sh:minCount":1}, {"sh:path":{"@id":"tkos:hasStatus"},"sh:minCount":1,"sh:class":{"@id":"tkos:OutcomeStatus"}},
+      {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1,"sh:class":{"@id":"tkos:ConfirmationStatus"}}, {"sh:path":{"@id":"tkos:validFrom"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}
+    ]},
+    {"@id":"tkos:ContextAssetShape","@type":"sh:NodeShape","sh:target":[{"@type":"sh:SPARQLTarget","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT ?this WHERE { ?this a tkos:ContextAsset . FILTER NOT EXISTS { ?this a tkos:SourceRecord } }"}],"sh:property":[
+      {"sh:path":{"@id":"tkos:objectId"},"sh:minCount":1,"sh:maxCount":1}, {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1},
+      {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1,"sh:class":{"@id":"tkos:ConfirmationStatus"}}, {"sh:path":{"@id":"tkos:validFrom"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:SourceRecordShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:SourceRecord"},"sh:property":[
+      {"sh:path":{"@id":"tkos:objectId"},"sh:minCount":1,"sh:maxCount":1,"sh:datatype":{"@id":"xsd:string"}}, {"sh:path":{"@id":"tkos:externalSourceIdentifier"},"sh:minCount":1,"sh:maxCount":1,"sh:datatype":{"@id":"xsd:string"}},
+      {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}
+    ]},
+    {"@id":"tkos:ConfirmedAssetShape","@type":"sh:NodeShape","sh:target":[{"@type":"sh:SPARQLTarget","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT ?this WHERE { ?this tkos:hasConfirmationStatus tkos:Confirmed . }"}],"sh:property":[{"sh:path":{"@id":"tkos:confirmedBy"},"sh:minCount":1}]},
+    {"@id":"tkos:MissionPortfolioConsistencyShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Mission"},"sh:sparql":[{"sh:message":"Mission 归属的 Domain 必须与其所在 MissionPortfolio 所属 Domain 一致。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { $this tkos:inPortfolio ?portfolio ; tkos:belongsTo ?missionDomain . ?portfolio ^tkos:hasPortfolio ?portfolioDomain . FILTER(?missionDomain != ?portfolioDomain) }"}]},
+    {"@id":"tkos:MissionResponsibleAssignmentConsistencyShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Mission"},"sh:sparql":[{"sh:message":"Mission 的唯一责任承担必须以 DirectlyResponsibleRole 作用于当前 Mission，且承担期覆盖 Mission 起始时间。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> SELECT $this WHERE { $this tkos:hasResponsibleAssignment ?a ; tkos:validFrom ?missionStart . FILTER NOT EXISTS { ?a tkos:assignmentScope $this ; tkos:assignmentRole ?role ; tkos:validFrom ?assignmentStart . ?role rdf:type/rdfs:subClassOf* tkos:DirectlyResponsibleRole . FILTER(?assignmentStart <= ?missionStart) } }"}]},
+    {"@id":"tkos:RoleAssignmentShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:RoleAssignment"},"sh:property":[
+      {"sh:path":{"@id":"tkos:assignmentHolder"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Person"}},
+      {"sh:path":{"@id":"tkos:assignmentRole"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Role"}},
+      {"sh:path":{"@id":"tkos:assignmentScope"},"sh:minCount":1,"sh:maxCount":1},
+      {"sh:path":{"@id":"tkos:hasValidityInterval"},"sh:minCount":1,"sh:maxCount":1}, {"sh:path":{"@id":"tkos:validFrom"},"sh:minCount":1,"sh:maxCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}
+    ],"sh:sparql":[
+      {"sh:message":"RoleAssignment 的有效区间起点必须等于 validFrom。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> PREFIX time: <http://www.w3.org/2006/time#> SELECT $this WHERE { $this tkos:hasValidityInterval ?interval ; tkos:validFrom ?from . FILTER NOT EXISTS { ?interval time:hasBeginning/time:inXSDDateTime ?from } }"},
+      {"sh:message":"有限 RoleAssignment 的有效区间终点必须等于 validUntil。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> PREFIX time: <http://www.w3.org/2006/time#> SELECT $this WHERE { $this tkos:hasValidityInterval ?interval ; tkos:validUntil ?until . FILTER NOT EXISTS { ?interval time:hasEnd/time:inXSDDateTime ?until } }"}
+    ]},
+    {"@id":"tkos:AttributedAssertionShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:AttributedAssertion"},"sh:property":[
+      {"sh:path":{"@id":"tkos:assertedBy"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Actor"}},
+      {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1},
+      {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}},
+      {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:DecisionRecordShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:DecisionRecord"},"sh:property":[
+      {"sh:path":{"@id":"tkos:recordsDecision"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Decision"}},
+      {"sh:path":{"@id":"tkos:decisionMadeBy"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Person"}},
+      {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}
+    ]},
+    {"@id":"tkos:EvidenceSupportShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:EvidenceSupport"},"sh:property":[
+      {"sh:path":{"@id":"tkos:supportingEvidence"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Evidence"}}, {"sh:path":{"@id":"tkos:supportedClaim"},"sh:minCount":1,"sh:maxCount":1},
+      {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1}, {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}, {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:EvidenceChallengeShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:EvidenceChallenge"},"sh:property":[
+      {"sh:path":{"@id":"tkos:challengingEvidence"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Evidence"}}, {"sh:path":{"@id":"tkos:challengesClaim"},"sh:minCount":1,"sh:maxCount":1},
+      {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1}, {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}, {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:OutcomeContributionShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:OutcomeContribution"},"sh:property":[
+      {"sh:path":{"@id":"tkos:contributionSource"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Outcome"}}, {"sh:path":{"@id":"tkos:contributionTarget"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Outcome"}},
+      {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1}, {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}, {"sh:path":{"@id":"tkos:hasConfirmationStatus"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:ConfirmationEventShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:ConfirmationEvent"},"sh:property":[
+      {"sh:path":{"@id":"tkos:confirmsEntity"},"sh:minCount":1,"sh:maxCount":1}, {"sh:path":{"@id":"tkos:confirmedByActor"},"sh:minCount":1,"sh:maxCount":1,"sh:class":{"@id":"tkos:Actor"}},
+      {"sh:path":{"@id":"tkos:confirmedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}, {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:RevisionEventShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:RevisionEvent"},"sh:property":[
+      {"sh:path":{"@id":"tkos:revisionOf"},"sh:minCount":1,"sh:maxCount":1}, {"sh:path":{"@id":"tkos:revisedTo"},"sh:minCount":1,"sh:maxCount":1},
+      {"sh:path":{"@id":"tkos:revisionKind"},"sh:minCount":1,"sh:maxCount":1,"sh:datatype":{"@id":"xsd:string"}}, {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}, {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1}
+    ]},
+    {"@id":"tkos:DecisionProfileViewShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:DecisionProfileView"},"sh:property":[{"sh:path":{"@id":"tkos:viewGeneratedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}},{"sh:path":{"@id":"tkos:viewAsOf"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}],"sh:sparql":[{"sh:message":"决策画像视图至少应可追溯到一项归属断言、决策学习或决策记录。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { FILTER NOT EXISTS { { $this tkos:derivedFromAssertion ?x } UNION { $this tkos:derivedFromLearning ?x } UNION { $this tkos:derivedFromDecisionRecord ?x } } }"}]},
+    {"@id":"tkos:MissionResponsibleAssignmentTemporalCoverageShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Mission"},"sh:sparql":[{"sh:message":"责任承担必须覆盖 Mission 全周期。Mission 有结束时间时，承担结束时间不得早于该时间；Mission 为开放周期时，责任承担也须为开放周期。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { $this tkos:hasResponsibleAssignment ?a . { $this tkos:validUntil ?missionEnd . FILTER NOT EXISTS { ?a tkos:validUntil ?assignmentEnd . FILTER(?assignmentEnd >= ?missionEnd) } } UNION { FILTER NOT EXISTS { $this tkos:validUntil ?missionEnd } . ?a tkos:validUntil ?assignmentEnd } }"}]}
+  ]
+}

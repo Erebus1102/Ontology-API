@@ -1,0 +1,81 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# 每个测试均由 test-baseline 与一个 test-* 图合并后运行。
+# 基线承载完整、已确认的共同业务对象；每个 case 只引入一个预期失败点。
+
+tkos:test-baseline {
+  tkos:person-alice a tkos:Person .
+  tkos:role-dri a tkos:DirectlyResponsibleRole .
+  tkos:role-decision-maker a tkos:DecisionMakerRole .
+  tkos:domain-a a tkos:Domain .
+  tkos:criterion-a a tkos:SuccessCriterion ; tkos:criterionStatement "验收证据齐全" .
+  tkos:source-a a tkos:SourceRecord ; tkos:objectId "source-a" ; tkos:externalSourceIdentifier "feishu://test/source-a" ; tkos:recordedAt "2026-08-01T00:00:00Z"^^xsd:dateTime .
+
+  tkos:mission-outcome-a a tkos:MissionOutcome ; tkos:objectId "mission-outcome-a" ; tkos:displayName "共享任务结果" ; tkos:hasSuccessCriterion tkos:criterion-a ; tkos:hasStatus tkos:OutcomeRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-outcome-a .
+  tkos:evidence-a a tkos:Evidence ; tkos:objectId "evidence-a" ; tkos:sourcedFrom tkos:source-a ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-evidence-a .
+  tkos:review-a a tkos:MissionReview ; tkos:objectId "review-a" ; tkos:sourcedFrom tkos:source-a ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:hasReviewConclusion tkos:Continue ; tkos:confirmedBy tkos:confirmation-review-a .
+  tkos:rationale-a a tkos:MissionRationale ; tkos:objectId "rationale-a" ; tkos:sourcedFrom tkos:source-a ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-rationale-a .
+
+  tkos:confirmation-outcome-a a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-outcome-a ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:confirmation-evidence-a a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:evidence-a ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:confirmation-review-a a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:review-a ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:confirmation-rationale-a a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:rationale-a ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+}
+
+tkos:test-positive {
+  tkos:instant-positive a time:Instant ; time:inXSDDateTime "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-positive a time:ProperInterval ; time:hasBeginning tkos:instant-positive .
+  tkos:assignment-positive a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-dri ; tkos:assignmentScope tkos:mission-positive ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-positive .
+  tkos:confirmation-mission-positive a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-positive ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-positive a tkos:Mission ; tkos:objectId "mission-positive" ; tkos:displayName "开放周期正向样例" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-positive ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:supportedByEvidence tkos:evidence-a ; tkos:isReviewedBy tkos:review-a ; tkos:confirmedBy tkos:confirmation-mission-positive .
+}
+
+# 控制组：角色、范围与承担起点均错误，只应触发 DRI 一致性违规。
+tkos:test-negative-role {
+  tkos:instant-negative-role a time:Instant ; time:inXSDDateTime "2026-09-01T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-negative-role a time:ProperInterval ; time:hasBeginning tkos:instant-negative-role .
+  tkos:assignment-negative-role a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-decision-maker ; tkos:assignmentScope tkos:domain-a ; tkos:validFrom "2026-09-01T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-negative-role .
+  tkos:confirmation-negative-role a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-negative-role ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-negative-role a tkos:Mission ; tkos:objectId "mission-negative-role" ; tkos:displayName "错误责任样例" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-negative-role ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-negative-role .
+}
+
+# 有限 Mission 的承担在 Mission 结束前失效。
+tkos:test-negative-early-end {
+  tkos:instant-early-start a time:Instant ; time:inXSDDateTime "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:instant-early-end a time:Instant ; time:inXSDDateTime "2026-08-15T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-early-end a time:ProperInterval ; time:hasBeginning tkos:instant-early-start ; time:hasEnd tkos:instant-early-end .
+  tkos:assignment-early-end a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-dri ; tkos:assignmentScope tkos:mission-early-end ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:validUntil "2026-08-15T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-early-end .
+  tkos:confirmation-mission-early-end a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-early-end ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-early-end a tkos:Mission ; tkos:objectId "mission-early-end" ; tkos:displayName "提前结束承担" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-early-end ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:validUntil "2026-08-31T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-mission-early-end .
+}
+
+# 开放 Mission 不能绑定有限的责任承担。
+tkos:test-negative-open-mission-finite-assignment {
+  tkos:instant-open-start a time:Instant ; time:inXSDDateTime "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:instant-open-end a time:Instant ; time:inXSDDateTime "2026-08-31T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-open-finite a time:ProperInterval ; time:hasBeginning tkos:instant-open-start ; time:hasEnd tkos:instant-open-end .
+  tkos:assignment-open-finite a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-dri ; tkos:assignmentScope tkos:mission-open-finite ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:validUntil "2026-08-31T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-open-finite .
+  tkos:confirmation-mission-open-finite a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-open-finite ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-open-finite a tkos:Mission ; tkos:objectId "mission-open-finite" ; tkos:displayName "开放 Mission 有限承担" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-open-finite ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-mission-open-finite .
+}
+
+# 责任承担声明的起点与区间起点不一致。
+tkos:test-negative-interval-start {
+  tkos:instant-start-mismatch a time:Instant ; time:inXSDDateTime "2026-08-02T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-start-mismatch a time:ProperInterval ; time:hasBeginning tkos:instant-start-mismatch .
+  tkos:assignment-start-mismatch a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-dri ; tkos:assignmentScope tkos:mission-start-mismatch ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-start-mismatch .
+  tkos:confirmation-mission-start-mismatch a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-start-mismatch ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-start-mismatch a tkos:Mission ; tkos:objectId "mission-start-mismatch" ; tkos:displayName "区间起点不一致" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-start-mismatch ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-mission-start-mismatch .
+}
+
+# 责任承担声明的终点与区间终点不一致。
+tkos:test-negative-interval-end {
+  tkos:instant-end-start a time:Instant ; time:inXSDDateTime "2026-08-01T00:00:00Z"^^xsd:dateTime .
+  tkos:instant-end-mismatch a time:Instant ; time:inXSDDateTime "2026-08-21T00:00:00Z"^^xsd:dateTime .
+  tkos:interval-end-mismatch a time:ProperInterval ; time:hasBeginning tkos:instant-end-start ; time:hasEnd tkos:instant-end-mismatch .
+  tkos:assignment-end-mismatch a tkos:RoleAssignment ; tkos:assignmentHolder tkos:person-alice ; tkos:assignmentRole tkos:role-dri ; tkos:assignmentScope tkos:mission-end-mismatch ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:validUntil "2026-08-20T00:00:00Z"^^xsd:dateTime ; tkos:hasValidityInterval tkos:interval-end-mismatch .
+  tkos:confirmation-mission-end-mismatch a tkos:ConfirmationEvent ; tkos:confirmsEntity tkos:mission-end-mismatch ; tkos:confirmedByActor tkos:person-alice ; tkos:confirmedAt "2026-08-10T00:00:00Z"^^xsd:dateTime ; tkos:sourcedFrom tkos:source-a .
+  tkos:mission-end-mismatch a tkos:Mission ; tkos:objectId "mission-end-mismatch" ; tkos:displayName "区间终点不一致" ; tkos:belongsTo tkos:domain-a ; tkos:hasResponsibleAssignment tkos:assignment-end-mismatch ; tkos:expects tkos:mission-outcome-a ; tkos:hasRationale tkos:rationale-a ; tkos:hasScope tkos:scope-a ; tkos:hasCriterion tkos:criterion-a ; tkos:hasKeyPath tkos:keypath-a ; tkos:hasStatus tkos:MissionRunning ; tkos:hasConfirmationStatus tkos:Confirmed ; tkos:validFrom "2026-08-01T00:00:00Z"^^xsd:dateTime ; tkos:validUntil "2026-08-20T00:00:00Z"^^xsd:dateTime ; tkos:confirmedBy tkos:confirmation-mission-end-mismatch .
+}

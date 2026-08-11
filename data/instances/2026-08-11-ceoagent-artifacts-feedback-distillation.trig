@@ -1,0 +1,95 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# This graph records candidate facts distilled from the CEO Agent output and
+# feedback folder.  Source materials describe plans, strategy narratives and
+# a feedback statement; none alone establishes completed product capability or
+# a confirmed operating decision.
+
+tkos:graph-candidate-and-dispute {
+  tkos:source-ceoagent-feedback-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-ceoagent-feedback-2026-08-11" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:ceo-agent-artifacts:feedback" ;
+    tkos:displayName "CEO Agent 会前会后产物反馈" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-fangdongdong-reasoning-agent-plan-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-fangdongdong-reasoning-agent-plan-2026-08-11" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:ceo-agent-artifacts:fangdongdong-reasoning-agent-plan" ;
+    tkos:displayName "房懂懂推理 Agent 执行计划" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-fangdongdong-capital-market-report-2026-08-11 a tkos:SourceRecord ;
+    tkos:objectId "source-fangdongdong-capital-market-report-2026-08-11" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:ceo-agent-artifacts:fangdongdong-capital-market-report" ;
+    tkos:displayName "房懂懂重塑传统房产销售行业资本市场报告" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:evidence-ceoagent-feedback-quality-gap-2026-08-11 a tkos:Evidence ;
+    tkos:objectId "evidence-ceoagent-feedback-quality-gap-2026-08-11" ;
+    tkos:displayName "CEO Agent 产物与公司现实结合不足的反馈" ;
+    tkos:scopeDescription "反馈称，会前和会后产物在结构与思路上基本达到及格水准；但与公司已有内容结合不够紧密，对公司当前现状理解不够深入，本体建设不够完善，思考深度不足。反馈文件未标明反馈主体、样本量、评分标准或具体案例。" ;
+    tkos:sourcedFrom tkos:source-ceoagent-feedback-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:challenge-ceoagent-high-quality-routine-use-2026-08-11 a tkos:EvidenceChallenge ;
+    tkos:objectId "challenge-ceoagent-high-quality-routine-use-2026-08-11" ;
+    tkos:displayName "当前 CEO Agent 产物质量挑战" ;
+    tkos:challengingEvidence tkos:evidence-ceoagent-feedback-quality-gap-2026-08-11 ;
+    tkos:challengesClaim tkos:outcome-lighthouse-ceo-agent-routine-use-2026-08 ;
+    tkos:sourcedFrom tkos:source-ceoagent-feedback-2026-08-11 ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:gap-ceoagent-company-context-and-reasoning-depth a tkos:ContextGap ;
+    tkos:objectId "gap-ceoagent-company-context-and-reasoning-depth" ;
+    tkos:displayName "CEO Agent 的公司上下文、现实理解与推理深度待补齐" ;
+    tkos:scopeDescription "需要把公司现状、已确认经营对象和关系、事项材料、历史判断与证据边界编译进场景 Context Pack，并以具体议题的来源覆盖度、关键事实准确性、推理可追溯性和人类反馈验证改进。" ;
+    tkos:sourcedFrom tkos:source-ceoagent-feedback-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:research-fangdongdong-reasoning-agent-execution-plan a tkos:StrategicResearch ;
+    tkos:objectId "research-fangdongdong-reasoning-agent-execution-plan" ;
+    tkos:displayName "房懂懂推理 Agent 的业务本体与架构验证计划" ;
+    tkos:scopeDescription "执行计划将房产决策支持 Agent 的数据采集清洗、估值模型、业务本体与规则设计、好时机 Agent 迭代列为并行工作；以真实房产决策任务组织多种架构赛马，并从业务效果、任务能力、工程能力、多 Agent 能力、安全与治理五个维度统一评测。计划文本提出 90 天 Alpha、120 天 Beta、180 天上线的阶段设想，尚未构成已完成进度。" ;
+    tkos:sourcedFrom tkos:source-fangdongdong-reasoning-agent-plan-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:research-fangdongdong-decision-system-value-model a tkos:StrategicResearch ;
+    tkos:objectId "research-fangdongdong-decision-system-value-model" ;
+    tkos:displayName "房懂懂决策系统与业务本体价值模型" ;
+    tkos:scopeDescription "报告将房懂懂的业务主张描述为围绕用户买卖与置换问题的 AI 决策支持系统：由系统形成可解释、可审计、可迭代的决策报告和行动指令，线下团队承接执行；核心资产包括决策模型、房产本体知识图谱与用户决策行为数据闭环。该内容是战略叙事与设计依据，未提供真实运营效果的验证证据。" ;
+    tkos:sourcedFrom tkos:source-fangdongdong-capital-market-report-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:risk-fangdongdong-agent-architecture-unverified a tkos:HighRisk ;
+    tkos:objectId "risk-fangdongdong-agent-architecture-unverified" ;
+    tkos:displayName "房懂懂 Agent 架构尚未通过真实决策任务验证" ;
+    tkos:scopeDescription "执行计划将架构选型列为后续多 Agent 接入、工具调用与记忆管理上限及成本的关键风险，并要求以同一真实房产决策任务进行赛马。当前材料提供的是计划和评测口径，未提供各架构的实际对照结果或最终选择。" ;
+    tkos:sourcedFrom tkos:source-fangdongdong-reasoning-agent-plan-2026-08-11 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-tokenking-work-method-construction
+    tkos:hasContextGap tkos:gap-ceoagent-company-context-and-reasoning-depth ;
+    tkos:informedBy tkos:evidence-ceoagent-feedback-quality-gap-2026-08-11 .
+
+  tkos:issue-fangdongdong-business-ontology-design-choice
+    tkos:researchedBy tkos:research-fangdongdong-reasoning-agent-execution-plan,
+                      tkos:research-fangdongdong-decision-system-value-model .
+
+  tkos:mission-fe-m1-internal-context-loop
+    tkos:hasContextGap tkos:gap-ceoagent-company-context-and-reasoning-depth .
+
+  tkos:mission-fe-m2-lighthouse-context-loop
+    tkos:hasRisk tkos:risk-fangdongdong-agent-architecture-unverified .
+
+  tkos:decision-ceo-agent-priority-dual-scenario-validation
+    tkos:informedBy tkos:evidence-ceoagent-feedback-quality-gap-2026-08-11,
+                    tkos:research-fangdongdong-reasoning-agent-execution-plan,
+                    tkos:research-fangdongdong-decision-system-value-model .
+}

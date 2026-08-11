@@ -1,4 +1,30 @@
+# macOS and editor state
 .DS_Store
+*.swp
+*.swo
+
+# Python build and test state
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Local distillation scratch files
+.tmp-*.xml
+
+# External tool checkout and local business-source material
+/openllet/
+/业务文档/
+/enterprise-ontology-demo.md
+
+# Local logs and environment files
+*.log
+.env
+.env.*
+!.env.example
