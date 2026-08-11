@@ -98,6 +98,18 @@ ContextPackMember {                                               # ContextCompi
   sources,
   admission: AdmissionDecision
 }
+
+ContextPack {
+  pack_id, schema_version, as_of, query, purpose,
+  matched_root, alternative_matches,
+  scope_resolution,                  # enforcement=not_enforced
+  current_facts, candidate_context,
+  provenance_context, proof,         # 决策溯源图成员 / 确认·支持·挑战·supersedes 边
+  derived_claims, reasoning_status,  # 当前 derived_claims=[] / reasoning_status=not_available
+  context_gaps, conflicts, omissions,
+  contributing_graphs, admission_policy,
+  ontology_release_id, dataset_revision, policy_version, query_plan_version
+}
 ```
 
 **同一对象可出现在多个分区视图中**：例如 `mission-growth` 的主体在 `confirmed_enterprise`、其 `supportedByEvidence evidence-candidate` 关系在 `candidate_and_dispute`——两者生成**两个独立的分区视图**，各只携带该分区允许的语句。这是防止"成员整体落入某分区时夹带跨图关系"的关键。
@@ -109,9 +121,11 @@ ContextPackMember {                                               # ContextCompi
 | 分区切片 | 准入规则（纯函数，从切片语句读状态/时间） | 接受 → 进入 | 拒绝 → |
 |---|---|---|---|
 | `confirmed_enterprise` | 要求 `hasConfirmationStatus=Confirmed` 且在有效期 | `current_facts` | `omissions` |
-| `candidate_and_dispute` | 允许 `Candidate`/`PreliminarilyConfirmed`；`Archived` 拒绝 | `candidate_context` | `omissions` |
+| `candidate_and_dispute` | 显式 `Archived`→拒绝；显式 `Candidate`/`PreliminarilyConfirmed`→接受；**无显式状态的关系型切片**按 `effective_status=CandidateByPartition`（分区归属）接受 | `candidate_context` | `omissions`（`Archived`） |
 | `decision_provenance` | **不强制** `hasConfirmationStatus`（`ConfirmationEvent` 本身可能无此字段） | `provenance_context`（确认/支持/挑战/supersedes 边汇入 `proof`） | `omissions` |
 | `derived_context` | 读取已有派生内容（当前为空） | `derived_claims` | `omissions` |
+
+- **`effective_status=CandidateByPartition` 的作用**：Candidate 分区中"只有关系、主体无显式 `hasConfirmationStatus`"的切片（如 `mission-growth supportedByEvidence evidence-candidate`——`Candidate` 状态在 `evidence-candidate` 上，不在 `mission-growth` 上）按**分区归属**视为候选，进入 `candidate_context`，**绝不进入 `current_facts`**。这避免 Policy 因缺状态而误拒，与端到端测试 #3 一致。
 
 - **AGENTS.md 定序**：身份与用途 → 组织作用域 → 图策略 → 有效时间 → 确认状态。图策略与敏感隔离在端口执行；时间/确认状态在切片准入执行。相关性排序与 Token 预算不在本轮（P1）。
 - **组织作用域（显式降级）**：P0 不做基于调用方身份的访问控制。`organization_scope` 仅用于请求回显与后续兼容。Context Pack 返回：
