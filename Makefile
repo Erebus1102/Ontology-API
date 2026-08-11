@@ -11,10 +11,15 @@
 
 PYTHON ?= python3
 
-.PHONY: install test test-fast test-shacl test-context test-conformance test-swrl
+.PHONY: install generate test test-fast test-shacl test-context test-conformance test-isomorphism test-swrl
 
 install:
 	$(PYTHON) -m pip install -e '.[dev]'
+
+# Regenerate derived ontology artifacts from the JSON-LD source.
+generate:
+	$(PYTHON) scripts/export_schema_ttl.py
+	$(PYTHON) scripts/export_protege_view.py
 
 test-shacl:
 	$(PYTHON) tests/run_v2_3_shacl.py
@@ -25,8 +30,11 @@ test-context:
 test-conformance:
 	$(PYTHON) tests/run_instance_conformance.py
 
+test-isomorphism:
+	$(PYTHON) tests/run_schema_isomorphism.py
+
 # Pure-Python gate for the fast local feedback loop.
-test-fast: test-shacl test-context test-conformance
+test-fast: test-shacl test-context test-conformance test-isomorphism
 
 # Full regression gate. Adds the Openllet SWRL acceptance test, which needs Java
 # and a built Openllet CLI (openllet/openllet.sh builds it on first run via Maven).

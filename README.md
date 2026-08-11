@@ -96,12 +96,15 @@ Ontology-API/
 
 ## 规范制品
 
-- `ontology/schema/tkos-ontology.jsonld`
+- `ontology/schema/tkos-ontology.jsonld` —— 人工编辑源（紧凑 @context、多语言 label）
+- `ontology/schema/tkos-ontology.ttl` —— 推理器规范 Turtle，由 `scripts/export_schema_ttl.py` 从 JSON-LD 生成（保留 imports）
 - `ontology/shapes/tkos-validation-shapes.jsonld`
 - `ontology/datasets/tkos-runtime-dataset.trig`
-- `ontology/views/tkos-ontology-protege-view.ttl`
+- `ontology/views/tkos-ontology-protege-view.ttl` —— 去 imports 的 Protégé 浏览副本，由 `scripts/export_protege_view.py` 生成
 
 本体命名空间为 `https://ontology.tokenking.ai/tkos#`。
+
+`tests/run_schema_isomorphism.py` 守卫 JSON-LD ⇔ Turtle ⇔ Protégé 视图三者的同构（按结构匹配空白节点），编辑任一后用 `make generate` 重生成派生制品，否则同构测试会失败。
 
 当前共享核心、经营、决策溯源和治理模块主要保存在同一本体发布文件中。后续将为模块建立独立 Ontology IRI、Version IRI、imports、Shape/Profile 和兼容测试，并继续生成合并制品供 Protégé 与推理器使用。
 
@@ -147,11 +150,12 @@ Ontology-API/
 python3 -m pip install -e '.[dev]'
 ```
 
-聚合运行（推荐）。`make test-fast` 跑三个纯 Python 套件，`make test` 在此基础上追加 Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）：
+聚合运行（推荐）。`make test-fast` 跑四个纯 Python 套件，`make test` 在此基础上追加 Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）：
 
 ```bash
-make test-fast    # SHACL + Context Pack + 实例一致性
+make test-fast    # SHACL + Context Pack + 实例一致性 + 模式同构
 make test         # 上述 + Openllet SWRL 验收
+make generate     # 从 JSON-LD 重生成 Turtle 与 Protégé 视图派生制品
 ```
 
 单独运行各套件：
@@ -160,6 +164,7 @@ make test         # 上述 + Openllet SWRL 验收
 python3 tests/run_v2_3_shacl.py              # SHACL 正负向用例
 python3 tests/run_v2_3_context_pack.py       # Context Pack 读侧过滤
 python3 tests/run_instance_conformance.py    # 真实实例硬门禁 + 夹具可见性
+python3 tests/run_schema_isomorphism.py      # JSON-LD ⇔ Turtle ⇔ Protégé 视图同构守卫
 python3 tests/run_v2_3_swrl_openllet.py      # Openllet SWRL 验收推导
 ```
 

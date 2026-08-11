@@ -23,6 +23,8 @@ jobs:
         run: python tests/run_v2_3_context_pack.py
       - name: Instance conformance gate (real data + fixture visibility)
         run: python tests/run_instance_conformance.py
+      - name: Schema isomorphism guard (jsonld ⇔ ttl ⇔ protege-view)
+        run: python tests/run_schema_isomorphism.py
 
   # Informational: the SWRL acceptance test needs Java + a Maven build of the
   # vendored Openllet CLI. Kept non-blocking for now so a heavy/vendored build
