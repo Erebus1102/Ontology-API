@@ -11,8 +11,9 @@ raw triple-set equality, because SWRL bodies/heads and ``owl:oneOf`` enums are
 RDF lists whose blank nodes get fresh identifiers on each parse; only
 structure-aware comparison treats a list and its reserialization as equal.
 
-It does NOT cover ``tkos-ontology-protege.ttl`` (the hand-written, diverged
-copy); that file is tracked separately as legacy.
+The hand-written ``tkos-ontology-protege.ttl`` that had drifted to v2.3.0 was
+removed (see ADR-0002); only generated serializations now exist, so every copy
+is covered here.
 """
 from pathlib import Path
 
