@@ -147,23 +147,25 @@ Ontology-API/
 python3 -m pip install -e '.[dev]'
 ```
 
-运行 SHACL：
+聚合运行（推荐）。`make test-fast` 跑三个纯 Python 套件，`make test` 在此基础上追加 Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）：
 
 ```bash
-python3 tests/run_v2_3_shacl.py
+make test-fast    # SHACL + Context Pack + 实例一致性
+make test         # 上述 + Openllet SWRL 验收
 ```
 
-运行 Context Pack：
+单独运行各套件：
 
 ```bash
-python3 tests/run_v2_3_context_pack.py
+python3 tests/run_v2_3_shacl.py              # SHACL 正负向用例
+python3 tests/run_v2_3_context_pack.py       # Context Pack 读侧过滤
+python3 tests/run_instance_conformance.py    # 真实实例硬门禁 + 夹具可见性
+python3 tests/run_v2_3_swrl_openllet.py      # Openllet SWRL 验收推导
 ```
 
-运行 Openllet：
+`run_instance_conformance.py` 把 `data/instances/*.trig` 合并为生产式装载图并硬断言 SHACL 合规；测试夹具的违例按 `by-design / read-side / legacy` 分类输出，仅作可见性提示。
 
-```bash
-python3 tests/run_v2_3_swrl_openllet.py
-```
+GitHub Actions（`.github/workflows/ci.yml`）在推送与 PR 时自动运行纯 Python 套件（必过门禁），SWRL 套件作为信息性 job。
 
 运行真实议题查询原型：
 

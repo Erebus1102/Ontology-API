@@ -1,0 +1,53 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Required gate: the three pure-Python suites. Fast and reliable.
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Python deps
+        run: python -m pip install -e '.[dev]'
+      - name: SHACL positive/negative cases
+        run: python tests/run_v2_3_shacl.py
+      - name: Context Pack runtime filter
+        run: python tests/run_v2_3_context_pack.py
+      - name: Instance conformance gate (real data + fixture visibility)
+        run: python tests/run_instance_conformance.py
+
+  # Informational: the SWRL acceptance test needs Java + a Maven build of the
+  # vendored Openllet CLI. Kept non-blocking for now so a heavy/vendored build
+  # does not gate every change; flip continue-on-error to false once it is stable.
+  swrl-openllet:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('openllet/**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2-
+      - name: Install Python deps
+        run: python -m pip install -e '.[dev]'
+      - name: Build Openllet CLI
+        working-directory: openllet
+        run: mvn -B -q clean install -DskipTests
+      - name: SWRL acceptance via Openllet
+        run: python tests/run_v2_3_swrl_openllet.py

@@ -2,6 +2,12 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # 脱敏运行时场景；所有名称均为测试数据，不代表真实企业事项。
+#
+# 本夹具验证读侧 ContextResolver 的过滤行为（确认状态、有效时间、按用途的
+# 图白名单），不承担写门禁完整性。confirmedBy / ConfirmationEvent / RoleAssignment
+# 等写路径治理字段按需省略——它们属于 Layer 4 写门禁（见 AGENTS.md「语义职责边界」），
+# 不是本读侧夹具的关注点。故 run_instance_conformance.py 将本文件标为 read-side，
+# 不对其断言 SHACL 合规。真实候选数据的写门禁合规由该 runner 的硬门禁保证。
 
 tkos:graph-confirmed-enterprise {
   tkos:domain-growth a tkos:Domain ; tkos:objectId "domain-growth" ; tkos:displayName "增长域" .

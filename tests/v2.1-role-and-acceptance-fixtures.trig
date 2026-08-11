@@ -1,3 +1,8 @@
+# Legacy fixture from the V2.1 audit cycle. Superseded by
+# v2.3-role-assignment-cases.trig (used by run_v2_3_shacl.py) and not referenced
+# by any current runner. Retained for audit-history continuity; not maintained
+# against the current SHACL shapes, so run_instance_conformance.py classifies it
+# as legacy. Safe to delete once the V2.1 audit doc no longer needs the reference.
 @prefix tkos: <https://ontology.tokenking.ai/tkos#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
