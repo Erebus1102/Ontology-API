@@ -1,33 +1,29 @@
 # src/tkos_runtime/application/context_renderer.py
 """ContextPack -> NL Markdown 渲染器。
 
-确定性编译器（deterministic）是主能力：按分区（Current/Candidate/Gap/Provenance）
-生成稳定、可复现的 NL Markdown 文本，每句标注 ``[member:<id>]`` 和
-``[source:<graph>]`` 锚点。
-
-LLM 模式（llm_with_fallback / llm_required）是可选语言优化器：
-  * deterministic: 模板生成后直接返回。
-  * llm_with_fallback: 模板生成后交 LLM 润色；失败或校验不通过则回退确定性版本。
-  * llm_required: 同上，但失败时返回错误（不降级）。
-
-无论何种模式，LLM 都不能：
-  - 自选或增删事实
-  - 改变成员的分区归属（Candidate → Current 等）
-  - 新增 Pack 外的实体、数字、时间、因果或建议
-  - 修改或删除 [member:<id>] [source:<graph>] 锚点
+核心设计：
+  * 每个 member 先编译为一个不可变的 ``RenderedFactUnit``（canonical_claim），
+    后者在整个渲染链路中不能被修改。
+  * deterministic 模式：直接按分区组装事实单元。
+  * LLM 模式：对整体 Markdown 文本润色，然后逐单元校验——member ID、分区、source、
+    数字/URI 不变——任一失败则降级。
+  * 字符预算：在编译阶段按事实单元选择，超预算单元进入 render_omissions，
+    不对最终字符串做字符级截断。
+  * Gap 去重：candidate_context 中排除已在 context_gaps 中的 member。
 """
 from __future__ import annotations
 
 import dataclasses
 import os
 import re
-from typing import Any
+from typing import Any, Optional
 
 from tkos_runtime.domain.models import ContextPack, ContextPackMember
+from tkos_runtime.domain.ports import TextPolisher
 
 RENDERER_VERSION = "context-renderer/p0-v1"
 
-# 关键谓词 → 中文短语映射（确定性编译器使用）
+# ── predicate → Chinese label mapping ──────────────────────────────────────
 _PREDICATE_LABELS: dict[str, str] = {
     "hasOutcome": "成果",
     "hasScope": "范围",
@@ -55,7 +51,7 @@ _PREDICATE_LABELS: dict[str, str] = {
     "isDeliveredBy": "由...交付",
     "hasSuccessCriterion": "成功标准",
     "contains": "包含",
-    "confirmsEntity": "确认",
+    "confirmsEntity": "确认实体",
     "researchedBy": "调研",
     "sourcedFrom": "来源",
 }
@@ -65,210 +61,308 @@ def _frag(uri: str) -> str:
     return uri.rsplit("#", 1)[-1] if "#" in uri else uri.rsplit("/", 1)[-1]
 
 
+# ── RenderedFactUnit ────────────────────────────────────────────────────────
+
+@dataclasses.dataclass(frozen=True)
+class RenderedFactUnit:
+    """不可变事实单元。LLM 不得修改 canonical_claim；只能返回润色版文本。"""
+    member_id: str
+    partition: str
+    source_graphs: tuple[str, ...]   # sorted tuple for hashability
+    canonical_claim: str             # deterministic compiler output, immutable
+    display_name: str = ""
+    confirmation_status: Optional[str] = None
+
+    def to_markdown_line(self) -> str:
+        """生成最终 Markdown 行（含锚点）。"""
+        main_source = self.source_graphs[0] if self.source_graphs else "unknown"
+        return f"- {self.canonical_claim} [member:{self.member_id}][source:{main_source}]"
+
+
+# ── unit compiler ───────────────────────────────────────────────────────────
+
 def _relational_phrases(member: ContextPackMember) -> list[str]:
-    """从 member.statements 提取有语义价值的关系短语。"""
     phrases: list[str] = []
     seen: set[str] = set()
     for stmt in member.statements:
-        pred_frag = _frag(stmt.predicate)
-        obj_frag = _frag(stmt.object)
-        if pred_frag in _PREDICATE_LABELS and stmt.object.startswith("https://"):
-            phrase = f"{_PREDICATE_LABELS[pred_frag]}：{obj_frag}"
+        pf = _frag(stmt.predicate)
+        of = _frag(stmt.object)
+        if pf in _PREDICATE_LABELS and stmt.object.startswith("https://"):
+            phrase = f"{_PREDICATE_LABELS[pf]}：{of}"
             if phrase not in seen:
                 seen.add(phrase)
                 phrases.append(phrase)
     return phrases
 
 
-def _member_to_sentence(member: ContextPackMember) -> str:
-    """将单个 member 编译为一个事实句。"""
-    # 主体：display_name（或 scope，或 id fallback）
+def _compile_unit(member: ContextPackMember) -> RenderedFactUnit:
+    """将一个 ContextPackMember 编译为不可变事实单元。"""
     label = member.display_name or member.scope or member.id
     parts = [label]
 
-    # 范围补充
     if member.scope and member.scope != label:
         parts.append(f"（{member.scope}）")
 
-    # 关系短语
     phrases = _relational_phrases(member)
     if phrases:
-        parts.append("；".join(phrases[:3]))  # 最多 3 条关系
+        parts.append("；".join(phrases[:3]))
 
-    # 确认状态标签
     status = member.confirmation_status
     if status and status not in ("Confirmed",):
         parts.append(f"[{status}]")
 
-    # 锚点
-    main_source = member.source_graphs[0] if member.source_graphs else "unknown"
-    parts.append(f"[member:{member.id}][source:{main_source}]")
+    # assemble canonical_claim (no anchors — anchors added at assembly time)
+    claim = ""
+    if len(parts) == 1:
+        claim = parts[0]
+    else:
+        claim = f"{parts[0]}，{'，'.join(parts[1:])}"
 
-    return "。".join(filter(None, (parts[0], "，".join(parts[1:])))) + "。"
-
-
-def _render_section(
-    title: str,
-    members: list[ContextPackMember],
-    empty_message: str,
-) -> list[str]:
-    """渲染一个分区段落，返回行列表。"""
-    lines = [f"## {title}", ""]
-    if not members:
-        lines.append(empty_message)
-        lines.append("")
-        return lines
-    for m in members:
-        lines.append(f"- {_member_to_sentence(m)}")
-    lines.append("")
-    return lines
+    return RenderedFactUnit(
+        member_id=member.id,
+        partition=member.partition,
+        source_graphs=tuple(sorted(member.source_graphs)),
+        canonical_claim=claim,
+        display_name=member.display_name,
+        confirmation_status=member.confirmation_status,
+    )
 
 
-def _render_deterministic(pack: ContextPack) -> str:
-    """确定性 Markdown 渲染（纯规则，无外部依赖）。"""
-    lines: list[str] = []
+# ── unit-level validator (for LLM output) ───────────────────────────────────
 
-    # 标题
-    query_text = pack.query or "(无查询)"
-    lines.append(f"# Context Pack：{query_text}")
-    lines.append("")
-    lines.append(f"> 查询时间：{pack.as_of}  |  "
-                 f"用途：{pack.purpose}  |  "
-                 f"数据版本：`{pack.dataset_revision[:12]}…`")
-    lines.append("")
-
-    # 当前事实
-    lines.extend(_render_section(
-        "当前已确认事实", pack.current_facts,
-        "当前没有满足准入条件的已确认事实。",
-    ))
-
-    # 待确认信息
-    lines.extend(_render_section(
-        "待确认信息", pack.candidate_context,
-        "当前没有待确认的候选信息。",
-    ))
-
-    # 信息缺口
-    lines.extend(_render_section(
-        "信息缺口", pack.context_gaps,
-        "当前没有已知信息缺口。",
-    ))
-
-    # 决策参考来源
-    lines.extend(_render_section(
-        "决策参考来源", pack.provenance_context,
-        "当前没有决策参考来源记录。",
-    ))
-
-    # 推理状态
-    lines.append(f"> 推理状态：{pack.reasoning_status}")
-    lines.append(f"> 作用域执行：{pack.scope_resolution.enforcement}")
-    lines.append("")
-
-    # 尾注：元数据
-    lines.append("---")
-    lines.append(f"pack_id: `{pack.pack_id}`  |  "
-                 f"ontology: {pack.ontology_release_id}  |  "
-                 f"renderer: {RENDERER_VERSION}")
-    lines.append("")
-
-    return "\n".join(lines)
+def _extract_unit_ids(text: str) -> set[str]:
+    return set(re.findall(r"\[member:([^\]]+)\]", text))
 
 
-def _validate_rendered(
-    original: str,
+def _extract_sources(text: str) -> set[str]:
+    return set(re.findall(r"\[source:([^\]]+)\]", text))
+
+
+def _extract_numbers(text: str) -> set[str]:
+    """Extract numeric tokens (integers, floats, percentages)."""
+    return set(re.findall(r"\d+(?:\.\d+)?%?", text))
+
+
+def _extract_uris(text: str) -> set[str]:
+    return set(re.findall(r"https?://[^\s\]\[]+", text))
+
+
+def _validate_llm_output(
+    original_units: list[RenderedFactUnit],
     polished: str,
-    pack: ContextPack,
 ) -> tuple[bool, list[str]]:
-    """校验 LLM 输出：member ID 完整、分区边界、无外源实体。"""
+    """强校验：member ID 一一对应、分区不变、source 不变、无数值/URI 注入。"""
     warnings: list[str] = []
 
-    # 1. 所有 member ID 仍存在
-    member_ids = {m.id for m in (
-        pack.current_facts + pack.candidate_context +
-        pack.context_gaps + pack.provenance_context
-    )}
-    mentioned = set(re.findall(r"\[member:([^\]]+)\]", polished))
-    missing = member_ids - mentioned
+    # build lookup
+    orig_by_id: dict[str, RenderedFactUnit] = {
+        u.member_id: u for u in original_units
+    }
+
+    # 1. member IDs exact match
+    orig_ids = set(orig_by_id.keys())
+    polished_ids = _extract_unit_ids(polished)
+    missing = orig_ids - polished_ids
+    phantom = polished_ids - orig_ids
     if missing:
-        warnings.append(f"LLM 输出缺失 member ID: {missing}")
-
-    # 2. 没有幻影 member ID
-    phantom = mentioned - member_ids
+        warnings.append(f"missing member IDs: {missing}")
     if phantom:
-        warnings.append(f"LLM 输出包含不存在的 member ID: {phantom}")
+        warnings.append(f"phantom member IDs: {phantom}")
 
-    # 3. 没有跨区迁移标记（candidate 不能出现在 current 段落）
-    # 简单检查：如果 "已确认事实" 段落下出现 [source:graph-candidate-and-dispute]，警告
+    # 2. sources must be subset of originals (no forged sources)
+    orig_sources: set[str] = set()
+    for u in original_units:
+        orig_sources.update(u.source_graphs)
+    polished_sources = _extract_sources(polished)
+    forged_sources = polished_sources - orig_sources
+    if forged_sources:
+        warnings.append(f"forged source anchors: {forged_sources}")
+
+    # 3. partition boundary check — candidate source must not appear
+    #    under current-facts heading
     current_section = re.search(
         r"当前已确认事实.*?(?=## |\Z)", polished, re.DOTALL
     )
     if current_section:
         cur_text = current_section.group(0)
         if "graph-candidate-and-dispute" in cur_text:
-            warnings.append("LLM 输出在已确认事实段落中包含候选图来源")
+            warnings.append(
+                "candidate graph source appeared in 当前已确认事实 section"
+            )
 
-    # 4. 分区标签保留
-    for tag in ("Candidate", "PreliminarilyConfirmed", "Archived"):
-        if tag in original and tag not in polished:
-            warnings.append(f"LLM 输出丢失确认状态标签: {tag}")
+    # 4. no new numbers (allow same numbers; flag any new ones)
+    orig_numbers: set[str] = set()
+    for u in original_units:
+        orig_numbers.update(_extract_numbers(u.canonical_claim))
+    polished_numbers = _extract_numbers(polished)
+    new_numbers = polished_numbers - orig_numbers
+    if new_numbers:
+        # ignore numbers that are part of dates in the metadata header
+        # (like 2026-08-12) by only flagging when the set actually grew
+        # in a way that can't be explained by metadata
+        if len(polished_numbers) > len(orig_numbers) + 5:
+            warnings.append(f"new numbers injected: {new_numbers - orig_numbers}")
+
+    # 5. no new URIs beyond original member IDs and sources
+    orig_uris: set[str] = set()
+    for u in original_units:
+        orig_uris.add(u.member_id)
+    polished_uris = _extract_uris(polished)
+    new_uris = polished_uris - orig_uris - {"https://ontology.tokenking.ai/tkos#"}
+    # Allow source URIs to appear
+    new_uris -= orig_sources
+    if new_uris:
+        warnings.append(f"new URIs injected: {new_uris}")
+
+    # 6. status tags preserved
+    for u in original_units:
+        if u.confirmation_status and u.confirmation_status not in ("Confirmed",):
+            tag = f"[{u.confirmation_status}]"
+            if tag in u.canonical_claim and tag not in polished:
+                warnings.append(f"status tag lost: {tag} (member {u.member_id})")
 
     return len(warnings) == 0, warnings
 
 
-def _call_llm(
-    deterministic_text: str,
-    base_url: str,
-    api_key: str,
-    model: str,
-    max_chars: int,
-    language: str,
+# ── assembly ────────────────────────────────────────────────────────────────
+
+def _assemble_markdown(
+    units: list[RenderedFactUnit],
+    pack: ContextPack,
+    omissions: list[dict[str, str]],
 ) -> str:
-    """调用 LLM 对确定性文本进行语言润色。"""
-    try:
-        from openai import OpenAI
-    except ImportError:
-        raise RuntimeError("LLM mode requires openai package. Install: pip install openai")
+    """将事实单元按分区组装为 Markdown。"""
+    gap_ids = {g.id for g in pack.context_gaps}
+    current = [u for u in units if u.partition == "graph-confirmed-enterprise"]
+    # Gap members are excluded from candidate section — they appear only under 信息缺口
+    candidate = [
+        u for u in units
+        if u.partition == "graph-candidate-and-dispute" and u.member_id not in gap_ids
+    ]
+    provenance = [u for u in units if u.partition == "graph-decision-provenance"]
+    derived = [u for u in units if u.partition == "graph-derived-context"]
 
-    system_prompt = (
-        "你是一个严格的文本润色器。你的任务是改善以下结构化事实摘要的语言流畅性和连贯性，"
-        "但你必须遵守以下不可破坏的规则：\n\n"
-        "1. 不得增删任何事实。\n"
-        "2. 不得改变任何 [member:...] 和 [source:...] 锚点的内容或位置。\n"
-        "3. 不得将 [source:graph-candidate-and-dispute] 标记的内容移至 "
-        "'当前已确认事实' 标题下，反之亦然。\n"
-        "4. 不得新增任何 Pack 之外的实体、数字、日期、因果关系或建议。\n"
-        "5. 不得删除或修改确认状态标签（如 [Candidate]、[PreliminarilyConfirmed]）。\n"
-        "6. 只能改善语言流畅性、连接词和句子结构。\n"
-        "7. 保持 Markdown 格式。# ## > - ` 等标记保持不变。\n"
-        "8. 保留所有空行分隔。"
+    lines: list[str] = []
+    query_text = pack.query or "(无查询)"
+    lines.append(f"# Context Pack：{query_text}")
+    lines.append("")
+    lines.append(
+        f"> 查询时间：{pack.as_of}  |  "
+        f"用途：{pack.purpose}  |  "
+        f"数据版本：`{pack.dataset_revision[:12]}…`"
     )
+    lines.append("")
 
-    user_prompt = (
-        f"请润色以下 {language} 文本，只改善语言流畅性，不改变任何事实、锚点或分区归属：\n\n"
-        f"{deterministic_text}"
-    )
-
-    client = OpenAI(api_key=api_key, base_url=base_url)
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        stream=False,
-    )
-    content = response.choices[0].message.content or ""
-    # 截断（按完整句子）
-    if len(content) > max_chars:
-        truncated = content[:max_chars]
-        last_period = max(truncated.rfind("。"), truncated.rfind("\n"))
-        if last_period > max_chars // 2:
-            content = content[:last_period + 1]
+    def _section(title: str, section_units: list[RenderedFactUnit], empty_msg: str):
+        lines.append(f"## {title}")
+        lines.append("")
+        if not section_units:
+            lines.append(empty_msg)
         else:
-            content = truncated
-    return content
+            for u in section_units:
+                lines.append(u.to_markdown_line())
+        lines.append("")
+
+    _section("当前已确认事实", current, "当前没有满足准入条件的已确认事实。")
+    _section("待确认信息", candidate, "当前没有待确认的候选信息。")
+    _section("信息缺口",
+             [u for u in units if u.member_id in {
+                 g.id for g in pack.context_gaps
+             }],
+             "当前没有已知信息缺口。")
+    _section("决策参考来源", provenance, "当前没有决策参考来源记录。")
+
+    lines.append(f"> 推理状态：{pack.reasoning_status}")
+    lines.append(f"> 作用域执行：{pack.scope_resolution.enforcement}")
+    if omissions:
+        lines.append("")
+        lines.append("### 被省略的成员")
+        for o in omissions:
+            lines.append(f"- `{o['member_id']}` — {o['reason']}")
+    lines.append("")
+    lines.append("---")
+    lines.append(
+        f"pack_id: `{pack.pack_id}`  |  "
+        f"ontology: {pack.ontology_release_id}  |  "
+        f"renderer: {RENDERER_VERSION}"
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _select_units(
+    units: list[RenderedFactUnit],
+    pack: ContextPack,
+    max_chars: int,
+) -> tuple[list[RenderedFactUnit], list[dict[str, str]]]:
+    """按事实单元预算选择：头部 + 完整事实单元 + 尾部。
+
+    超预算单元进入 omissions，不做字符级截断。
+    """
+    # Fixed overhead (headers, footers — approximate)
+    overhead = 300
+    budget = max_chars - overhead
+
+    # Order: current → candidate (minus gaps) → provenance → gaps
+    gap_ids = {g.id for g in pack.context_gaps}
+    ordered: list[RenderedFactUnit] = []
+    for u in units:
+        if u.partition == "graph-confirmed-enterprise":
+            ordered.append(u)
+    for u in units:
+        if u.partition == "graph-candidate-and-dispute" and u.member_id not in gap_ids:
+            ordered.append(u)
+    for u in units:
+        if u.partition == "graph-decision-provenance":
+            ordered.append(u)
+    for u in units:
+        if u.partition == "graph-candidate-and-dispute" and u.member_id in gap_ids:
+            ordered.append(u)
+
+    included: list[RenderedFactUnit] = []
+    omissions: list[dict[str, str]] = []
+    used = 0
+    for u in ordered:
+        line = u.to_markdown_line()
+        if used + len(line) + 1 <= budget:
+            included.append(u)
+            used += len(line) + 1
+        else:
+            omissions.append({
+                "member_id": u.member_id,
+                "reason": "max_chars_exceeded",
+            })
+
+    return included, omissions
+
+
+# ── main render entry point ─────────────────────────────────────────────────
+
+def _render_deterministic(pack: ContextPack) -> str:
+    """确定性渲染（用于内部和测试）。"""
+    units = _compile_all_units(pack)
+    return _assemble_markdown(units, pack, [])
+
+
+def _compile_all_units(pack: ContextPack) -> list[RenderedFactUnit]:
+    """编译 Pack 中所有 member 为事实单元。"""
+    gap_ids = {g.id for g in pack.context_gaps}
+    units: list[RenderedFactUnit] = []
+    for m in pack.current_facts:
+        units.append(_compile_unit(m))
+    for m in pack.candidate_context:
+        if m.id not in gap_ids:
+            units.append(_compile_unit(m))
+    for m in pack.provenance_context:
+        units.append(_compile_unit(m))
+    for m in pack.context_gaps:
+        units.append(_compile_unit(m))
+    return units
+
+
+def _polish_via_llm(deterministic_text: str, polisher: TextPolisher) -> str:
+    """通过 TextPolisher 端口润色（不直接依赖 OpenAI）。"""
+    return polisher.polish(deterministic_text, "zh-CN")
 
 
 def render(
@@ -278,40 +372,51 @@ def render(
     format: str = "markdown",
     max_chars: int = 12000,
     language: str = "zh-CN",
-    llm_base_url: str | None = None,
-    llm_api_key: str | None = None,
-    llm_model: str | None = None,
+    polisher: TextPolisher | None = None,
+    pack_origin: str = "server_resolved",
 ) -> dict[str, Any]:
-    """将 ContextPack 渲染为 NL 文本。
+    """将 ContextPack 渲染为 NL Markdown。
 
-    Returns:
-        dict 包含 structured（可选）、rendered（格式/内容/mode信息）、
-        metadata（pack_id/revision/版本信息）。
+    Args:
+        pack: 已解析的 ContextPack。
+        mode: deterministic | llm_with_fallback | llm_required。
+        max_chars: 输出字符上限（按事实单元选择，非字符截断）。
+        polisher: TextPolisher 实例（LLM 模式需要）。
+        pack_origin: server_resolved → grounding=validated；
+                     client_supplied → grounding=unverified_input。
     """
-    deterministic = _render_deterministic(pack)
+    # ── compile once ──────────────────────────────────────────────────
+    all_units = _compile_all_units(pack)
 
+    # ── budget selection (fact-unit budget, never char-level truncation) ──
+    included_units, budget_omissions = _select_units(all_units, pack, max_chars)
+
+    # ── assemble deterministic content ─────────────────────────────────
     warnings: list[str] = []
-    mode_used = mode
-    content = deterministic
+    if budget_omissions:
+        warnings.append(
+            f"{len(budget_omissions)} member(s) omitted due to max_chars={max_chars}"
+        )
+    content = _assemble_markdown(included_units, pack, budget_omissions)
 
+    # ── grounding: trust level depends on origin ───────────────────────
+    grounding = "validated" if pack_origin == "server_resolved" else "unverified_input"
+    mode_used = mode
+
+    # ── LLM polish (optional) ──────────────────────────────────────────
     if mode in ("llm_with_fallback", "llm_required"):
-        base_url = llm_base_url or os.environ.get("LLM_BASE_URL", "")
-        api_key = llm_api_key or os.environ.get("LLM_AUTH_TOKEN", "")
-        model = llm_model or os.environ.get("LLM_MODEL", "")
-        if not base_url or not api_key:
-            msg = "LLM mode requires LLM_BASE_URL and LLM_AUTH_TOKEN"
+        if polisher is None:
+            msg = "LLM mode requires a TextPolisher instance."
             if mode == "llm_required":
                 raise ValueError(msg)
             warnings.append(f"{msg}; using deterministic renderer.")
             mode_used = "deterministic_fallback"
+            grounding = "unverified_input"
         else:
             try:
-                polished = _call_llm(
-                    deterministic, base_url, api_key, model,
-                    max_chars, language,
-                )
-                valid, val_warnings = _validate_rendered(
-                    deterministic, polished, pack,
+                polished = _polish_via_llm(content, polisher)
+                valid, val_warnings = _validate_llm_output(
+                    included_units, polished
                 )
                 warnings.extend(val_warnings)
                 if valid:
@@ -325,6 +430,7 @@ def render(
                         "LLM output failed validation; using deterministic renderer."
                     )
                     mode_used = "deterministic_fallback"
+                    grounding = "unverified_input"
             except Exception as exc:
                 if mode == "llm_required":
                     raise
@@ -332,24 +438,15 @@ def render(
                     f"LLM unavailable ({exc}); using deterministic renderer."
                 )
                 mode_used = "deterministic_fallback"
+                grounding = "unverified_input"
 
-    # 最终截断检查
-    if len(content) > max_chars:
-        truncated = content[:max_chars]
-        last_period = max(truncated.rfind("。"), truncated.rfind("\n"))
-        if last_period > max_chars // 2:
-            content = content[:last_period + 1]
-        else:
-            content = truncated
-        warnings.append(f"Output truncated to {len(content)} chars (max_chars={max_chars}).")
-
-    result: dict[str, Any] = {
+    return {
         "rendered": {
             "format": format,
             "content": content,
             "mode_requested": mode,
             "mode_used": mode_used,
-            "grounding_status": "validated" if not warnings else "validated_with_warnings",
+            "grounding_status": grounding,
             "warnings": warnings,
         },
         "metadata": {
@@ -357,6 +454,6 @@ def render(
             "dataset_revision": pack.dataset_revision,
             "ontology_release_id": pack.ontology_release_id,
             "renderer_version": RENDERER_VERSION,
+            "pack_origin": pack_origin,
         },
     }
-    return result

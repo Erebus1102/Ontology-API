@@ -9,14 +9,14 @@ Exactly one must be present; both or neither → HTTP 422.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 
 class RenderOptions(BaseModel):
-    format: str = "markdown"
-    mode: str = "deterministic"  # deterministic | llm_with_fallback | llm_required
+    format: Literal["markdown"] = "markdown"
+    mode: Literal["deterministic", "llm_with_fallback", "llm_required"] = "deterministic"
     include_structured: bool = False
     max_chars: int = Field(default=12000, ge=100, le=100000)
     language: str = "zh-CN"

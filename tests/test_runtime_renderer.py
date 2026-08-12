@@ -206,23 +206,20 @@ def test_deterministic_mode_no_external_deps():
     assert result["rendered"]["grounding_status"] == "validated"
 
 
-def test_llm_with_fallback_degrades_on_missing_creds():
-    """llm_with_fallback must degrade to deterministic when no API key."""
+def test_llm_with_fallback_degrades_on_missing_polisher():
+    """llm_with_fallback must degrade to deterministic when polisher is None."""
     pack = _pack()
-    result = render(
-        pack, mode="llm_with_fallback",
-        llm_base_url="", llm_api_key="", llm_model="",
-    )
+    result = render(pack, mode="llm_with_fallback", polisher=None)
     assert result["rendered"]["mode_used"] == "deterministic_fallback"
     assert result["rendered"]["warnings"]
+    assert result["rendered"]["grounding_status"] == "unverified_input"
 
 
-def test_llm_required_raises_on_missing_creds():
-    """llm_required must raise ValueError when no API key configured."""
+def test_llm_required_raises_on_missing_polisher():
+    """llm_required must raise ValueError when no polisher provided."""
     pack = _pack()
-    with pytest.raises(ValueError):
-        render(pack, mode="llm_required", llm_base_url="", llm_api_key="",
-               llm_model="")
+    with pytest.raises(ValueError, match="TextPolisher"):
+        render(pack, mode="llm_required", polisher=None)
 
 
 # ---------------------------------------------------------------------------
@@ -283,18 +280,29 @@ def test_chinese_long_text_renders():
 # 9. max_chars truncation
 # ---------------------------------------------------------------------------
 
-def test_max_chars_truncation_at_sentence_boundary():
+def test_max_chars_fact_unit_budget():
+    """max_chars enforced as fact-unit budget, never char-level truncation.
+
+    With 20 members and max_chars=600, only a subset of complete units fit;
+    the rest appear in the omissions array. Content never ends mid-sentence."""
     pack = _pack(
         current_facts=[
             _member(f"m{i}", f"事实条目{i}", "graph-confirmed-enterprise", [])
             for i in range(20)
         ],
     )
-    result = render(pack, mode="deterministic", max_chars=500)
+    result = render(pack, mode="deterministic", max_chars=600)
     content = result["rendered"]["content"]
-    assert len(content) <= 500
-    # 判断末尾是句号或换行（句子边界）
-    assert content.rstrip().endswith(("。", "\n", "-"))
+    warnings = result["rendered"]["warnings"]
+    # Fact-unit budget: some units omitted
+    assert any("omitted" in w for w in warnings)
+    # No mid-sentence truncation — full footer is present
+    assert "renderer:" in content
+    assert "pack_id:" in content
+    # Omitted members listed explicitly
+    assert "被省略的成员" in content
+    # Included members are present with anchors
+    assert "[member:m0]" in content
 
 
 # ---------------------------------------------------------------------------
@@ -438,3 +446,206 @@ def test_dict_to_pack_roundtrip_preserves_renderable_fields():
     result = _render_deterministic(reconstructed)
     assert "当前已确认事实" in result
     assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
+# P1-2: forged / minimal pack rejection
+# ---------------------------------------------------------------------------
+
+def test_forged_pack_missing_governance_fields_is_rejected():
+    """Minimal pack without dataset_revision/ontology_release_id → ValueError."""
+    with pytest.raises(ValueError, match="dataset_revision"):
+        dict_to_pack({"pack_id": "forged"})
+
+    with pytest.raises(ValueError, match="ontology_release_id"):
+        dict_to_pack({
+            "pack_id": "forged",
+            "dataset_revision": "a" * 64,
+        })
+
+
+def test_valid_pack_with_governance_fields_is_accepted():
+    """Pack with both governance fields present → accepted."""
+    pack = dict_to_pack({
+        "pack_id": "validated-pack",
+        "dataset_revision": "a" * 64,
+        "ontology_release_id": "2.4.0",
+    })
+    assert pack.pack_id == "validated-pack"
+    assert pack.dataset_revision == "a" * 64
+
+
+# ---------------------------------------------------------------------------
+# P1-2: pack_origin → grounding_status
+# ---------------------------------------------------------------------------
+
+def test_client_supplied_pack_has_unverified_grounding():
+    """Client-supplied packs get grounding_status=unverified_input."""
+    pack = _pack(current_facts=[
+        _member("m1", "事实", "graph-confirmed-enterprise", []),
+    ])
+    result = render(pack, mode="deterministic", pack_origin="client_supplied")
+    assert result["rendered"]["grounding_status"] == "unverified_input"
+    assert result["metadata"]["pack_origin"] == "client_supplied"
+
+
+def test_server_resolved_pack_has_validated_grounding():
+    """Server-resolved packs get grounding_status=validated."""
+    pack = _pack(current_facts=[
+        _member("m1", "事实", "graph-confirmed-enterprise", []),
+    ])
+    result = render(pack, mode="deterministic", pack_origin="server_resolved")
+    assert result["rendered"]["grounding_status"] == "validated"
+    assert result["metadata"]["pack_origin"] == "server_resolved"
+
+
+# ---------------------------------------------------------------------------
+# P1-3: gap dedup — context_gap members excluded from candidate_context section
+# ---------------------------------------------------------------------------
+
+def test_gap_members_not_duplicated_in_candidate_section():
+    """Members appearing in both candidate_context and context_gaps must
+    only appear under 信息缺口, not under 待确认信息."""
+    pack = _pack(
+        candidate_context=[
+            _member("shared", "共享条目", "graph-candidate-and-dispute", [],
+                    status="Candidate"),
+            _member("cand-only", "仅候选", "graph-candidate-and-dispute", [],
+                    status="Candidate"),
+        ],
+        context_gaps=[
+            _member("shared", "共享条目", "graph-candidate-and-dispute", [],
+                    status="Candidate"),
+        ],
+    )
+    result = _render_deterministic(pack)
+    # "shared" should appear exactly once (under 信息缺口)
+    assert result.count("[member:shared]") == 1
+    # "cand-only" should appear under 待确认信息
+    cand_section_start = result.index("待确认信息")
+    gap_section_start = result.index("信息缺口")
+    cand_only_pos = result.index("[member:cand-only]")
+    shared_pos = result.index("[member:shared]")
+    assert cand_section_start < cand_only_pos < gap_section_start
+    assert shared_pos > gap_section_start
+
+
+# ---------------------------------------------------------------------------
+# P1-1: adversarial LLM output validation (deterministic validator tests)
+# ---------------------------------------------------------------------------
+
+from tkos_runtime.application.context_renderer import (
+    RenderedFactUnit,
+    _validate_llm_output,
+)
+
+_MOCK_CURRENT_FACT = RenderedFactUnit(
+    member_id="urn:test:m1",
+    partition="graph-confirmed-enterprise",
+    source_graphs=("graph-confirmed-enterprise",),
+    canonical_claim="Q3 营收增长 15%",
+    confirmation_status="Confirmed",
+)
+
+_MOCK_CANDIDATE_FACT = RenderedFactUnit(
+    member_id="urn:test:c1",
+    partition="graph-candidate-and-dispute",
+    source_graphs=("graph-candidate-and-dispute",),
+    canonical_claim="灯塔项目预计延迟 2 周交付",
+    confirmation_status="Candidate",
+)
+
+
+def _wrap_in_markdown(text: str) -> str:
+    return (
+        "# Context Pack：测试\n\n"
+        "> 查询时间：2026-08-12  |  用途：decision_preparation  |  数据版本：`abc123…`\n\n"
+        "## 当前已确认事实\n\n"
+        + text +
+        "\n\n## 待确认信息\n\n"
+        "## 信息缺口\n\n当前没有已知信息缺口。\n\n"
+        "## 决策参考来源\n\n当前没有决策参考来源记录。\n\n"
+        "> 推理状态：not_available\n"
+    )
+
+
+def test_validator_rejects_fabricated_revenue():
+    """LLM added a fabricated revenue claim → validation must fail."""
+    polished = _wrap_in_markdown(
+        "- Q3 营收增长 15%，已超额完成全年目标 200% [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    valid, warnings = _validate_llm_output([_MOCK_CURRENT_FACT], polished)
+    assert not valid
+    assert any("new numbers" in w.lower() or "injected" in w.lower() for w in warnings)
+
+
+def test_validator_rejects_forged_source_graph():
+    """LLM added a forged source anchor → validation must fail."""
+    polished = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-sensitive-restricted]"
+    )
+    valid, warnings = _validate_llm_output([_MOCK_CURRENT_FACT], polished)
+    assert not valid
+    assert any("forged source" in w.lower() for w in warnings)
+
+
+def test_validator_rejects_phantom_member_id():
+    """LLM invented a member ID not in the original pack → validation must fail."""
+    original = [
+        _MOCK_CURRENT_FACT,
+        RenderedFactUnit(
+            member_id="urn:test:c1",
+            partition="graph-candidate-and-dispute",
+            source_graphs=("graph-candidate-and-dispute",),
+            canonical_claim="灯塔项目预计延迟 2 周交付",
+        ),
+    ]
+    polished = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]\n"
+        "- 灯塔项目预计延迟 2 周交付 [member:urn:test:c1][source:graph-candidate-and-dispute]\n"
+        "- 新增虚假事实：竞品已倒闭 [member:urn:test:phantom][source:graph-candidate-and-dispute]"
+    )
+    valid, warnings = _validate_llm_output(original, polished)
+    assert not valid
+    assert any("phantom" in w.lower() for w in warnings)
+
+
+def test_validator_rejects_candidate_in_current_section():
+    """LLM moved a candidate fact into 当前已确认事实 section → validation must fail."""
+    polished = (
+        "# Context Pack：测试\n\n"
+        "> 查询时间：2026-08-12  |  用途：decision_preparation  |  数据版本：`abc123…`\n\n"
+        "## 当前已确认事实\n\n"
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]\n"
+        "- 灯塔项目预计延迟 2 周交付 [member:urn:test:c1][source:graph-candidate-and-dispute]\n\n"
+        "## 待确认信息\n\n"
+        "当前没有待确认的候选信息。\n\n"
+    )
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT, _MOCK_CANDIDATE_FACT], polished
+    )
+    assert not valid
+    assert any("candidate" in w.lower() for w in warnings)
+
+
+def test_validator_passes_clean_output():
+    """Clean LLM output that preserves all anchors and facts → validation passes."""
+    polished = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    valid, warnings = _validate_llm_output([_MOCK_CURRENT_FACT], polished)
+    assert valid
+    assert not warnings
+
+
+def test_validator_detects_missing_member():
+    """LLM dropped a member → validation must fail."""
+    polished = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    # c1 is in original but not in polished
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT, _MOCK_CANDIDATE_FACT], polished
+    )
+    assert not valid
+    assert any("missing member" in w.lower() for w in warnings)

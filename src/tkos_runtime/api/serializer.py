@@ -34,7 +34,29 @@ def dict_to_pack(d: dict[str, Any]) -> ContextPack:
 
     Only the fields consumed by the deterministic renderer are reconstructed;
     optional nested objects are built with safe defaults.
+
+    **Security hardening (P1-2):**
+      * ``admission.accept`` defaults to False — client must prove provenance.
+      * Governance fields (``dataset_revision``, ``ontology_release_id``) must be
+        non-empty strings; a forged/minimal pack is rejected with ValueError.
+      * Callers must set ``pack_origin=client_supplied`` so the renderer marks
+        ``grounding_status: unverified_input``.
     """
+    # ── governance field validation ──────────────────────────────────────
+    missing: list[str] = []
+    ds_rev = d.get("dataset_revision", "")
+    ont_rel = d.get("ontology_release_id", "")
+    if not ds_rev or not isinstance(ds_rev, str) or not ds_rev.strip():
+        missing.append("dataset_revision")
+    if not ont_rel or not isinstance(ont_rel, str) or not ont_rel.strip():
+        missing.append("ontology_release_id")
+    if missing:
+        raise ValueError(
+            f"client-supplied pack missing required governance fields: {missing}. "
+            f"Resolve via /v1/context-packs:resolve first, or include valid "
+            f"dataset_revision and ontology_release_id."
+        )
+
     def _member(m: dict) -> ContextPackMember:
         stmts = [GraphStatement(**s) for s in m.get("statements", [])]
         adm = m.get("admission", {})
@@ -51,7 +73,7 @@ def dict_to_pack(d: dict[str, Any]) -> ContextPack:
             valid_until=m.get("valid_until"),
             sources=m.get("sources", []),
             admission=AdmissionDecision(
-                accept=adm.get("accept", True),
+                accept=adm.get("accept", False),
                 partition=adm.get("partition", ""),
                 stage=adm.get("stage"),
                 reason=adm.get("reason"),
@@ -89,8 +111,8 @@ def dict_to_pack(d: dict[str, Any]) -> ContextPack:
         omissions=omissions,
         contributing_graphs=d.get("contributing_graphs", []),
         admission_policy=d.get("admission_policy", ""),
-        ontology_release_id=d.get("ontology_release_id", ""),
-        dataset_revision=d.get("dataset_revision", ""),
+        ontology_release_id=ont_rel,
+        dataset_revision=ds_rev,
         policy_version=d.get("policy_version", ""),
         query_plan_version=d.get("query_plan_version", ""),
     )

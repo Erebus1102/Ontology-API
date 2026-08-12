@@ -29,6 +29,7 @@ from tkos_runtime.application.context_pack_resolver import ContextPackResolver
 from tkos_runtime.domain.models import NoMatchError
 from tkos_runtime.domain.policies import AdmissionPolicy
 from tkos_runtime.api.models import ResolveRequest
+from tkos_runtime.adapters.openai_text_polisher import OpenAITextPolisher
 from tkos_runtime.api.render_models import RenderRequest
 from tkos_runtime.api.serializer import dict_to_pack, pack_to_dict
 from tkos_runtime.application.context_renderer import render
@@ -117,6 +118,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             except NoMatchError as exc:
                 raise HTTPException(status_code=404, detail=str(exc)) from exc
+            pack_origin = "server_resolved"
         else:
             try:
                 pack = dict_to_pack(req.pack)  # type: ignore[arg-type]
@@ -124,6 +126,15 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 raise HTTPException(
                     status_code=422, detail=f"invalid pack: {exc}"
                 ) from exc
+            pack_origin = "client_supplied"
+
+        # Build polisher for LLM modes
+        polisher = None
+        if opts.mode in ("llm_with_fallback", "llm_required"):
+            try:
+                polisher = OpenAITextPolisher()
+            except ValueError:
+                pass  # creds not configured; render() handles fallback/raise
 
         try:
             result = render(
@@ -132,6 +143,8 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 format=opts.format,
                 max_chars=opts.max_chars,
                 language=opts.language,
+                polisher=polisher,
+                pack_origin=pack_origin,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

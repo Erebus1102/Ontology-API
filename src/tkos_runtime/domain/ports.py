@@ -29,3 +29,9 @@ class GraphRetriever(Protocol):
 
 class LineageRepository(Protocol):
     def fetch(self, assertion_id: str, allowed_graph_ids: list[str]) -> Lineage: ...
+
+
+class TextPolisher(Protocol):
+    """LLM 语言润色端口。只改写文本流畅性，不得改变事实、分区或锚点。"""
+    def polish(self, text: str, language: str) -> str: ...
+    """返回润色后文本；失败必须抛异常（由调用方决定降级策略）。"""
