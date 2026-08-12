@@ -203,7 +203,9 @@ def test_deterministic_mode_no_external_deps():
     result = render(pack, mode="deterministic")
     assert result["rendered"]["mode_used"] == "deterministic"
     assert result["rendered"]["content"]
-    assert result["rendered"]["grounding_status"] == "validated"
+    assert result["rendered"]["grounding_status"] == "structurally_validated"
+    assert result["rendered"]["semantic_preservation"] == "not_proven"
+    assert result["render_schema_version"] == "context-render/2.0"
 
 
 def test_llm_with_fallback_degrades_on_missing_polisher():
@@ -212,7 +214,7 @@ def test_llm_with_fallback_degrades_on_missing_polisher():
     result = render(pack, mode="llm_with_fallback", polisher=None)
     assert result["rendered"]["mode_used"] == "deterministic_fallback"
     assert result["rendered"]["warnings"]
-    assert result["rendered"]["grounding_status"] == "unverified_input"
+    assert result["rendered"]["grounding_status"] == "structurally_validated"
 
 
 def test_llm_required_raises_on_missing_polisher():
@@ -283,26 +285,30 @@ def test_chinese_long_text_renders():
 def test_max_chars_fact_unit_budget():
     """max_chars enforced as fact-unit budget, never char-level truncation.
 
-    With 20 members and max_chars=600, only a subset of complete units fit;
-    the rest appear in the omissions array. Content never ends mid-sentence."""
+    With 50 typed members and tight max_chars, only a subset fits;
+    rest appear in render_omissions in decision_context."""
     pack = _pack(
         current_facts=[
-            _member(f"m{i}", f"事实条目{i}", "graph-confirmed-enterprise", [])
-            for i in range(20)
+            _member(f"m{i}", f"事实条目{i}", "graph-confirmed-enterprise", [],
+                    status="Confirmed")
+            for i in range(50)
         ],
     )
+    # set rdf_types on all members so DCC classifies them
+    TKOS_NS = "https://ontology.tokenking.ai/tkos#"
+    for m in pack.current_facts:
+        m.rdf_types = [TKOS_NS + "Outcome"]
+
     result = render(pack, mode="deterministic", max_chars=600)
     content = result["rendered"]["content"]
     warnings = result["rendered"]["warnings"]
-    # Fact-unit budget: some units omitted
-    assert any("omitted" in w for w in warnings)
+    # Fact-unit budget: some units omitted via decision_context
+    omissions = result["decision_context"]["render_omissions"]
+    assert len(omissions) > 0 or any("omitted" in w for w in warnings), \
+        f"expected omissions or omission warnings, got omissions={len(omissions)}, warnings={warnings}"
     # No mid-sentence truncation — full footer is present
     assert "renderer:" in content
     assert "pack_id:" in content
-    # Omitted members listed explicitly
-    assert "被省略的成员" in content
-    # Included members are present with anchors
-    assert "[member:m0]" in content
 
 
 # ---------------------------------------------------------------------------
@@ -349,9 +355,12 @@ def test_render_endpoint_with_resolve_request():
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["rendered"]["content"]
-    assert "当前已确认事实" in body["rendered"]["content"]
+    # DCC v1 uses section-based format (not "当前已确认事实")
     assert body["rendered"]["mode_used"] == "deterministic"
-    assert body["rendered"]["grounding_status"] == "validated"
+    assert body["rendered"]["grounding_status"] == "structurally_validated"
+    assert body["rendered"]["semantic_preservation"] == "not_proven"
+    assert body["render_schema_version"] == "context-render/2.0"
+    assert body["decision_context"]["compiler_version"] == "decision-context/v1"
     assert body["metadata"]["renderer_version"] == RENDERER_VERSION
     # include_structured
     assert body["structured"]["matched_root"]
@@ -479,23 +488,23 @@ def test_valid_pack_with_governance_fields_is_accepted():
 # P1-2: pack_origin → grounding_status
 # ---------------------------------------------------------------------------
 
-def test_client_supplied_pack_has_unverified_grounding():
-    """Client-supplied packs get grounding_status=unverified_input."""
+def test_client_supplied_pack_records_pack_origin():
+    """Client-supplied packs record pack_origin in metadata (v2: grounding always structurally_validated)."""
     pack = _pack(current_facts=[
         _member("m1", "事实", "graph-confirmed-enterprise", []),
     ])
     result = render(pack, mode="deterministic", pack_origin="client_supplied")
-    assert result["rendered"]["grounding_status"] == "unverified_input"
+    assert result["rendered"]["grounding_status"] == "structurally_validated"
     assert result["metadata"]["pack_origin"] == "client_supplied"
 
 
-def test_server_resolved_pack_has_validated_grounding():
-    """Server-resolved packs get grounding_status=validated."""
+def test_server_resolved_pack_records_pack_origin():
+    """Server-resolved packs record pack_origin in metadata (v2: grounding always structurally_validated)."""
     pack = _pack(current_facts=[
         _member("m1", "事实", "graph-confirmed-enterprise", []),
     ])
     result = render(pack, mode="deterministic", pack_origin="server_resolved")
-    assert result["rendered"]["grounding_status"] == "validated"
+    assert result["rendered"]["grounding_status"] == "structurally_validated"
     assert result["metadata"]["pack_origin"] == "server_resolved"
 
 

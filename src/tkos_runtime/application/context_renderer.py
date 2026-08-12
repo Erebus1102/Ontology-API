@@ -2,14 +2,13 @@
 """ContextPack -> NL Markdown 渲染器。
 
 核心设计：
-  * 每个 member 先编译为一个不可变的 ``RenderedFactUnit``（canonical_claim），
-    后者在整个渲染链路中不能被修改。
-  * deterministic 模式：直接按分区组装事实单元。
-  * LLM 模式：对整体 Markdown 文本润色，然后逐单元校验——member ID、分区、source、
-    数字/URI 不变——任一失败则降级。
-  * 字符预算：在编译阶段按事实单元选择，超预算单元进入 render_omissions，
-    不对最终字符串做字符级截断。
-  * Gap 去重：candidate_context 中排除已在 context_gaps 中的 member。
+  * DecisionContextCompiler 将 ContextPack 编译为 sectioned RenderedFactUnit 集合，
+    然后按 section 组装为 Markdown。
+  * deterministic 模式：直接按 section 组装。
+  * LLM 模式：对整体 Markdown 文本润色，然后 section-aware 逐 view_key 校验。
+  * 字符预算：在编译阶段按 slot 分配，超预算单元进入 render_omissions。
+  * grounding_status: structurally_validated (never validated/unverified_input).
+  * semantic_preservation: always not_proven.
 """
 from __future__ import annotations
 
@@ -23,7 +22,9 @@ from tkos_runtime.domain.ports import TextPolisher
 from tkos_runtime.domain.render_units import (
     RenderedFactUnit, RenderBudgetTooSmall, DECISION_INCIDENT_PREDICATES,
     SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RENDERER_VERSION,
+    RENDER_SCHEMA_VERSION,
 )
+from tkos_runtime.application.decision_context_compiler import DecisionContextCompiler
 
 __all__ = [
     "RenderedFactUnit", "RenderBudgetTooSmall", "DECISION_INCIDENT_PREDICATES",
@@ -352,6 +353,259 @@ def _select_units(
     return included, omissions
 
 
+# ── section-aware Markdown assembly (DCC v1) ─────────────────────────────────
+
+def _assemble_sectioned_markdown(compiled, pack: ContextPack) -> str:
+    """Render compiled sections as decision-oriented Markdown."""
+    lines: list[str] = []
+    query_text = pack.query or "(无查询)"
+    lines.append(f"# 决策上下文：{query_text}")
+    lines.append("")
+
+    # Epistemic summary
+    lines.append(f"> {compiled.decision_context.get('epistemic_summary', '')}")
+    lines.append("")
+
+    for section in SECTION_ORDER:
+        title = SECTION_TITLES.get(section, f"## {section}")
+        lines.append(title)
+        lines.append("")
+        units = compiled.units_by_section.get(section, [])
+        if not units:
+            lines.append("（无）")
+        else:
+            for u in units:
+                short = (section == "gaps")
+                lines.append(u.to_markdown_line(short=short))
+        lines.append("")
+
+    # Omission summary
+    if compiled.omissions:
+        lines.append("### 被省略的条目")
+        for o in compiled.omissions:
+            lines.append(f"- `{o.member_id}` ({o.role}) — {o.reason}")
+        lines.append("")
+
+    lines.append("---")
+    lines.append(
+        f"pack_id: `{pack.pack_id}`  |  "
+        f"ontology: {pack.ontology_release_id}  |  "
+        f"renderer: {RENDERER_VERSION}"
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
+# ── section-aware validator helpers ───────────────────────────────────────────
+
+def _split_sections(polished: str) -> dict[str, str]:
+    """Split polished Markdown into {section: body_text} by SECTION_TITLES headers."""
+    sections: dict[str, str] = {}
+    # Build a regex that matches any section title
+    titles = [(sec, title) for sec, title in SECTION_TITLES.items()]
+    pattern = "|".join(re.escape(t) for _, t in titles)
+    parts = re.split(f"({pattern})", polished, flags=re.MULTILINE)
+    # parts: [before_first_title, title1, body1, title2, body2, ...]
+    i = 1
+    while i < len(parts) - 1:
+        title_text = parts[i]
+        body = parts[i + 1] if i + 1 < len(parts) else ""
+        for sec, t in titles:
+            if title_text == t:
+                sections[sec] = body
+                break
+        i += 2
+    return sections
+
+
+def _validate_llm_output_sections(
+    compiled, polished: str, deterministic_text: str = "",
+) -> tuple[bool, list[str]]:
+    """Section-aware LLM output validation keyed by view_key.
+
+    Eight checks:
+      1. exact once per view_key
+      2. in expected section
+      3. partition anchor preserved
+      4. status tags preserved
+      5. section set + order unchanged
+      6/7. phantom/missing (via occurrences)
+      8. numbers/URIs unchanged from baseline
+    """
+    warnings: list[str] = []
+
+    # Build view_key → unit lookup from compiled (sectioned)
+    selected: dict[tuple[str, str], RenderedFactUnit] = {}
+    for sec_units in compiled.units_by_section.values():
+        for u in sec_units:
+            selected[u.view_key] = u
+
+    sections = _split_sections(polished)
+
+    # 5. section set + order unchanged
+    expected_sections = [s for s in SECTION_ORDER
+                         if s in compiled.units_by_section and compiled.units_by_section[s]]
+    actual_sections = list(sections.keys())
+    if actual_sections != expected_sections:
+        warnings.append(f"section set/order changed: {actual_sections} vs {expected_sections}")
+
+    for vk, unit in selected.items():
+        anchor_member = f"[member:{unit.member_id}]"
+        anchor_partition = f"[partition:{unit.partition}]"
+
+        # 1. exact once per view_key
+        occurrences = sum(1 for b in sections.values()
+                         if anchor_member in b and anchor_partition in b)
+        if occurrences != 1:
+            warnings.append(f"view_key {vk} appears {occurrences} times (expected 1)")
+
+        # 2. in expected section
+        found_section = next((s for s, b in sections.items()
+                             if anchor_member in b), None)
+        if found_section and found_section != unit.expected_section:
+            warnings.append(
+                f"view_key {vk} in section {found_section}, expected {unit.expected_section}"
+            )
+
+        # 3. partition anchor preserved
+        if found_section and anchor_partition not in sections.get(found_section, ""):
+            warnings.append(f"partition anchor changed for {vk}")
+
+    # 4. status tags preserved
+    for unit in selected.values():
+        if unit.confirmation_status and unit.confirmation_status not in ("Confirmed",):
+            tag = f"[{unit.confirmation_status}]"
+            if tag in unit.canonical_claim and tag not in polished:
+                warnings.append(f"status tag lost: {tag} (member {unit.member_id})")
+
+    # 8. numbers/URIs unchanged from baseline (reuse existing extractors against
+    #    the full deterministic text as baseline)
+    baseline_numbers: set[str] = set()
+    if deterministic_text:
+        baseline_numbers.update(_extract_numbers(deterministic_text))
+    for unit in selected.values():
+        baseline_numbers.update(_extract_numbers(unit.canonical_claim))
+    polished_numbers = _extract_numbers(polished)
+    new_numbers = polished_numbers - baseline_numbers
+    if new_numbers:
+        warnings.append(f"new numbers injected: {new_numbers}")
+
+    # URIs
+    baseline_uris: set[str] = set()
+    if deterministic_text:
+        baseline_uris.update(_extract_uris(deterministic_text))
+    orig_sources: set[str] = set()
+    for unit in selected.values():
+        baseline_uris.add(unit.member_id)
+        orig_sources.update(unit.source_graphs)
+    baseline_uris.update(orig_sources)
+    polished_uris = _extract_uris(polished)
+    new_uris = polished_uris - baseline_uris
+    if new_uris:
+        warnings.append(f"new URIs injected: {new_uris}")
+
+    # Forged source check
+    polished_sources = _extract_sources(polished)
+    forged_sources = polished_sources - orig_sources
+    if forged_sources:
+        warnings.append(f"forged source anchors: {forged_sources}")
+
+    return len(warnings) == 0, warnings
+
+
+# ── backward-compat wrapper ───────────────────────────────────────────────────
+# Existing tests call _validate_llm_output with a flat list of RenderedFactUnit.
+# We keep the original function but delegate to section-aware when passed a
+# CompiledDecisionContext-like object.
+
+
+def _validate_llm_output(
+    original_units, polished: str, deterministic_text: str = "",
+) -> tuple[bool, list[str]]:
+    """Validate LLM output — accepts both flat list (legacy) and CompiledDecisionContext."""
+    # If it looks like a CompiledDecisionContext (has .units_by_section), use v2
+    if hasattr(original_units, "units_by_section"):
+        return _validate_llm_output_sections(
+            original_units, polished, deterministic_text,
+        )
+
+    # ── Legacy flat-list path (unchanged) ──────────────────────────────────
+    from tkos_runtime.application.decision_context_compiler import CompiledDecisionContext
+    if isinstance(original_units, CompiledDecisionContext):
+        return _validate_llm_output_sections(
+            original_units, polished, deterministic_text,
+        )
+
+    warnings: list[str] = []
+    units = original_units  # list[RenderedFactUnit]
+
+    orig_by_id: dict[str, RenderedFactUnit] = {
+        u.member_id: u for u in units
+    }
+
+    # 1. member IDs exact match
+    orig_ids = set(orig_by_id.keys())
+    polished_ids = _extract_unit_ids(polished)
+    missing = orig_ids - polished_ids
+    phantom = polished_ids - orig_ids
+    if missing:
+        warnings.append(f"missing member IDs: {missing}")
+    if phantom:
+        warnings.append(f"phantom member IDs: {phantom}")
+
+    # 2. sources must be subset of originals
+    orig_sources: set[str] = set()
+    for u in units:
+        orig_sources.update(u.source_graphs)
+    polished_sources = _extract_sources(polished)
+    forged_sources = polished_sources - orig_sources
+    if forged_sources:
+        warnings.append(f"forged source anchors: {forged_sources}")
+
+    # 3. partition boundary check
+    current_section = re.search(
+        r"当前已确认事实.*?(?=## |\Z)", polished, re.DOTALL
+    )
+    if current_section:
+        cur_text = current_section.group(0)
+        if "graph-candidate-and-dispute" in cur_text:
+            warnings.append(
+                "candidate graph source appeared in 当前已确认事实 section"
+            )
+
+    # 4. no new numbers
+    baseline_numbers: set[str] = set()
+    if deterministic_text:
+        baseline_numbers.update(_extract_numbers(deterministic_text))
+    for u in units:
+        baseline_numbers.update(_extract_numbers(u.canonical_claim))
+    polished_numbers = _extract_numbers(polished)
+    new_numbers = polished_numbers - baseline_numbers
+    if new_numbers:
+        warnings.append(f"new numbers injected: {new_numbers}")
+
+    # 5. no new URIs
+    baseline_uris: set[str] = set()
+    if deterministic_text:
+        baseline_uris.update(_extract_uris(deterministic_text))
+    for u in units:
+        baseline_uris.add(u.member_id)
+    baseline_uris.update(orig_sources)
+    polished_uris = _extract_uris(polished)
+    new_uris = polished_uris - baseline_uris
+    if new_uris:
+        warnings.append(f"new URIs injected: {new_uris}")
+
+    # 6. status tags preserved
+    for u in units:
+        if u.confirmation_status and u.confirmation_status not in ("Confirmed",):
+            tag = f"[{u.confirmation_status}]"
+            if tag in u.canonical_claim and tag not in polished:
+                warnings.append(f"status tag lost: {tag} (member {u.member_id})")
+
+    return len(warnings) == 0, warnings
+
+
 # ── main render entry point ─────────────────────────────────────────────────
 
 def _render_deterministic(pack: ContextPack) -> str:
@@ -391,35 +645,37 @@ def render(
     polisher: TextPolisher | None = None,
     pack_origin: str = "server_resolved",
 ) -> dict[str, Any]:
-    """将 ContextPack 渲染为 NL Markdown。
+    """将 ContextPack 渲染为 NL Markdown（DCC v1 sectioned output + Render Schema v2）。
 
     Args:
         pack: 已解析的 ContextPack。
         mode: deterministic | llm_with_fallback | llm_required。
-        max_chars: 输出字符上限（按事实单元选择，非字符截断）。
+        max_chars: 输出字符上限。
         polisher: TextPolisher 实例（LLM 模式需要）。
-        pack_origin: server_resolved → grounding=validated；
-                     client_supplied → grounding=unverified_input。
+        pack_origin: 记录在 metadata 中，但不影响 grounding_status（v2 固定为 structurally_validated）。
     """
-    # ── compile once ──────────────────────────────────────────────────
-    all_units = _compile_all_units(pack)
+    # ── Decision Context Compiler ───────────────────────────────────────
+    compiler = DecisionContextCompiler()
+    try:
+        compiled = compiler.compile(pack, max_chars=max_chars)
+    except RenderBudgetTooSmall:
+        raise  # let caller (server) map to 422
 
-    # ── budget selection (fact-unit budget, never char-level truncation) ──
-    included_units, budget_omissions = _select_units(all_units, pack, max_chars)
-
-    # ── assemble deterministic content ─────────────────────────────────
-    warnings: list[str] = []
-    if budget_omissions:
+    # ── Assemble deterministic content ──────────────────────────────────
+    warnings: list[str] = list(compiled.warnings)
+    if compiled.omissions:
         warnings.append(
-            f"{len(budget_omissions)} member(s) omitted due to max_chars={max_chars}"
+            f"{len(compiled.omissions)} member(s) omitted due to max_chars={max_chars}"
         )
-    content = _assemble_markdown(included_units, pack, budget_omissions)
+    content = _assemble_sectioned_markdown(compiled, pack)
 
-    # ── grounding: trust level depends on origin ───────────────────────
-    grounding = "validated" if pack_origin == "server_resolved" else "unverified_input"
+    # ── Render Schema v2: grounding is always structurally_validated ────
+    # NOTE: structural validation cannot detect in-line NL business judgements
+    # (e.g. "该风险已可忽略") — semantic_preservation stays not_proven.
+    grounding = "structurally_validated"
     mode_used = mode
 
-    # ── LLM polish (optional) ──────────────────────────────────────────
+    # ── LLM polish (optional) ───────────────────────────────────────────
     if mode in ("llm_with_fallback", "llm_required"):
         if polisher is None:
             msg = "LLM mode requires a TextPolisher instance."
@@ -427,12 +683,11 @@ def render(
                 raise ValueError(msg)
             warnings.append(f"{msg}; using deterministic renderer.")
             mode_used = "deterministic_fallback"
-            grounding = "unverified_input"
         else:
             try:
                 polished = _polish_via_llm(content, polisher)
                 valid, val_warnings = _validate_llm_output(
-                    included_units, polished, deterministic_text=content
+                    compiled, polished, deterministic_text=content,
                 )
                 warnings.extend(val_warnings)
                 if valid:
@@ -446,7 +701,6 @@ def render(
                         "LLM output failed validation; using deterministic renderer."
                     )
                     mode_used = "deterministic_fallback"
-                    grounding = "unverified_input"
             except Exception as exc:
                 if mode == "llm_required":
                     raise
@@ -454,17 +708,20 @@ def render(
                     f"LLM unavailable ({exc}); using deterministic renderer."
                 )
                 mode_used = "deterministic_fallback"
-                grounding = "unverified_input"
 
     return {
+        "render_schema_version": RENDER_SCHEMA_VERSION,
         "rendered": {
             "format": format,
             "content": content,
+            "grounding_status": grounding,
+            "semantic_preservation": "not_proven",
+            "rendering_status": "completed",
             "mode_requested": mode,
             "mode_used": mode_used,
-            "grounding_status": grounding,
             "warnings": warnings,
         },
+        "decision_context": compiled.decision_context,
         "metadata": {
             "context_pack_id": pack.pack_id,
             "dataset_revision": pack.dataset_revision,
