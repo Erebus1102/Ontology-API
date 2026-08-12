@@ -16,6 +16,7 @@ Error mapping:
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -28,7 +29,8 @@ try:
 except ImportError:
     pass
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
 from tkos_runtime.adapters.gram_intent_resolver import GramIntentResolver
 from tkos_runtime.adapters.rdflib_dataset_store import RdfDatasetStore
@@ -44,14 +46,52 @@ from tkos_runtime.api.serializer import dict_to_pack, pack_to_dict
 from tkos_runtime.application.context_renderer import render
 from tkos_runtime.domain.render_units import RenderBudgetTooSmall
 
+# authN/authZ (deployment blockers B2)
+from tkos_runtime.api.auth import (
+    Principal,
+    _load_credentials,
+    assert_purpose,
+    require_token,
+)
+
+# version constants for /version fingerprint aggregation
+from tkos_runtime.application.context_renderer import RENDERER_VERSION
+from tkos_runtime.domain.query_plan import QUERY_PLAN_VERSION
+
 # src/tkos_runtime/api/server.py -> parents[3] is the repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SCHEMA = _REPO_ROOT / "ontology" / "schema" / "tkos-ontology.jsonld"
 _DATASET = _REPO_ROOT / "ontology" / "datasets" / "tkos-runtime-dataset.trig"
 
 
+# ---------------------------------------------------------------------------
+# runtime state for health / readiness probes (deployment blockers B1)
+# ---------------------------------------------------------------------------
+
+class _RuntimeState:
+    """Per-worker runtime state for health/readiness probes."""
+    ready: bool = False
+    startup_shacl_status: str = "skipped"  # "pass" | "fail" | "skipped"
+
+
+_state = _RuntimeState()
+
+
+# ---------------------------------------------------------------------------
+# store construction
+# ---------------------------------------------------------------------------
+
+def _is_sensitive_instance(path: Path) -> bool:
+    """Heuristic: filename contains 'sensitive' or 'persona' (O(1))."""
+    name = path.name.lower()
+    return "sensitive" in name or "persona" in name
+
+
 def _default_store() -> RdfDatasetStore:
     instance_paths = sorted((_REPO_ROOT / "data" / "instances").glob("*.trig"))
+    # B.4: exclude sensitive partition instances unless explicitly opted in
+    if os.environ.get("TKOS_INCLUDE_SENSITIVE", "0") != "1":
+        instance_paths = [p for p in instance_paths if not _is_sensitive_instance(p)]
     return RdfDatasetStore(_SCHEMA, _DATASET, instance_paths, release_root=_REPO_ROOT)
 
 
@@ -61,6 +101,82 @@ def _build_resolver(store: RdfDatasetStore) -> ContextPackResolver:
     compiler = ContextCompiler(store, AdmissionPolicy())
     return ContextPackResolver(store, intent, retriever, compiler)
 
+
+# ---------------------------------------------------------------------------
+# startup SHACL gate
+# ---------------------------------------------------------------------------
+
+def _run_startup_shacl_if_enabled(store: RdfDatasetStore) -> str:
+    """Run pyshacl at startup if ``TKOS_STARTUP_SHACL=1``.
+
+    Returns ``"pass"``, ``"fail"``, or ``"skipped"``.
+
+    Note: v1 skips startup SHACL by default. The store does not yet expose
+    raw rdflib graphs for external validation; when it does, wire pyshacl
+    here via ``store._ds`` (the internal rdflib Dataset).
+    """
+    if os.environ.get("TKOS_STARTUP_SHACL") != "1":
+        return "skipped"
+    # v1: store doesn't expose raw graphs yet — skip until store API grows
+    return "skipped"
+
+
+# ---------------------------------------------------------------------------
+# health / readiness / version handlers
+# ---------------------------------------------------------------------------
+
+def _register_health_routes(app: FastAPI, store: RdfDatasetStore) -> None:
+    """Register GET /health, /ready, /version on *app*."""
+
+    @app.get("/health")
+    async def health() -> dict:
+        """Liveness probe — unconditionally 200."""
+        return {"status": "ok"}
+
+    @app.get("/ready")
+    async def ready():
+        """Readiness probe — 200 when Store loaded + optional SHACL pass."""
+        if _state.ready:
+            return {
+                "status": "ready",
+                "checks": {
+                    "store_loaded": True,
+                    "startup_shacl": _state.startup_shacl_status,
+                },
+            }
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "reason": (
+                    "store_loading"
+                    if _state.startup_shacl_status == "skipped"
+                    else "startup_shacl_failed"
+                ),
+            },
+        )
+
+    @app.get("/version")
+    async def version(
+        principal: Principal = Depends(require_token),
+    ) -> dict:
+        """Version fingerprint — requires auth (prevents fingerprint leak)."""
+        code_sha = os.environ.get("TKOS_CODE_SHA", "unknown")
+        ds_rev = getattr(store, "dataset_revision", "unknown")
+        return {
+            "ontology_release_id": getattr(store, "ontology_release_id", "unknown"),
+            "dataset_revision": ds_rev[:16] if isinstance(ds_rev, str) else "unknown",
+            "code_sha": code_sha,
+            "policy_version": "read-admission/p0-v1",
+            "query_plan_version": QUERY_PLAN_VERSION,
+            "renderer_version": RENDERER_VERSION,
+            "app_version": app.version,
+        }
+
+
+# ---------------------------------------------------------------------------
+# application factory
+# ---------------------------------------------------------------------------
 
 def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
     """Application factory.
@@ -73,8 +189,22 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
     resolver = _build_resolver(store)
     app = FastAPI(title="TKOS Runtime — Context Pack API", version="0.1.0")
 
+    # ── auth: load credentials onto app state ──
+    app.state.principals = _load_credentials()
+
+    # ── readiness: run optional startup SHACL, then set ready ──
+    _state.startup_shacl_status = _run_startup_shacl_if_enabled(store)
+    _state.ready = (_state.startup_shacl_status != "fail")
+
+    # ── health routes (before business endpoints) ──
+    _register_health_routes(app, store)
+
     @app.post("/v1/context-packs:resolve")
-    def resolve(req: ResolveRequest) -> dict:
+    def resolve(
+        req: ResolveRequest,
+        principal: Principal = Depends(require_token),
+    ) -> dict:
+        assert_purpose(req.purpose, principal)
         try:
             as_of = datetime.fromisoformat(req.as_of.replace("Z", "+00:00"))
         except ValueError as exc:
@@ -99,11 +229,18 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
         return pack_to_dict(pack)
 
     @app.post("/v1/context-packs:render")
-    def resolve_and_render(req: RenderRequest) -> dict:
+    def resolve_and_render(
+        req: RenderRequest,
+        principal: Principal = Depends(require_token),
+    ) -> dict:
         opts = req.render_options
         # Resolve source pack
         if req.resolve_request is not None:
             rr = req.resolve_request
+            # authZ: validate purpose on the resolved request
+            assert_purpose(
+                rr.get("purpose", "decision_preparation"), principal
+            )
             try:
                 as_of = datetime.fromisoformat(
                     rr.get("as_of", "").replace("Z", "+00:00")

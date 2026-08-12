@@ -315,8 +315,9 @@ def test_max_chars_fact_unit_budget():
 # 10. resolve unaffected
 # ---------------------------------------------------------------------------
 
-def test_resolve_endpoint_still_works():
+def test_resolve_endpoint_still_works(monkeypatch):
     """Existing /resolve endpoint must be unaffected by render additions."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
@@ -327,7 +328,7 @@ def test_resolve_endpoint_still_works():
         "query": "是否在本季度同时完成产品 1.0 上线和灯塔项目交付",
         "as_of": "2026-08-11T23:59:59+08:00",
         "actor_id": "test",
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 200, resp.text
     assert resp.json()["matched_root"]
 
@@ -336,8 +337,9 @@ def test_resolve_endpoint_still_works():
 # render endpoint integration
 # ---------------------------------------------------------------------------
 
-def test_render_endpoint_with_resolve_request():
+def test_render_endpoint_with_resolve_request(monkeypatch):
     """POST /render with resolve_request resolves + renders in one call."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
@@ -351,7 +353,7 @@ def test_render_endpoint_with_resolve_request():
             "as_of": "2026-08-11T23:59:59+08:00",
         },
         "render_options": {"mode": "deterministic", "include_structured": True, "max_chars": 50000},
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["rendered"]["content"]
@@ -366,8 +368,9 @@ def test_render_endpoint_with_resolve_request():
     assert body["structured"]["matched_root"]
 
 
-def test_render_endpoint_with_pack_input():
+def test_render_endpoint_with_pack_input(monkeypatch):
     """POST /render with a pre-resolved pack."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
@@ -379,21 +382,22 @@ def test_render_endpoint_with_pack_input():
         "query": "是否在本季度同时完成产品 1.0 上线和灯塔项目交付",
         "as_of": "2026-08-11T23:59:59+08:00",
         "actor_id": "test",
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     pack_dict = r1.json()
 
     # Then render the pack dict
     r2 = client.post("/v1/context-packs:render", json={
         "pack": pack_dict,
         "render_options": {"mode": "deterministic"},
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     assert r2.status_code == 200, r2.text
     body = r2.json()
     assert body["rendered"]["content"]
 
 
-def test_render_both_inputs_is_422():
+def test_render_both_inputs_is_422(monkeypatch):
     """Exactly one of pack or resolve_request required."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
@@ -401,24 +405,26 @@ def test_render_both_inputs_is_422():
     resp = client.post("/v1/context-packs:render", json={
         "pack": {"pack_id": "x"},
         "resolve_request": {"query": "x", "purpose": "decision_preparation"},
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 422, resp.text
 
 
-def test_render_neither_input_is_422():
+def test_render_neither_input_is_422(monkeypatch):
     """Neither pack nor resolve_request → 422."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
     client = TestClient(create_app())
-    resp = client.post("/v1/context-packs:render", json={})
+    resp = client.post("/v1/context-packs:render", json={}, headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 422, resp.text
 
 
 # ── Task 7: 422 envelope + e2e schema v2 ──────────────────────────────────
 
-def test_render_budget_too_small_422_envelope():
+def test_render_budget_too_small_422_envelope(monkeypatch):
     """RenderBudgetTooSmall → HTTP 422 with detail envelope."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
@@ -432,7 +438,7 @@ def test_render_budget_too_small_422_envelope():
             "as_of": "2026-08-11T23:59:59+08:00",
         },
         "render_options": {"mode": "deterministic", "max_chars": 100},
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 422
     d = resp.json()["detail"]
     assert d["code"] == "render_budget_too_small"
@@ -440,10 +446,11 @@ def test_render_budget_too_small_422_envelope():
     assert d["minimum_required_chars"] > 100
 
 
-def test_render_response_schema_v2():
+def test_render_response_schema_v2(monkeypatch):
     """Full render response carries v2 schema: render_schema_version,
     structurally_validated grounding, not_proven semantic_preservation,
     decision_context with compiler_version."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     from fastapi.testclient import TestClient
     from tkos_runtime.api.server import create_app
 
@@ -457,7 +464,7 @@ def test_render_response_schema_v2():
             "as_of": "2026-08-11T23:59:59+08:00",
         },
         "render_options": {"mode": "deterministic", "max_chars": 50000},
-    })
+    }, headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["render_schema_version"] == "context-render/2.0"

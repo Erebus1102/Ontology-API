@@ -40,10 +40,12 @@ def _member_ids(members: list[dict[str, Any]]) -> set[str]:
     return {m["id"] for m in members}
 
 
-def test_pack_is_agent_usable_for_fe_issue():
+def test_pack_is_agent_usable_for_fe_issue(monkeypatch):
     """Acceptance: the Pack the agent receives for the FE issue is usable."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     client = TestClient(create_app())
-    resp = client.post("/v1/context-packs:resolve", json=FE_REQ)
+    resp = client.post("/v1/context-packs:resolve", json=FE_REQ,
+                       headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 200, resp.text
     pack = resp.json()
 
@@ -115,12 +117,14 @@ def test_pack_is_agent_usable_for_fe_issue():
     assert pack["schema_version"], "schema_version missing"
 
 
-def test_degraded_path_fe_issue_yields_usable_pack():
+def test_degraded_path_fe_issue_yields_usable_pack(monkeypatch):
     """Degraded path: the real FE issue yields current_facts==[] but a
     non-empty candidate_context + context_gaps — the agent gets a usable
     degraded Pack, not an error or empty 200."""
+    monkeypatch.setenv("TKOS_API_KEY", "test-key")
     client = TestClient(create_app())
-    resp = client.post("/v1/context-packs:resolve", json=FE_REQ)
+    resp = client.post("/v1/context-packs:resolve", json=FE_REQ,
+                       headers={"Authorization": "Bearer test-key"})
     assert resp.status_code == 200, resp.text
     pack = resp.json()
 
