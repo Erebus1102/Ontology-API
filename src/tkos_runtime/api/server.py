@@ -19,6 +19,15 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+# Auto-load .env for LLM credentials (python-dotenv).
+# Gracefully no-op if python-dotenv is not installed or .env is absent.
+try:
+    from dotenv import load_dotenv
+    _ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
+    load_dotenv(_ENV_PATH)
+except ImportError:
+    pass
+
 from fastapi import FastAPI, HTTPException
 
 from tkos_runtime.adapters.gram_intent_resolver import GramIntentResolver
