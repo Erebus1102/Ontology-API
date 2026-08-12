@@ -1,6 +1,6 @@
 # tests/test_decision_context_compiler.py
 from tkos_runtime.application.decision_context_compiler import build_type_index, build_type_index_from_members, classify_role
-from tkos_runtime.domain.models import ContextPackMember, AdmissionDecision
+from tkos_runtime.domain.models import ContextPack, ContextPackMember, AdmissionDecision, ScopeResolution
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
 def _m(mid, partition, types):
@@ -8,6 +8,22 @@ def _m(mid, partition, types):
         statements=[], source_graphs=[partition], confirmation_status=None,
         lifecycle=None, valid_from=None, valid_until=None, sources=[],
         admission=AdmissionDecision(True, partition), rdf_types=[TKOS+t for t in types])
+
+def _pack(**overrides):
+    defaults = dict(
+        pack_id="test", schema_version="1.0",
+        as_of="2026-08-12T00:00:00+08:00", query="q",
+        purpose="decision_preparation", matched_root="urn:test:root",
+        alternative_matches=[], scope_resolution=ScopeResolution([], [], "not_enforced", ""),
+        current_facts=[], candidate_context=[], provenance_context=[],
+        proof=[], derived_claims=[], reasoning_status="not_available",
+        context_gaps=[], conflicts=[], omissions=[],
+        contributing_graphs=[], admission_policy="",
+        ontology_release_id="2.4.0", dataset_revision="a"*64,
+        policy_version="read-admission/p0-v1", query_plan_version="bfs-2gram/p0-v1",
+    )
+    defaults.update(overrides)
+    return ContextPack(**defaults)
 
 def test_type_index_merges_across_views_and_classifies():
     pack_members = [_m("m1","graph-candidate-and-dispute",["Mission"]),
@@ -31,3 +47,19 @@ def test_rejected_slice_type_does_not_leak():
 def test_other_when_no_match():
     ti = build_type_index_from_members([_m("z","graph-confirmed-enterprise",["LifecycleStatus"])])
     assert classify_role("z", ti) == "other"
+
+def test_build_type_index_from_pack_merges_across_partitions():
+    # Exercises the pack-iteration path (current_facts/candidate_context/provenance_context/
+    # context_gaps/derived_claims), not the flat-list helper.
+    pack = _pack(
+        current_facts=[_m("e1","graph-confirmed-enterprise",["Outcome"])],
+        candidate_context=[_m("e1","graph-candidate-and-dispute",["Mission"])],
+        provenance_context=[_m("e1","graph-decision-provenance",[])],
+        context_gaps=[_m("g1","graph-context-gap",["ContextGap"])],
+        derived_claims=[_m("d1","graph-confirmed-enterprise",["ProgressSnapshot"])],
+    )
+    ti = build_type_index(pack)
+    assert ti["e1"] == {TKOS + "Outcome", TKOS + "Mission"}
+    assert classify_role("e1", ti) == "outcome"
+    assert ti["g1"] == {TKOS + "ContextGap"}
+    assert ti["d1"] == {TKOS + "ProgressSnapshot"}
