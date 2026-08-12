@@ -144,7 +144,18 @@ def _extract_numbers(text: str) -> set[str]:
 
 
 def _extract_uris(text: str) -> set[str]:
-    return set(re.findall(r"https?://[^\s\]\[]+", text))
+    """Extract http(s) URIs, stopping at ASCII and CJK punctuation.
+
+    Without the CJK exclusions, a URL immediately followed by Chinese
+    punctuation (e.g. ``https://x.example/；首批场景……``) gets greedily
+    captured together. When the LLM later trims surrounding brackets, the
+    two "URI strings" diverge and trigger a false positive.
+    """
+    # Exclude ASCII whitespace/brackets/quotes AND common CJK punctuation.
+    return set(re.findall(
+        r"""https?://[^\s\]\[<>"'，。；！？、（）【】《》“”‘’]+""",
+        text,
+    ))
 
 
 def _validate_llm_output(

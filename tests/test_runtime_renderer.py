@@ -682,3 +682,45 @@ def test_validator_detects_missing_member():
     )
     assert not valid
     assert any("missing member" in w.lower() for w in warnings)
+
+
+# ---------------------------------------------------------------------------
+# P1-1b: URI boundary — CJK punctuation must terminate URL extraction
+# ---------------------------------------------------------------------------
+
+def test_validator_same_url_with_changed_cjk_punctuation_passes():
+    """Same URL with surrounding Chinese punctuation changed → must pass.
+
+    Regression: the old greedy regex captured ``https://x.example/；首批场景``
+    as one URI, so removing a bracket made the strings diverge and triggered
+    a false positive. The URL itself is unchanged.
+    """
+    deterministic = _wrap_in_markdown(
+        "- 灯塔场景见 https://meeting-green-phi.vercel.app/（首批词元云集场景）"
+        " [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    # LLM removed the full-width parentheses around the trailing text — URL unchanged
+    polished = _wrap_in_markdown(
+        "- 灯塔场景见 https://meeting-green-phi.vercel.app/；首批词元云集场景"
+        " [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT], polished, deterministic_text=deterministic,
+    )
+    assert valid, f"false positive: {warnings}"
+
+
+def test_validator_new_url_injected_is_rejected():
+    """A genuinely new URL not in the deterministic baseline → must fail."""
+    deterministic = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    polished = _wrap_in_markdown(
+        "- Q3 营收增长 15%，详见 https://evil.example.com/report.pdf"
+        " [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT], polished, deterministic_text=deterministic,
+    )
+    assert not valid
+    assert any("new uris" in w.lower() for w in warnings)
