@@ -1,5 +1,5 @@
 # tests/test_decision_context_compiler.py
-from tkos_runtime.application.decision_context_compiler import build_type_index, build_type_index_from_members, classify_role
+from tkos_runtime.application.decision_context_compiler import build_type_index, build_type_index_from_members, build_name_index, build_name_index_from_members_test, classify_role, humanize_relation_text
 from tkos_runtime.domain.models import ContextPack, ContextPackMember, AdmissionDecision, ScopeResolution
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
@@ -47,6 +47,26 @@ def test_rejected_slice_type_does_not_leak():
 def test_other_when_no_match():
     ti = build_type_index_from_members([_m("z","graph-confirmed-enterprise",["LifecycleStatus"])])
     assert classify_role("z", ti) == "other"
+
+def _m2(mid, display, scope=None):
+    return ContextPackMember(id=mid, display_name=display, scope=scope,
+        partition="graph-candidate-and-dispute", statements=[], source_graphs=[],
+        confirmation_status=None, lifecycle=None, valid_from=None, valid_until=None,
+        sources=[], admission=AdmissionDecision(True,"graph-candidate-and-dispute"), rdf_types=[])
+
+def test_name_index_priority_real_display_over_scope_over_fragment():
+    # display_name == fragment => not real => fall to scope
+    m = _m2("mission-fe-m2", "mission-fe-m2", scope="灯塔 Context 闭环")
+    idx = build_name_index_from_members_test([m])
+    assert idx["mission-fe-m2"] == "灯塔 Context 闭环"
+
+def test_humanize_replaces_fragment_with_name():
+    name_index = {"dependency-x": "共同交付依赖"}
+    claim = "依赖：dependency-x；其余不变"
+    assert humanize_relation_text(claim, name_index) == "依赖：共同交付依赖；其余不变"
+
+def test_literal_object_unchanged():
+    assert humanize_relation_text("范围：用户增长", {}) == "范围：用户增长"
 
 def test_build_type_index_from_pack_merges_across_partitions():
     # Exercises the pack-iteration path (current_facts/candidate_context/provenance_context/
