@@ -4,7 +4,7 @@
 
 > **Honesty boundary (r3 P1-5):** 结构校验通过 **≠** 自然语言语义等价证明。编译器/校验器只保证**结构**完整（member、partition、section、source、状态标签、数字、URI）。自然语言层的语义保持始终 `not_proven`。`grounding_status` 收窄为 `structurally_validated`，不再称 `validated`。
 
-> **Revision note (r3):** 依二轮评审修订 5 项 P1 + 4 项 P2。锚点与校验主键升级为 `view_key=(member_id,partition)`；type 抽取改为 Admission 门控两阶段；定义 `mandatory_floor` 与 422；模型移至中立模块避免循环依赖；grounding 声明收窄并拆三状态。
+> **Revision note (r4):** 依三轮评审修订 3 项 P1 + 2 项建议。修正 `DECISION_INCIDENT_PREDICATES` 事实错误（TRAVERSAL 实含治理谓词，须显式排除 7 项）；状态字段改为 Render Schema v2 显式迁移，`mode_used` 枚举不破坏；422 定义为 `RenderBudgetTooSmall` 异常 + 完整 `detail` 信封；`rdf_types` 存当前 view 自身类型、`type_index` 跨 view 合并；"≥1 Outcome 不可回收"加存在性条件。
 
 ## 1. 背景与问题
 
@@ -39,13 +39,15 @@ rdf_types: list[str]   # 完整 class IRI 列表，如 ["https://ontology.tokenk
 
 **两阶段抽取（P1-2，不绕过 AdmissionPolicy）**：
 1. 第一阶段：对每个 `(member_id, partition)` 执行 `AdmissionPolicy.decide(part, subj, as_of)`。
-2. 第二阶段：`rdf_types` **只从 `accept=True` 的 subject slice** 收集该实体的 `rdf:type`。被拒切片（Archived / 超有效期 / 状态不满足）的类型**不得**影响获准 view 的 role。
+2. 第二阶段：`ContextPackMember.rdf_types` **只从该 view 自身获准（`accept=True`）的 subject slice** 收集 `rdf:type`。被拒切片的类型不得进入任何 view 的 `rdf_types`。
+
+`rdf_types` 保存的是**当前 view 自身**的类型，不跨分区复制（不把 Candidate 类型抄进 Provenance view 的字段）。跨 view 合并由 §4.1 `type_index` 完成。
 
 存完整 IRI（非 fragment）以避免跨模块/namespace 同名 class 冲突；role 映射时再取 fragment。v1 **不设**"类型可跨状态复用"的治理例外——若未来需要，须显式 spec 修订 + 测试，不由 `_to_member` 隐式读取。
 
 ### 4.1 type_index 与 view_key
 
-- `type_index[member_id]` = 该 member 在**所有获准分区**的 `rdf_types` 并集（一个实体一个 role）。
+- `type_index[member_id]` = 该 member 在**所有获准 view** 的 `rdf_types` 并集（一个实体一个 role）——合并发生在此处，不在 member 字段。
 - `view_key = (member_id, partition)` —— 输出与校验的主键（见 §7 锚点、§10 校验）。
 - `classify_role(member_id)` 读 `type_index[member_id]`，按 §4.2 表取首个命中（required > secondary > trace_only），无命中 → `other`。
 
@@ -95,15 +97,38 @@ mandatory_floor =
   + 必要 section 标题 + footer
 ```
 
-`mandatory_floor` 随实际内容动态计算（Gap 数 0 时更低）。当 `max_chars < mandatory_floor`：**返回 HTTP 422**，不放松"全部 Gap 进 Markdown"契约：
+`mandatory_floor` 随实际内容动态计算（Gap 数 0 时更低）。当 `max_chars < mandatory_floor`：**返回 HTTP 422**，不放松"全部 Gap 进 Markdown"契约。
 
-```json
-{ "code": "render_budget_too_small",
-  "requested_max_chars": 500,
-  "minimum_required_chars": 1378 }
+**机器契约（P1-3，r4）**：定义领域异常，由 API 层映射，响应须有完整可断言 JSON 结构：
+
+```python
+# domain 层
+class RenderBudgetTooSmall(Exception):
+    def __init__(self, requested_max_chars: int, minimum_required_chars: int):
+        self.requested_max_chars = requested_max_chars
+        self.minimum_required_chars = minimum_required_chars
 ```
 
-API 字段 `max_chars` 的静态下限可保留，但动态 `mandatory_floor` 是真正的硬门。
+```python
+# server.py 映射
+except RenderBudgetTooSmall as exc:
+    raise HTTPException(status_code=422, detail={
+        "code": "render_budget_too_small",
+        "requested_max_chars": exc.requested_max_chars,
+        "minimum_required_chars": exc.minimum_required_chars,
+    }) from exc
+```
+
+实际响应信封（FastAPI 默认 `detail` 包裹）：
+
+```json
+{ "detail": {
+    "code": "render_budget_too_small",
+    "requested_max_chars": 500,
+    "minimum_required_chars": 1378 } }
+```
+
+端到端测试须断言**完整 JSON 结构**（`detail.code` / `detail.requested_max_chars` / `detail.minimum_required_chars`），不只断言 HTTP 422。API 字段 `max_chars` 的静态下限可保留，但动态 `mandatory_floor` 是真正的硬门。
 
 ### 6.2 闭合预算公式
 
@@ -120,7 +145,7 @@ slot_budget[s]  = usable_budget * slot_ratio[s]
 - **第一遍**：按槽位贪心选择完整 view 行，计算各槽 omission。
 - **第二遍**：生成精确 omission 计数行 + 完整 fixed_text，重算 `len`。
 - **超限回收**：从最低优先级可选项开始回收（secondary → evidence → 非 root outcome…）。
-- **不可回收项**：根议题、至少 1 个 Outcome、每条 Gap 短格式。
+- **不可回收项**：根议题、每条 Gap 短格式，以及（**存在性条件**）Pack 中存在 Outcome 时至少保留 1 个 Outcome；不存在 Outcome 时此规则不触发，不得导致编译失败。
 
 ### 6.4 Gap 短格式 + 动态借用（P1-3）
 
@@ -137,12 +162,26 @@ gap 槽不足 → 借 evidence → risk/dependency → outcome/progress → 全�
 
 排序信号，按 view 计算：同一 partition 内 `statement.object == member 完整 IRI` 且 `predicate ∈ DECISION_INCIDENT_PREDICATES` 的去重数量。
 
+**完整定义（r4 P1-1，事实修正）**：`TRAVERSAL`（`domain/query_plan.py:6`）实际**包含**治理/溯源/分配谓词（`sourcedFrom`、`confirmedBy`、`confirmsEntity`、`hasResponsibleAssignment`、`assignmentHolder`、`assignmentRole`、`assignmentScope`）。若直接 `frozenset(TRAVERSAL)`，被大量来源/确认/分配记录引用的对象会获得虚高 incident_edges，让 trace_only 治理记录污染决策排序。故须显式排除：
+
 ```python
-# domain/render_units.py —— 唯一定义处，无省略号
-DECISION_INCIDENT_PREDICATES = frozenset(TRAVERSAL)
+# domain/render_units.py —— 唯一定义处，完整集合，无省略号
+from tkos_runtime.domain.query_plan import TRAVERSAL, TKOS
+
+NON_DECISION_INCIDENT_PREDICATES = frozenset({
+    TKOS + "sourcedFrom",
+    TKOS + "confirmedBy",
+    TKOS + "confirmsEntity",
+    TKOS + "hasResponsibleAssignment",
+    TKOS + "assignmentHolder",
+    TKOS + "assignmentRole",
+    TKOS + "assignmentScope",
+})
+
+DECISION_INCIDENT_PREDICATES = frozenset(TRAVERSAL) - NON_DECISION_INCIDENT_PREDICATES
 ```
 
-`TRAVERSAL` 复用 `domain/query_plan.py` 的现有业务关系集（P0-1 已收敛为单一源）。结构性谓词（`rdf:type`、`displayName`、`scopeDescription`、`hasConfirmationStatus`、`hasStatus`、`validFrom`、`validUntil`、`sourcedFrom`）本就不在 `TRAVERSAL` 中，故不计入。同四元组去重；跨分区关系不计入当前 view。
+排除集合必须**完整列出**（上表 7 项），不得用省略号；新增排除项须同步加测试。同四元组去重；跨分区关系不计入当前 view。测试：业务关系（`hasOutcome`/`hasRisk`/`dependsOn`/`supportedByEvidence`…）计入；上述 7 项不计入；`rdf:type`/`displayName` 等结构谓词不计入（本就不在 TRAVERSAL）；同四元组不重复；跨分区不计入当前 view。
 
 ## 7. rendered.content 分节模板（r3：view-aware 锚点）
 
@@ -209,27 +248,33 @@ DECISION_INCIDENT_PREDICATES = frozenset(TRAVERSAL)
 
 `entry` = `{view_key, member_id, name, claim, epistemic_status, partition, source_graphs}`（`epistemic_status` 可 null）。`entry_full`（Gap）增 `scope`、关联 member_ids、来源关系。每个 entry 固定含 `partition` 与 `source_graphs`。
 
-### 9.1 输出三状态（P1-5，收窄 grounding 声明）
+### 9.1 输出状态（r4：Render Schema v2 迁移，不破坏 mode_used 契约）
+
+**这是 Render Schema v2 迁移**（P1-2，r4）。`mode_used` 枚举**保持不变**（沿用现有客户端契约）：`deterministic | deterministic_fallback | llm_with_fallback | llm_required`。**不引入** `llm_polished`。新增的是独立的 `grounding_status` / `semantic_preservation` / `rendering_status` 三字段 + 顶层 `render_schema_version`，作为 v2 标记。
 
 ```json
 {
+  "render_schema_version": "context-render/2.0",
   "rendered": {
     "content": "...",
     "grounding_status": "structurally_validated",
     "semantic_preservation": "not_proven",
     "rendering_status": "completed",
-    "mode_used": "deterministic | deterministic_fallback | llm_polished"
+    "mode_used": "deterministic | deterministic_fallback | llm_with_fallback | llm_required",
+    "mode_requested": "deterministic | llm_with_fallback | llm_required"
   },
   "metadata": { "pack_origin": "server_resolved | client_supplied", ... }
 }
 ```
 
+- `render_schema_version`：`context-render/2.0`。v1（`validated`/`unverified_input`）→ v2 是显式 schema 迁移，须同步更新 OpenAPI、README 兼容说明与 `api/api-contracts`。**不得**只改测试替代迁移。
 - `grounding_status`：仅 `structurally_validated`（member/partition/section/source/状态标签/数字/URI 已过结构校验）。**不再用 `validated`**。deterministic 链路结构有效是构造保证；LLM 链路仅在 §10 八条全过时为 `structurally_validated`，否则回退到 deterministic（仍 `structurally_validated`，`mode_used=deterministic_fallback`）。
 - `semantic_preservation`：v1 恒为 `not_proven`——自然语言语义等价未证明。
 - `pack_origin`：表**输入信任**（server_resolved vs client_supplied），替代旧 `grounding_status=unverified_input` 的混淆用法。
 - `rendering_status`：`completed`（成功产出，含 fallback）。
+- `mode_used`：**枚举不变**，保持向后兼容。
 
-旧测试中 `grounding_status == "validated"` / `"unverified_input"` 的断言须迁移（计划层处理）。
+现有断言 `grounding_status == "validated"` / `"unverified_input"` 须迁移到 v2 字段（计划层处理，属 schema 迁移一部分，非"改测试替代兼容"）。
 
 ## 10. 与现有渲染器的关系（r3：中立模块 + view_key 校验 + 收窄声明）
 
@@ -298,6 +343,8 @@ domain/render_units.py
 11. 同 ID 的 Candidate/Provenance view 各自保留 partition/source_graph/epistemic_status，且 `view_key` 各精确出现一次。
 12. deterministic 与 LLM 输出的**已选 view_key 集合、出现次数、role section**完全相同。
 13. epistemic_summary 不含 (B) 类表述。
-14. `max_chars < mandatory_floor` → HTTP 422 `render_budget_too_small`。
-15. `grounding_status == "structurally_validated"` 且 `semantic_preservation == "not_proven"`（任何成功渲染）。
+14. `max_chars < mandatory_floor` → HTTP 422，断言**完整 JSON**：`detail.code == "render_budget_too_small"`、`detail.requested_max_chars`、`detail.minimum_required_chars`（不只断言状态码）。
+15. `render_schema_version == "context-render/2.0"`、`grounding_status == "structurally_validated"`、`semantic_preservation == "not_proven"`（任何成功渲染）。
 16. `pack_origin=client_supplied` 时输入信任体现在 metadata，而非 `grounding_status`。
+17. `mode_used` 枚举仅取 `deterministic | deterministic_fallback | llm_with_fallback | llm_required`（无 `llm_polished`，契约不破坏）。
+18. incident_edges 正负样例：被 `sourcedFrom`/`confirmedBy`/`assignmentHolder` 等引用的对象不因此加分；被 `hasOutcome`/`hasRisk` 引用的对象正常加分。
