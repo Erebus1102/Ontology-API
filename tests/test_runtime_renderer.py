@@ -415,6 +415,72 @@ def test_render_neither_input_is_422():
     assert resp.status_code == 422, resp.text
 
 
+# ── Task 7: 422 envelope + e2e schema v2 ──────────────────────────────────
+
+def test_render_budget_too_small_422_envelope():
+    """RenderBudgetTooSmall → HTTP 422 with detail envelope."""
+    from fastapi.testclient import TestClient
+    from tkos_runtime.api.server import create_app
+
+    client = TestClient(create_app())
+    resp = client.post("/v1/context-packs:render", json={
+        "resolve_request": {
+            "enterprise_id": "tokenking",
+            "organization_scope": [],
+            "purpose": "decision_preparation",
+            "query": "是否在本季度同时完成产品 1.0 上线和灯塔项目交付",
+            "as_of": "2026-08-11T23:59:59+08:00",
+        },
+        "render_options": {"mode": "deterministic", "max_chars": 100},
+    })
+    assert resp.status_code == 422
+    d = resp.json()["detail"]
+    assert d["code"] == "render_budget_too_small"
+    assert d["requested_max_chars"] == 100
+    assert d["minimum_required_chars"] > 100
+
+
+def test_render_response_schema_v2():
+    """Full render response carries v2 schema: render_schema_version,
+    structurally_validated grounding, not_proven semantic_preservation,
+    decision_context with compiler_version."""
+    from fastapi.testclient import TestClient
+    from tkos_runtime.api.server import create_app
+
+    client = TestClient(create_app())
+    resp = client.post("/v1/context-packs:render", json={
+        "resolve_request": {
+            "enterprise_id": "tokenking",
+            "organization_scope": [],
+            "purpose": "decision_preparation",
+            "query": "是否在本季度同时完成产品 1.0 上线和灯塔项目交付",
+            "as_of": "2026-08-11T23:59:59+08:00",
+        },
+        "render_options": {"mode": "deterministic", "max_chars": 50000},
+    })
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["render_schema_version"] == "context-render/2.0"
+    assert body["rendered"]["grounding_status"] == "structurally_validated"
+    assert body["rendered"]["semantic_preservation"] == "not_proven"
+    assert body["rendered"]["rendering_status"] == "completed"
+    assert body["decision_context"]["compiler_version"] == "decision-context/v1"
+    # Gap contract: no "没有已知信息缺口" when gaps exist
+    n_gaps = len(body["decision_context"]["gaps"])
+    if n_gaps > 0:
+        assert "没有已知信息缺口" not in body["rendered"]["content"]
+    # Epistemic summary has no (B)-type phrases
+    summary = body["decision_context"].get("epistemic_summary", "")
+    for banned in ("尚不", "最可能", "建议您", "推荐"):
+        assert banned not in summary, f"found banned phrase '{banned}' in: {summary}"
+    # mode_used never llm_polished
+    assert body["rendered"]["mode_used"] != "llm_polished"
+    assert body["rendered"]["mode_used"] in (
+        "deterministic", "deterministic_fallback",
+        "llm_with_fallback", "llm_required",
+    )
+
+
 # ---------------------------------------------------------------------------
 # roundtrip: dict_to_pack → pack_to_dict
 # ---------------------------------------------------------------------------

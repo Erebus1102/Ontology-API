@@ -42,6 +42,7 @@ from tkos_runtime.adapters.openai_text_polisher import OpenAITextPolisher
 from tkos_runtime.api.render_models import RenderRequest
 from tkos_runtime.api.serializer import dict_to_pack, pack_to_dict
 from tkos_runtime.application.context_renderer import render
+from tkos_runtime.domain.render_units import RenderBudgetTooSmall
 
 # src/tkos_runtime/api/server.py -> parents[3] is the repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -155,6 +156,12 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 polisher=polisher,
                 pack_origin=pack_origin,
             )
+        except RenderBudgetTooSmall as exc:
+            raise HTTPException(status_code=422, detail={
+                "code": "render_budget_too_small",
+                "requested_max_chars": exc.requested_max_chars,
+                "minimum_required_chars": exc.minimum_required_chars,
+            }) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except RuntimeError as exc:

@@ -123,7 +123,8 @@ Ontology-API/
 - Openllet SWRL 验收推导测试
 - RDF Dataset 命名图契约
 - API 1 Runtime Library：进程内 Context Pack Resolver（保留图身份、敏感节点隔离、分区切片准入、确定性 BFS、cwd 无关 revision、Agent API 契约验证客户端）
-- API 1 本地 FastAPI HTTP 服务（`POST /v1/context-packs:resolve`）
+- API 1 本地 FastAPI HTTP 服务（`POST /v1/context-packs:resolve` + `POST /v1/context-packs:render`）
+- NL Rendering：确定性 Decision Context Compiler（角色分类→分节组装→预算分配），可选 LLM 润色（post-LLM section-aware 校验），**Render Schema v2**（`render_schema_version: "context-render/2.0"`，`grounding_status: structurally_validated`，`semantic_preservation: not_proven`，`decision_context.compiler_version: decision-context/v1`）
 
 仍待实现：
 
