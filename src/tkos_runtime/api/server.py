@@ -29,7 +29,9 @@ from tkos_runtime.application.context_pack_resolver import ContextPackResolver
 from tkos_runtime.domain.models import NoMatchError
 from tkos_runtime.domain.policies import AdmissionPolicy
 from tkos_runtime.api.models import ResolveRequest
-from tkos_runtime.api.serializer import pack_to_dict
+from tkos_runtime.api.render_models import RenderRequest
+from tkos_runtime.api.serializer import dict_to_pack, pack_to_dict
+from tkos_runtime.application.context_renderer import render
 
 # src/tkos_runtime/api/server.py -> parents[3] is the repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -84,6 +86,61 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
         except NoMatchError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return pack_to_dict(pack)
+
+    @app.post("/v1/context-packs:render")
+    def resolve_and_render(req: RenderRequest) -> dict:
+        opts = req.render_options
+        # Resolve source pack
+        if req.resolve_request is not None:
+            rr = req.resolve_request
+            try:
+                as_of = datetime.fromisoformat(
+                    rr.get("as_of", "").replace("Z", "+00:00")
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=422, detail=f"invalid as_of: {exc}"
+                ) from exc
+            if as_of.tzinfo is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="as_of must include a timezone offset (e.g. +08:00 or Z)",
+                )
+            try:
+                pack = resolver.resolve(
+                    query=rr.get("query", ""),
+                    purpose=rr.get("purpose", "decision_preparation"),
+                    as_of=as_of,
+                    organization_scope=list(rr.get("organization_scope", [])),
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except NoMatchError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+        else:
+            try:
+                pack = dict_to_pack(req.pack)  # type: ignore[arg-type]
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=422, detail=f"invalid pack: {exc}"
+                ) from exc
+
+        try:
+            result = render(
+                pack,
+                mode=opts.mode,
+                format=opts.format,
+                max_chars=opts.max_chars,
+                language=opts.language,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+        if opts.include_structured:
+            result["structured"] = pack_to_dict(pack)
+        return result
 
     return app
 
