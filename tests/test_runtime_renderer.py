@@ -571,20 +571,30 @@ def _wrap_in_markdown(text: str) -> str:
 
 def test_validator_rejects_fabricated_revenue():
     """LLM added a fabricated revenue claim → validation must fail."""
+    deterministic = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
     polished = _wrap_in_markdown(
         "- Q3 营收增长 15%，已超额完成全年目标 200% [member:urn:test:m1][source:graph-confirmed-enterprise]"
     )
-    valid, warnings = _validate_llm_output([_MOCK_CURRENT_FACT], polished)
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT], polished, deterministic_text=deterministic
+    )
     assert not valid
     assert any("new numbers" in w.lower() or "injected" in w.lower() for w in warnings)
 
 
 def test_validator_rejects_forged_source_graph():
     """LLM added a forged source anchor → validation must fail."""
+    deterministic = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
+    )
     polished = _wrap_in_markdown(
         "- Q3 营收增长 15% [member:urn:test:m1][source:graph-sensitive-restricted]"
     )
-    valid, warnings = _validate_llm_output([_MOCK_CURRENT_FACT], polished)
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT], polished, deterministic_text=deterministic
+    )
     assert not valid
     assert any("forged source" in w.lower() for w in warnings)
 
@@ -600,18 +610,32 @@ def test_validator_rejects_phantom_member_id():
             canonical_claim="灯塔项目预计延迟 2 周交付",
         ),
     ]
+    deterministic = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]\n"
+        "- 灯塔项目预计延迟 2 周交付 [member:urn:test:c1][source:graph-candidate-and-dispute]"
+    )
     polished = _wrap_in_markdown(
         "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]\n"
         "- 灯塔项目预计延迟 2 周交付 [member:urn:test:c1][source:graph-candidate-and-dispute]\n"
         "- 新增虚假事实：竞品已倒闭 [member:urn:test:phantom][source:graph-candidate-and-dispute]"
     )
-    valid, warnings = _validate_llm_output(original, polished)
+    valid, warnings = _validate_llm_output(
+        original, polished, deterministic_text=deterministic
+    )
     assert not valid
     assert any("phantom" in w.lower() for w in warnings)
 
 
 def test_validator_rejects_candidate_in_current_section():
     """LLM moved a candidate fact into 当前已确认事实 section → validation must fail."""
+    deterministic = (
+        "# Context Pack：测试\n\n"
+        "> 查询时间：2026-08-12  |  用途：decision_preparation  |  数据版本：`abc123…`\n\n"
+        "## 当前已确认事实\n\n"
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]\n\n"
+        "## 待确认信息\n\n"
+        "- 灯塔项目预计延迟 2 周交付 [member:urn:test:c1][source:graph-candidate-and-dispute]\n\n"
+    )
     polished = (
         "# Context Pack：测试\n\n"
         "> 查询时间：2026-08-12  |  用途：decision_preparation  |  数据版本：`abc123…`\n\n"
@@ -622,7 +646,8 @@ def test_validator_rejects_candidate_in_current_section():
         "当前没有待确认的候选信息。\n\n"
     )
     valid, warnings = _validate_llm_output(
-        [_MOCK_CURRENT_FACT, _MOCK_CANDIDATE_FACT], polished
+        [_MOCK_CURRENT_FACT, _MOCK_CANDIDATE_FACT], polished,
+        deterministic_text=deterministic,
     )
     assert not valid
     assert any("candidate" in w.lower() for w in warnings)
@@ -630,22 +655,30 @@ def test_validator_rejects_candidate_in_current_section():
 
 def test_validator_passes_clean_output():
     """Clean LLM output that preserves all anchors and facts → validation passes."""
-    polished = _wrap_in_markdown(
+    deterministic = _wrap_in_markdown(
         "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
     )
-    valid, warnings = _validate_llm_output([_MOCK_CURRENT_FACT], polished)
-    assert valid
+    polished = deterministic  # LLM kept everything unchanged
+    valid, warnings = _validate_llm_output(
+        [_MOCK_CURRENT_FACT], polished, deterministic_text=deterministic
+    )
+    assert valid, f"warnings: {warnings}"
     assert not warnings
 
 
 def test_validator_detects_missing_member():
     """LLM dropped a member → validation must fail."""
+    deterministic = _wrap_in_markdown(
+        "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]\n"
+        "- 灯塔项目预计延迟 2 周交付 [member:urn:test:c1][source:graph-candidate-and-dispute]"
+    )
     polished = _wrap_in_markdown(
         "- Q3 营收增长 15% [member:urn:test:m1][source:graph-confirmed-enterprise]"
     )
     # c1 is in original but not in polished
     valid, warnings = _validate_llm_output(
-        [_MOCK_CURRENT_FACT, _MOCK_CANDIDATE_FACT], polished
+        [_MOCK_CURRENT_FACT, _MOCK_CANDIDATE_FACT], polished,
+        deterministic_text=deterministic,
     )
     assert not valid
     assert any("missing member" in w.lower() for w in warnings)

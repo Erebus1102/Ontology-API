@@ -150,8 +150,16 @@ def _extract_uris(text: str) -> set[str]:
 def _validate_llm_output(
     original_units: list[RenderedFactUnit],
     polished: str,
+    deterministic_text: str = "",
 ) -> tuple[bool, list[str]]:
-    """强校验：member ID 一一对应、分区不变、source 不变、无数值/URI 注入。"""
+    """强校验：member ID 一一对应、分区不变、source 不变、无数值/URI 注入。
+
+    Numbers and URIs are validated against the full *deterministic* text
+    (metadata headers/footers included), not just the canonical claims,
+    so that dates, ontology versions, dataset revisions, and member URLs
+    already present in the deterministic output do not trigger false
+    positives.
+    """
     warnings: list[str] = []
 
     # build lookup
@@ -190,27 +198,28 @@ def _validate_llm_output(
                 "candidate graph source appeared in 当前已确认事实 section"
             )
 
-    # 4. no new numbers (allow same numbers; flag any new ones)
-    orig_numbers: set[str] = set()
+    # 4. no new numbers — baseline is the FULL deterministic text
+    #    (includes metadata: dates, ontology versions, dataset revisions)
+    baseline_numbers: set[str] = set()
+    if deterministic_text:
+        baseline_numbers.update(_extract_numbers(deterministic_text))
     for u in original_units:
-        orig_numbers.update(_extract_numbers(u.canonical_claim))
+        baseline_numbers.update(_extract_numbers(u.canonical_claim))
     polished_numbers = _extract_numbers(polished)
-    new_numbers = polished_numbers - orig_numbers
+    new_numbers = polished_numbers - baseline_numbers
     if new_numbers:
-        # ignore numbers that are part of dates in the metadata header
-        # (like 2026-08-12) by only flagging when the set actually grew
-        # in a way that can't be explained by metadata
-        if len(polished_numbers) > len(orig_numbers) + 5:
-            warnings.append(f"new numbers injected: {new_numbers - orig_numbers}")
+        warnings.append(f"new numbers injected: {new_numbers}")
 
-    # 5. no new URIs beyond original member IDs and sources
-    orig_uris: set[str] = set()
+    # 5. no new URIs — baseline is the FULL deterministic text
+    #    (includes ontology namespace, member URLs, source URIs)
+    baseline_uris: set[str] = set()
+    if deterministic_text:
+        baseline_uris.update(_extract_uris(deterministic_text))
     for u in original_units:
-        orig_uris.add(u.member_id)
+        baseline_uris.add(u.member_id)
+    baseline_uris.update(orig_sources)
     polished_uris = _extract_uris(polished)
-    new_uris = polished_uris - orig_uris - {"https://ontology.tokenking.ai/tkos#"}
-    # Allow source URIs to appear
-    new_uris -= orig_sources
+    new_uris = polished_uris - baseline_uris
     if new_uris:
         warnings.append(f"new URIs injected: {new_uris}")
 
@@ -416,7 +425,7 @@ def render(
             try:
                 polished = _polish_via_llm(content, polisher)
                 valid, val_warnings = _validate_llm_output(
-                    included_units, polished
+                    included_units, polished, deterministic_text=content
                 )
                 warnings.extend(val_warnings)
                 if valid:
