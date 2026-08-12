@@ -1,6 +1,14 @@
 # tests/test_decision_context_compiler.py
-from tkos_runtime.application.decision_context_compiler import build_type_index, build_type_index_from_members, build_name_index, build_name_index_from_members_test, classify_role, humanize_relation_text
-from tkos_runtime.domain.models import ContextPack, ContextPackMember, AdmissionDecision, ScopeResolution
+import pytest
+from tkos_runtime.application.decision_context_compiler import (
+    build_type_index, build_type_index_from_members,
+    build_name_index, build_name_index_from_members_test,
+    classify_role, humanize_relation_text,
+    compute_incident_edges, mandatory_floor, allocate_budget,
+    DecisionContextCompiler,
+)
+from tkos_runtime.domain.models import ContextPack, ContextPackMember, AdmissionDecision, ScopeResolution, GraphStatement
+from tkos_runtime.domain.render_units import RenderBudgetTooSmall, RenderedFactUnit, SECTION_ORDER
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
 def _m(mid, partition, types):
@@ -83,3 +91,114 @@ def test_build_type_index_from_pack_merges_across_partitions():
     assert classify_role("e1", ti) == "outcome"
     assert ti["g1"] == {TKOS + "ContextGap"}
     assert ti["d1"] == {TKOS + "ProgressSnapshot"}
+
+
+# ── Task 3: Budget ────────────────────────────────────────────────────────
+
+def test_incident_excludes_governance_predicates():
+    stmts = [GraphStatement("s", TKOS+"hasOutcome", "urn:x", "g"),
+             GraphStatement("s", TKOS+"sourcedFrom", "urn:x", "g"),
+             GraphStatement("s", TKOS+"confirmedBy", "urn:x", "g"),
+             GraphStatement("s", TKOS+"assignmentHolder", "urn:x", "g")]
+    m = ContextPackMember(id="x", display_name="x", scope=None,
+        partition="g", statements=stmts, source_graphs=["g"],
+        confirmation_status=None, lifecycle=None, valid_from=None, valid_until=None,
+        sources=[], admission=AdmissionDecision(True,"g"), rdf_types=[])
+    # Only hasOutcome should count (3 governance predicates excluded)
+    assert compute_incident_edges(m, "urn:x") == 1
+
+
+def test_mandatory_floor_includes_outcome_line_when_outcome_exists():
+    pack = _pack(
+        current_facts=[_m("o1", "graph-confirmed-enterprise", ["Outcome"])],
+        candidate_context=[_m("c1", "graph-candidate-and-dispute", ["Risk"])],
+        context_gaps=[_m("g1", "graph-candidate-and-dispute", ["ContextGap"]),
+                      _m("g2", "graph-candidate-and-dispute", ["ContextGap"])],
+    )
+    floor = mandatory_floor(pack)
+    assert floor > 0
+    # floor must exceed a gaps-only floor (accounts for an outcome line)
+    gaps_only_pack = _pack(
+        context_gaps=[_m("g1", "graph-candidate-and-dispute", ["ContextGap"]),
+                      _m("g2", "graph-candidate-and-dispute", ["ContextGap"])],
+    )
+    gaps_only = mandatory_floor(gaps_only_pack)
+    assert floor > gaps_only
+
+
+def test_allocate_raises_when_below_floor():
+    pack = _pack(
+        current_facts=[_m("o1", "graph-confirmed-enterprise", ["Outcome"])],
+        context_gaps=[_m(f"g{i}", "graph-candidate-and-dispute", ["ContextGap"])
+                      for i in range(8)],
+    )
+    with pytest.raises(RenderBudgetTooSmall) as ei:
+        allocate_budget({}, pack, max_chars=100)
+    assert ei.value.minimum_required_chars > 100
+    assert ei.value.requested_max_chars == 100
+
+
+def test_allocate_budget_gaps_always_included():
+    """Gaps are non-reclaimable — always included even if budget is tight."""
+    pack = _pack(
+        context_gaps=[_m("g1", "graph-candidate-and-dispute", ["ContextGap"])],
+    )
+    type_index = build_type_index(pack)
+    unit = RenderedFactUnit(
+        member_id="g1", partition="graph-candidate-and-dispute",
+        source_graphs=("graph-candidate-and-dispute",),
+        canonical_claim="缺口1", display_name="缺口1",
+        expected_section="gaps",
+    )
+    units = {"gaps": [unit]}
+    selected, omissions = allocate_budget(units, pack, max_chars=12000, type_index=type_index)
+    assert len(selected.get("gaps", [])) == 1
+    assert len(omissions) == 0
+
+
+# ── Task 4: DecisionContextCompiler.compile ────────────────────────────────
+
+def _fe_like_pack():
+    """Minimal pack resembling a real FE-issue resolve output."""
+    return _pack(
+        current_facts=[
+            _m("outcome-1", "graph-confirmed-enterprise", ["Outcome"]),
+        ],
+        candidate_context=[
+            _m("risk-1", "graph-candidate-and-dispute", ["Risk"]),
+            _m("issue-fe", "graph-candidate-and-dispute", ["StrategicIssue"]),
+        ],
+        provenance_context=[
+            _m("src-1", "graph-decision-provenance", ["SourceRecord"]),
+        ],
+        context_gaps=[
+            _m("gap-1", "graph-candidate-and-dispute", ["ContextGap"]),
+            _m("gap-2", "graph-candidate-and-dispute", ["ContextGap"]),
+        ],
+    )
+
+
+def test_compile_produces_sections_and_decision_context():
+    pack = _fe_like_pack()
+    out = DecisionContextCompiler().compile(pack, max_chars=4000)
+    # sections are subset of SECTION_ORDER + "issue" is already in SECTION_ORDER
+    assert set(out.units_by_section).issubset(set(SECTION_ORDER))
+    assert out.decision_context["compiler_version"] == "decision-context/v1"
+    # all gaps present in decision_context.gaps
+    assert len(out.decision_context["gaps"]) == len(pack.context_gaps)
+    # issue entry present
+    assert out.decision_context["issue"]["member_id"]
+    # trace_only (SourceRecord) not in any section's units
+    all_units = [u for sec in out.units_by_section.values() for u in sec]
+    assert all(u.expected_section for u in all_units)
+    source_record_units = [u for u in all_units if u.member_id == "src-1"]
+    assert len(source_record_units) == 0  # trace_only excluded
+
+
+def test_compile_epistemic_summary_no_b_type_phrases():
+    pack = _fe_like_pack()
+    out = DecisionContextCompiler().compile(pack, max_chars=4000)
+    summary = out.decision_context["epistemic_summary"]
+    # No (B)-type judgement phrases
+    for banned in ("尚不", "最可能", "建议", "应该", "推荐"):
+        assert banned not in summary, f"found banned phrase '{banned}' in: {summary}"
