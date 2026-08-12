@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import datetime
 from tkos_runtime.domain.models import (RetrievedMember, ContextPackMember, ContextPack,
-    IntentAssessment, ScopeResolution, Omission)
+    IntentAssessment, ScopeResolution, Omission, AdmissionDecision)
 from tkos_runtime.domain.policies import AdmissionPolicy
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
@@ -24,13 +24,26 @@ class ContextCompiler:
                 as_of: datetime, query: str, purpose: str) -> ContextPack:
         current, candidate, provenance, derived, gaps, omissions = [], [], [], [], [], []
         for m in sorted(members, key=lambda x: x.subject):
-            for part in sorted(set(m.subject_by_partition) | set(m.incident_by_partition)):
+            parts = sorted(set(m.subject_by_partition) | set(m.incident_by_partition))
+            # Pass 1: decide + collect admitted rdf:type (ER3 two-phase, Admission-gated)
+            decisions: dict[str, AdmissionDecision] = {}
+            member_types: set[str] = set()
+            for part in parts:
                 subj = m.subject_by_partition.get(part, [])
-                decision = self._policy.decide(part, subj, as_of)
-                if not decision.accept:
-                    omissions.append(Omission(_frag(m.subject), part, decision.stage or "unknown", decision.reason or ""))
+                d = self._policy.decide(part, subj, as_of)
+                decisions[part] = d
+                if d.accept:
+                    for s in subj:
+                        if s.predicate == RDF_TYPE:
+                            member_types.add(s.object)
+            # Pass 2: build views with full admitted type set
+            for part in parts:
+                d = decisions[part]
+                if not d.accept:
+                    omissions.append(Omission(_frag(m.subject), part, d.stage or "unknown", d.reason or ""))
                     continue
-                view = self._to_member(m, part, m.incident_by_partition.get(part, subj), subj, decision)
+                subj = m.subject_by_partition.get(part, [])
+                view = self._to_member(m, part, m.incident_by_partition.get(part, subj), subj, d, sorted(member_types))
                 if part == "graph-confirmed-enterprise": current.append(view)
                 elif part == "graph-candidate-and-dispute":
                     candidate.append(view)
@@ -56,7 +69,7 @@ class ContextCompiler:
         # 仅认 rdf:type ContextGap（名称前缀不承担分类）
         return any(s.predicate == RDF_TYPE and s.object.endswith("#ContextGap") for s in subj_stmts)
 
-    def _to_member(self, m, part, incident, subj, decision) -> ContextPackMember:
+    def _to_member(self, m, part, incident, subj, decision, rdf_types) -> ContextPackMember:
         def val(pred):
             return next((s.object for s in subj if s.predicate == pred), None)
         scope_v = val(SCOPE_DESC)
@@ -71,7 +84,8 @@ class ContextCompiler:
             lifecycle=(_frag(val(LIFE)) if val(LIFE) else None),
             valid_from=val(VF), valid_until=val(VU),
             sources=sorted({_frag(s.object) for s in subj if s.predicate == SOURCED}),
-            admission=decision)
+            admission=decision,
+            rdf_types=rdf_types)
 
     def _proof(self, provenance) -> list[dict]:
         # 用真实 subject/object，避免 m.id 篡改方向；按四元组去重排序

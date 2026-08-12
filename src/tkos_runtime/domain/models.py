@@ -1,6 +1,6 @@
 # src/tkos_runtime/domain/models.py
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -67,6 +67,7 @@ class ContextPackMember:
     valid_until: str | None
     sources: list[str]
     admission: AdmissionDecision
+    rdf_types: list[str] = field(default_factory=list)
 
 
 @dataclass

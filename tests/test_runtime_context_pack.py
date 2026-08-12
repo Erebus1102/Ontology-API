@@ -77,3 +77,34 @@ def test_aggregate_sensitive_isolation():
             for s in m.statements:
                 assert s.subject.rsplit("#",1)[-1] != SENS and s.object.rsplit("#",1)[-1] != SENS
     assert "graph-sensitive-persona" not in pack.contributing_graphs
+
+
+def test_rdf_types_roundtrip_and_default_empty():
+    from tkos_runtime.api.serializer import pack_to_dict, dict_to_pack
+    # resolver-built pack: candidate members carry rdf:type → rdf_types populated
+    pack = resolver(sorted((ROOT/"data/instances").glob("*.trig"))).resolve(
+        "是否在本季度同时完成产品 1.0 上线和灯塔项目交付",
+        "decision_preparation", AS_OF, [])
+    d = pack_to_dict(pack)
+    # candidate_context is non-empty for the FE issue; each member has rdf_types
+    # (a list, possibly empty for members whose admitted slice had no rdf:type,
+    # but the key must always be present after asdict)
+    assert pack.candidate_context, "fixture pack should have candidate members"
+    for m in d["candidate_context"]:
+        assert "rdf_types" in m
+        assert isinstance(m["rdf_types"], list)
+    # at least one candidate member should have a non-empty rdf_types (the issue
+    # itself is typed as StrategicIssue)
+    assert any(m["rdf_types"] for m in d["candidate_context"]), (
+        "expected at least one member with admitted rdf:type"
+    )
+    # round-trip: dict_to_pack preserves rdf_types
+    rebuilt = dict_to_pack(d)
+    for orig, new in zip(pack.candidate_context, rebuilt.candidate_context):
+        assert new.rdf_types == orig.rdf_types
+    # old/legacy pack without rdf_types still reconstructs → default []
+    legacy = {"pack_id": "x", "dataset_revision": "a"*64, "ontology_release_id": "2.4.0",
+              "current_facts": [{"id": "m1", "partition": "graph-confirmed-enterprise"}]}
+    legacy_pack = dict_to_pack(legacy)
+    assert legacy_pack.current_facts[0].rdf_types == []
+

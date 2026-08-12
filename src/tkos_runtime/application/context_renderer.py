@@ -20,8 +20,16 @@ from typing import Any, Optional
 
 from tkos_runtime.domain.models import ContextPack, ContextPackMember
 from tkos_runtime.domain.ports import TextPolisher
+from tkos_runtime.domain.render_units import (
+    RenderedFactUnit, RenderBudgetTooSmall, DECISION_INCIDENT_PREDICATES,
+    SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RENDERER_VERSION,
+)
 
-RENDERER_VERSION = "context-renderer/p0-v1"
+__all__ = [
+    "RenderedFactUnit", "RenderBudgetTooSmall", "DECISION_INCIDENT_PREDICATES",
+    "SECTION_ORDER", "SECTION_TITLES", "ROLE_TO_SECTION", "RENDERER_VERSION",
+    "render",
+]
 
 # ── predicate → Chinese label mapping ──────────────────────────────────────
 _PREDICATE_LABELS: dict[str, str] = {
@@ -62,21 +70,9 @@ def _frag(uri: str) -> str:
 
 
 # ── RenderedFactUnit ────────────────────────────────────────────────────────
-
-@dataclasses.dataclass(frozen=True)
-class RenderedFactUnit:
-    """不可变事实单元。LLM 不得修改 canonical_claim；只能返回润色版文本。"""
-    member_id: str
-    partition: str
-    source_graphs: tuple[str, ...]   # sorted tuple for hashability
-    canonical_claim: str             # deterministic compiler output, immutable
-    display_name: str = ""
-    confirmation_status: Optional[str] = None
-
-    def to_markdown_line(self) -> str:
-        """生成最终 Markdown 行（含锚点）。"""
-        main_source = self.source_graphs[0] if self.source_graphs else "unknown"
-        return f"- {self.canonical_claim} [member:{self.member_id}][source:{main_source}]"
+# RenderedFactUnit is imported from tkos_runtime.domain.render_units (re-exported
+# there to avoid import cycles). The grounding principle is unchanged; the
+# structure is extended with ``expected_section`` and ``view_key`` (ER2).
 
 
 # ── unit compiler ───────────────────────────────────────────────────────────

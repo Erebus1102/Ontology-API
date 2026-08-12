@@ -78,6 +78,7 @@ def dict_to_pack(d: dict[str, Any]) -> ContextPack:
                 stage=adm.get("stage"),
                 reason=adm.get("reason"),
             ),
+            rdf_types=m.get("rdf_types", []),
         )
 
     scope = d.get("scope_resolution", {})
