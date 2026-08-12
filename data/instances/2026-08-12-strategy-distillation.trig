@@ -1,0 +1,574 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Batch 1 — Strategy & operating baseline distillation.
+# Sources: 2026-08 Outcome-Mission v1.1 (already a SourceRecord), 总体战略定位与阶段路径,
+# AI 企业智能决策网络商业模式, 企业 AI 转型 TKOS 设计方案（管理层汇报版）.
+# Every assertion is a Candidate in graph-candidate-and-dispute. Nothing is marked Confirmed.
+#
+# NOTE on DRI modelling (per user review 2026-08-12): Domain DRIs are expressed as ROLES, not
+# named individuals. The six role URIs below are typed both as tkos:DirectlyResponsibleRole
+# (per the user's instruction "按本体 DirectlyResponsibleRole") and as tkos:Person, because
+# RoleAssignmentShape constrains assignmentHolder to sh:class tkos:Person and the shapes file
+# is out of scope for this change. They represent role-position accountability whose in-position
+# person is pending confirmation.
+
+tkos:graph-candidate-and-dispute {
+
+  # ---------------------------------------------------------------------------
+  # Source records (new documents not yet registered)
+  # ---------------------------------------------------------------------------
+  tkos:source-strategy-positioning-2026-07 a tkos:SourceRecord ;
+    tkos:objectId "source-strategy-positioning-2026-07" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:strategy-positioning-and-phased-path-2026-07" ;
+    tkos:displayName "词元云集总体战略定位与阶段路径（董事长汇报版｜2026 年 7 月）" ;
+    tkos:version "董事长汇报版" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-ai-decision-network-business-model-2026-07 a tkos:SourceRecord ;
+    tkos:objectId "source-ai-decision-network-business-model-2026-07" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:ai-enterprise-decision-network-business-model-2026-07" ;
+    tkos:displayName "AI 企业智能决策网络商业模式（董事长汇报版｜2026 年 7 月）" ;
+    tkos:version "董事长汇报版" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-tkos-design-management-report-2026-08 a tkos:SourceRecord ;
+    tkos:objectId "source-tkos-design-management-report-2026-08" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:tkos-design-management-report-vf-2026-08" ;
+    tkos:displayName "企业 AI 转型 TKOS 设计方案（管理层汇报版 vf）" ;
+    tkos:version "vf" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # DRI role entities (replace named-person DRIs). Double-typed Person + DirectlyResponsibleRole
+  # so they can serve as RoleAssignment.assignmentHolder under the current shapes.
+  # ---------------------------------------------------------------------------
+  tkos:role-ceo a tkos:DirectlyResponsibleRole, tkos:Person ;
+    tkos:objectId "role-ceo" ;
+    tkos:displayName "CEO 角色（DRI 岗位）" ;
+    tkos:scopeDescription "以 CEO 岗位作为直接责任承担方，在位人待确认。用于 Domain 01 方向与经营选择、Domain 02 Transformation（当前 DRI）。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:role-business-owner a tkos:DirectlyResponsibleRole, tkos:Person ;
+    tkos:objectId "role-business-owner" ;
+    tkos:displayName "业务负责人角色（DRI 岗位）" ;
+    tkos:scopeDescription "以业务负责人岗位作为直接责任承担方，在位人待确认。用于 Method、TokenHub 等域（候选映射，详见各 Domain）。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:role-product-owner a tkos:DirectlyResponsibleRole, tkos:Person ;
+    tkos:objectId "role-product-owner" ;
+    tkos:displayName "产品负责人角色（DRI 岗位）" ;
+    tkos:scopeDescription "以产品负责人岗位作为直接责任承担方，在位人待确认。用于 Domain 04 Agents。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:role-data-owner a tkos:DirectlyResponsibleRole, tkos:Person ;
+    tkos:objectId "role-data-owner" ;
+    tkos:displayName "数据负责人角色（DRI 岗位）" ;
+    tkos:scopeDescription "以数据负责人岗位作为直接责任承担方，在位人待确认。用于 Domain 05 Engine & Ontology（候选映射）。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:role-finance-owner a tkos:DirectlyResponsibleRole, tkos:Person ;
+    tkos:objectId "role-finance-owner" ;
+    tkos:displayName "财务负责人角色（DRI 岗位）" ;
+    tkos:scopeDescription "以财务负责人岗位作为直接责任承担方，在位人待确认。用于 Domain 08 公司运营与保障。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:role-hr-owner a tkos:DirectlyResponsibleRole, tkos:Person ;
+    tkos:objectId "role-hr-owner" ;
+    tkos:displayName "人力负责人角色（DRI 岗位）" ;
+    tkos:scopeDescription "以人力负责人岗位作为直接责任承担方，在位人待确认。用于 Domain 07 人才与组织能力。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  # ---------------------------------------------------------------------------
+  # Company vision / business model / barriers
+  # ---------------------------------------------------------------------------
+  tkos:vision-token-factory-and-paradigm a tkos:CompanyVision ;
+    tkos:objectId "vision-token-factory-and-paradigm" ;
+    tkos:displayName "建设 AI 时代企业经营范式与 Token 运营中枢" ;
+    tkos:scopeDescription "长期愿景：建设系统性 Token 工厂，推动收入从空间、算力升级到 Token 与数字劳动力；词元云集承接第 3-6 层，成为连接智能供给与企业价值的运营中枢。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:businessmodel-ai-decision-network a tkos:BusinessModel ;
+    tkos:objectId "businessmodel-ai-decision-network" ;
+    tkos:displayName "AI 企业智能决策网络（核心主业务）" ;
+    tkos:scopeDescription "客户购买的不是五个孤立 AI 产品，而是一套同时提升判断准确度、战略一致性与经营闭环速度的企业智能系统。以一把手战略源点进入，向管理者矩阵与数字劳动力扩展，形成长期公司身份。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:businessmodel-tokenops-fde a tkos:BusinessModel ;
+    tkos:objectId "businessmodel-tokenops-fde" ;
+    tkos:displayName "TokenOps FDE（辅助业务）" ;
+    tkos:scopeDescription "辅助业务：获取高频真实负载，训练路由、评测与调优能力，保持轻量验证。文档明确不与核心主业务并列，亦暂不纳入当前 8 个内部 Domain。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07, tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:barrier-five-control-points a tkos:CompetitiveBarrier ;
+    tkos:objectId "barrier-five-control-points" ;
+    tkos:displayName "词元云集应掌握的五个关键控制点" ;
+    tkos:scopeDescription "客户与场景入口、企业智能运行入口、Token 调用关系、模型选择与路由权、结果反馈数据。判断标准：任何新增能力都应强化上述控制点，并沉淀可复用的客户、调用或反馈数据。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Strategic content: ACT and T×Q operating models
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-act-model a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-act-model" ;
+    tkos:displayName "ACT 经营闭环效率模型" ;
+    tkos:scopeDescription "经营闭环效率 ∝ Accuracy（判断准确度）× Consistency（战略一致性）÷ Time（闭环周期）。ACT 不是精确财务公式，而是解释新旧经营范式差异的管理框架。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-tq-model a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-tq-model" ;
+    tkos:displayName "T×Q 战略闭环模型" ;
+    tkos:scopeDescription "战略有效转化效率 ≈ Q（战略判断质量与传导保真度）÷ T（时间损耗）× 闭环频率。用于解释 CEO 战略判断从形成到组织执行再校正的闭环效率。" ;
+    tkos:sourcedFrom tkos:source-paradigm-reconstruction-roadshow-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Company Outcome — August first company formation (canonical company outcome).
+  # The FE-card company outcome (strategy-loop) is integrated into this one as a contributing
+  # component via OutcomeContribution below; see decision #3.
+  # ---------------------------------------------------------------------------
+  tkos:company-outcome-august-first-formation-2026-08 a tkos:CompanyOutcome ;
+    tkos:objectId "company-outcome-august-first-formation-2026-08" ;
+    tkos:displayName "8 月底完成词元云集第一次公司成型" ;
+    tkos:scopeDescription "到 2026 年 8 月 31 日，词元云集完成第一次公司成型：核心业务由 Transformation 进入灯塔客户真实运行，8 个 Domain 按 Outcome-Mission-DRI 方法运转；一号位与管理者 Agents 形成可用版本，Engine & Ontology 建立最小经营 Context 与运行能力，TokenHub 稳定承接核心调用；核心团队、激励体系和公司基础运营条件基本到位。本 CompanyOutcome 为 8 月公司级总目标的规范主实体，并入 FE 卡先前的战略闭环 CompanyOutcome（company-outcome-tkos-real-strategy-loop-2026-08）作为其战略闭环维度。" ;
+    tkos:hasSuccessCriterion tkos:criterion-company-formation-august-2026 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1, tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-company-formation-august-2026 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-company-formation-august-2026" ;
+    tkos:displayName "公司成型 8 月底验收清单（10 项）" ;
+    tkos:criterionStatement "8 个 Domain 均有清晰 Outcome、唯一 DRI 与关键 Mission；灯塔形成目标 Operating Model、转型路径、关键角色采用与首轮价值验证；一号位 Application 进入真实稳定使用；Outcome-Mission-DRI 方法真实运行三周并完成三次异常 Review；Engine & Ontology 承载统一 Context、状态、权限与回写；TokenHub MVP 稳定承接内部核心 AI 调用；核心岗位 8 月中旬基本确认、8 月底团队完成实质搭建；第一版期权激励体系完成；办公、设备、研发环境、模型资源与基础财务体系可运行；完成一次公司级验收与复盘并形成 9 月调整决定。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  # Structured link integrating the two previously coexisting August CompanyOutcomes.
+  tkos:contribution-strategy-loop-to-formation a tkos:OutcomeContribution ;
+    tkos:objectId "contribution-strategy-loop-to-formation" ;
+    tkos:displayName "FE 卡战略闭环 CompanyOutcome 并入公司成型 CompanyOutcome" ;
+    tkos:contributionSource tkos:company-outcome-tkos-real-strategy-loop-2026-08 ;
+    tkos:contributionTarget tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1, tkos:source-fe-domain-mission-card-2026-08 ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  # ---------------------------------------------------------------------------
+  # 8 Domains — reuse domain-fe-2026-08 for Domain 05; create 01,02,03,04,06,07,08
+  # ---------------------------------------------------------------------------
+  tkos:domain-01-direction-choice-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-01-direction-choice-2026-08" ;
+    tkos:displayName "Domain 01 · 方向与经营选择" ;
+    tkos:scopeDescription "确定阶段战略、Company Outcome 与公司级 Mission Portfolio，持续校准经营方向。DRI 角色：CEO。跨 Domain 依赖：为全部 Domain 提供统一 Outcome、优先级、资源边界与关键决策。" ;
+    tkos:hasOutcome tkos:domain-outcome-01-strategy-portfolio-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-02-transformation-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-02-transformation-2026-08" ;
+    tkos:displayName "Domain 02 · Transformation" ;
+    tkos:scopeDescription "把客户从当前状态带入目标 Operating Model，推动采用并验证价值；负责灯塔项目现状诊断、转型路径与首轮 ACT 改善证据。不定义通用 Method，不替代产品和系统建设。DRI 角色：CEO（当前；未来由 Transformation 负责人逐步承接）。跨 Domain 依赖：为 03/04/05/06 提供真实客户问题、目标 Operating Model、采用反馈与价值证据。" ;
+    tkos:hasOutcome tkos:domain-outcome-02-transformation-lighthouse-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-03-method-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-03-method-2026-08" ;
+    tkos:displayName "Domain 03 · Method" ;
+    tkos:scopeDescription "定义 SICO / OMD / MOER、Outcome、Mission、DRI、Review 与 Work Pattern 规则；不由系统字段倒推经营逻辑。DRI 角色：业务负责人（候选映射——Method 在 6 角色集合中无精确对应，暂以业务负责人承接，待确认）。跨 Domain 依赖：为 02/04/05 及全部 Domain 提供经营语义、Mission 标准、Review 规则与 Work Pattern 验证机制。" ;
+    tkos:hasOutcome tkos:domain-outcome-03-method-real-run-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-04-agents-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-04-agents-2026-08" ;
+    tkos:displayName "Domain 04 · Agents" ;
+    tkos:scopeDescription "建设一号位 / 管理者 Agent、数字劳动力与角色化工作入口；不承载企业本体和底层 Runtime。统一口径：Agents DRI 承接产品责任，不再设置 Product / Product DRI 平行责任面。DRI 角色：产品负责人。跨 Domain 依赖：为 02/05 提供真实角色入口、使用反馈与产品边界。" ;
+    tkos:hasOutcome tkos:domain-outcome-04-agents-real-use-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-06-tokenhub-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-06-tokenhub-2026-08" ;
+    tkos:displayName "Domain 06 · TokenHub" ;
+    tkos:scopeDescription "提供统一模型接入、账户、权限、计量、日志与运行基础；不与 TKOS Engine 混用，不承担客户转型。DRI 角色：业务负责人（候选映射——TokenHub 为模型/Token 基础设施，6 角色集合无精确对应，暂以业务负责人承接，建议后续补充平台/基础设施负责人角色，待确认）。跨 Domain 依赖：为 04/05 及 TokenOps 提供统一模型调用、账户、计量、日志与稳定性。" ;
+    tkos:hasOutcome tkos:domain-outcome-06-tokenhub-mvp-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-07-talent-org-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-07-talent-org-2026-08" ;
+    tkos:displayName "Domain 07 · 人才与组织能力" ;
+    tkos:scopeDescription "搭建核心团队与长期激励机制。DRI 角色：人力负责人。跨 Domain 依赖：为 02-06 提供关键人才及时到位并进入真实 Mission。" ;
+    tkos:hasOutcome tkos:domain-outcome-07-talent-equity-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:domain-08-operations-2026-08 a tkos:Domain ;
+    tkos:objectId "domain-08-operations-2026-08" ;
+    tkos:displayName "Domain 08 · 公司运营与保障" ;
+    tkos:scopeDescription "提供财务、办公、研发环境、采购与合规保障。DRI 角色：财务负责人（涵盖财务及综合运营）。跨 Domain 依赖：为 05/06/07 及全部 Domain 提供模型、云资源、设备、办公、合同与 Offer 执行条件。" ;
+    tkos:hasOutcome tkos:domain-outcome-08-operations-base-2026-08 ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Domain Outcomes (7 new; reuse domain-outcome-fe-real-context-loop-2026-08 for 05)
+  # ---------------------------------------------------------------------------
+  tkos:domain-outcome-01-strategy-portfolio-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-01-strategy-portfolio-2026-08" ;
+    tkos:displayName "形成公司统一、清晰且可向下分解的阶段战略" ;
+    tkos:scopeDescription "到 8 月底，明确 8 个 Domain 的目标、边界、优先级与资源配置，并通过公司级 Mission Portfolio 持续校准经营方向。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-01-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-01-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-01-2026-08" ;
+    tkos:displayName "方向与经营选择 Domain 验收证据" ;
+    tkos:criterionStatement "8 个 Domain 的 Outcome、DRI、边界与关键 Mission 得到确认；公司级组合形成真实取舍；新增事项能够说明替代哪个既有 Mission。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:domain-outcome-02-transformation-lighthouse-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-02-transformation-lighthouse-2026-08" ;
+    tkos:displayName "灯塔项目进入真实运行并形成首轮客户采用与价值验证" ;
+    tkos:scopeDescription "到 8 月底，以灯塔项目为核心，完成客户现状诊断、目标 Operating Model 与转型路径第一版设计，推动一号位与关键角色进入真实运行，并形成首轮客户采用与价值验证证据。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-02-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-02-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-02-2026-08" ;
+    tkos:displayName "Transformation Domain 验收证据" ;
+    tkos:criterionStatement "客户能够复述目标 Operating Model 和转型路径；一号位与至少一个关键角色进入真实使用；形成可说明的采用、ACT 或闭环改善证据；完成一次转型复盘。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:domain-outcome-03-method-real-run-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-03-method-real-run-2026-08" ;
+    tkos:displayName "Outcome-Mission-DRI 标准方法形成并真实运行" ;
+    tkos:scopeDescription "到 8 月底，形成并实际运行一套以 Outcome 为导向、以 Mission 为基本工作单元、以唯一 DRI 承担结果责任、由人和 Agent 共同执行的标准工作方法，并完成 SICO / OMD / MOER 的首轮设计与验证。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-03-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-03-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-03-2026-08" ;
+    tkos:displayName "Method Domain 验收证据" ;
+    tkos:criterionStatement "8 个 Domain 完成 Mission 分解；关键 Mission 形成唯一 DRI 承诺；至少完成三次真实经营 Review；Method 需求能够被 Transformation、Agents 与 Engine & Ontology 一致理解。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:domain-outcome-04-agents-real-use-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-04-agents-real-use-2026-08" ;
+    tkos:displayName "首批 TKOS Agents 形成并进入词元云集自身及灯塔项目真实使用" ;
+    tkos:scopeDescription "到 8 月底，形成面向一号位、管理者和数字劳动力的首批 TKOS Agents，并使 Mission、决策和 Review 等角色化工作入口进入真实使用。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-04-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-04-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-04-2026-08" ;
+    tkos:displayName "Agents Domain 验收证据" ;
+    tkos:criterionStatement "一号位 Application 在真实会议和经营事项中持续使用；至少一个管理者或数字劳动力场景进入真实运行；核心入口能够调用统一 Context 并回写结果；形成明确产品迭代判断。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:domain-outcome-06-tokenhub-mvp-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-06-tokenhub-mvp-2026-08" ;
+    tkos:displayName "TokenHub 第一版 MVP 完成并稳定承接核心调用" ;
+    tkos:scopeDescription "到 8 月底，完成 TokenHub 第一版 MVP，稳定承接公司内部 Agents、Engine & Ontology 和灯塔场景的统一模型调用、账户权限、计量账单与基础运行管理，并具备后续企业化与商业化扩展基础。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-06-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-06-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-06-2026-08" ;
+    tkos:displayName "TokenHub Domain 验收证据" ;
+    tkos:criterionStatement "公司核心 AI 调用稳定经过 TokenHub，并看清谁在调用、调用什么、使用多少、成本多少及是否异常；不因未来路由或优化能力拖延当前 MVP。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:domain-outcome-07-talent-equity-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-07-talent-equity-2026-08" ;
+    tkos:displayName "核心团队实质搭建完成并形成第一版期权激励体系" ;
+    tkos:scopeDescription "到 8 月中旬基本确认核心岗位人选，到 8 月底完成公司核心团队实质性搭建，并形成支持关键人才引入与长期绑定的第一版期权与激励体系。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-07-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-07-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-07-2026-08" ;
+    tkos:displayName "人才与组织能力 Domain 验收证据" ;
+    tkos:criterionStatement "8 月中旬前核心岗位人选基本确认或进入 Offer 阶段；8 月底前核心团队完成实质搭建，新人进入真实 Mission，期权方案可直接用于招聘谈判。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  tkos:domain-outcome-08-operations-base-2026-08 a tkos:DomainOutcome ;
+    tkos:objectId "domain-outcome-08-operations-base-2026-08" ;
+    tkos:displayName "公司正式运行所需的财务、办公、采购、研发环境与合规基本到位" ;
+    tkos:scopeDescription "到 8 月底，完成公司正式运行所需的财务、办公、采购、研发环境、模型资源、设备设施与必要合规建设，使团队能够稳定办公、研发、采购、签约与交付。" ;
+    tkos:supports tkos:company-outcome-august-first-formation-2026-08 ;
+    tkos:hasSuccessCriterion tkos:criterion-domain-outcome-08-2026-08 ;
+    tkos:hasStatus tkos:OutcomeDefined ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:criterion-domain-outcome-08-2026-08 a tkos:SuccessCriterion ;
+    tkos:objectId "criterion-domain-outcome-08-2026-08" ;
+    tkos:displayName "公司运营与保障 Domain 验收证据" ;
+    tkos:criterionStatement "财务、办公、研发、采购、签约与交付条件能够正常运行；关键系统、账户、设备、合同与权限具备 Owner 与基本治理。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 .
+
+  # FE Domain 05 also supports the formation company outcome (M2 lists all 8 domains under one Company Outcome).
+  tkos:domain-outcome-fe-real-context-loop-2026-08 tkos:supports tkos:company-outcome-august-first-formation-2026-08 .
+
+  # ---------------------------------------------------------------------------
+  # Domain DRI RoleAssignments (August baseline), now role-based. 05 reuses domain-fe-2026-08.
+  # assignmentHolder and assignmentRole both point to the role entity; the role is double-typed
+  # Person + DirectlyResponsibleRole so the RoleAssignmentShape (assignmentHolder sh:class Person,
+  # assignmentRole sh:class Role) is satisfied.
+  # ---------------------------------------------------------------------------
+  tkos:interval-august-baseline-2026 a time:ProperInterval ;
+    time:hasBeginning tkos:instant-aug-baseline-start ;
+    time:hasEnd tkos:instant-aug-baseline-end .
+  tkos:instant-aug-baseline-start a time:Instant ; time:inXSDDateTime "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+  tkos:instant-aug-baseline-end a time:Instant ; time:inXSDDateTime "2026-08-31T23:59:59+08:00"^^xsd:dateTime .
+
+  tkos:assignment-01-ceo-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-01-ceo-2026-08" ;
+    tkos:displayName "CEO 角色承担 Domain 01 DRI" ;
+    tkos:assignmentHolder tkos:role-ceo ;
+    tkos:assignmentRole tkos:role-ceo ;
+    tkos:assignmentScope tkos:domain-01-direction-choice-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-02-ceo-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-02-ceo-2026-08" ;
+    tkos:displayName "CEO 角色承担 Domain 02 DRI（当前）" ;
+    tkos:assignmentHolder tkos:role-ceo ;
+    tkos:assignmentRole tkos:role-ceo ;
+    tkos:assignmentScope tkos:domain-02-transformation-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-03-business-owner-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-03-business-owner-2026-08" ;
+    tkos:displayName "业务负责人角色承担 Domain 03 DRI（候选映射）" ;
+    tkos:assignmentHolder tkos:role-business-owner ;
+    tkos:assignmentRole tkos:role-business-owner ;
+    tkos:assignmentScope tkos:domain-03-method-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-04-product-owner-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-04-product-owner-2026-08" ;
+    tkos:displayName "产品负责人角色承担 Domain 04 DRI" ;
+    tkos:assignmentHolder tkos:role-product-owner ;
+    tkos:assignmentRole tkos:role-product-owner ;
+    tkos:assignmentScope tkos:domain-04-agents-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-05-data-owner-domain-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-05-data-owner-domain-2026-08" ;
+    tkos:displayName "数据负责人角色承担 Domain 05 DRI（候选映射）" ;
+    tkos:assignmentHolder tkos:role-data-owner ;
+    tkos:assignmentRole tkos:role-data-owner ;
+    tkos:assignmentScope tkos:domain-fe-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-06-business-owner-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-06-business-owner-2026-08" ;
+    tkos:displayName "业务负责人角色承担 Domain 06 DRI（候选映射，无精确对应）" ;
+    tkos:assignmentHolder tkos:role-business-owner ;
+    tkos:assignmentRole tkos:role-business-owner ;
+    tkos:assignmentScope tkos:domain-06-tokenhub-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-07-hr-owner-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-07-hr-owner-2026-08" ;
+    tkos:displayName "人力负责人角色承担 Domain 07 DRI" ;
+    tkos:assignmentHolder tkos:role-hr-owner ;
+    tkos:assignmentRole tkos:role-hr-owner ;
+    tkos:assignmentScope tkos:domain-07-talent-org-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  tkos:assignment-08-finance-owner-2026-08 a tkos:RoleAssignment ;
+    tkos:objectId "assignment-08-finance-owner-2026-08" ;
+    tkos:displayName "财务负责人角色承担 Domain 08 DRI（涵盖综合运营）" ;
+    tkos:assignmentHolder tkos:role-finance-owner ;
+    tkos:assignmentRole tkos:role-finance-owner ;
+    tkos:assignmentScope tkos:domain-08-operations-2026-08 ;
+    tkos:hasValidityInterval tkos:interval-august-baseline-2026 ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:validUntil "2026-08-31T23:59:59+08:00"^^xsd:dateTime ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate .
+
+  # ---------------------------------------------------------------------------
+  # Company capabilities — TKOS 3×3 method/language matrix
+  # ---------------------------------------------------------------------------
+  tkos:capability-sico-method a tkos:CompanyCapability ;
+    tkos:objectId "capability-sico-method" ;
+    tkos:displayName "M1 ｜ SICO：Signal→Issue→Choice→Outcome" ;
+    tkos:scopeDescription "面向一号位的战略决策方法：把信号转化为议题、选择与公司结果（Company Outcome）。对应 M1 方法层与 E&O1 战略本体。" ;
+    tkos:sourcedFrom tkos:source-tkos-design-management-report-2026-08 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-omd-method a tkos:CompanyCapability ;
+    tkos:objectId "capability-omd-method" ;
+    tkos:displayName "M2 ｜ OMD：Outcome→Mission→DRI" ;
+    tkos:scopeDescription "面向 DRI 的管理运营方法：把公司结果转化为业务域结果、任务组合与唯一 DRI 承诺，并持续评估与动态调整。" ;
+    tkos:sourcedFrom tkos:source-tkos-design-management-report-2026-08, tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-moer-method a tkos:CompanyCapability ;
+    tkos:objectId "capability-moer-method" ;
+    tkos:displayName "M3 ｜ MOER：Mission→Orchestration→Execution→Result" ;
+    tkos:scopeDescription "面向 IC 与数字劳动力的生产执行方法：定义任务如何通过人和数字劳动力协同完成，并从实践中识别可复用工作模式。" ;
+    tkos:sourcedFrom tkos:source-tkos-design-management-report-2026-08, tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-ai-transformation-nine-step a tkos:CompanyCapability ;
+    tkos:objectId "capability-ai-transformation-nine-step" ;
+    tkos:displayName "Transformation ｜ AI 转型九步法" ;
+    tkos:scopeDescription "AI 转型九步法分三段：T1 认知破局（步骤 1-4，让一号位看见必要性与目标状态）；T2 组织重构贯通（步骤 5-7，跑通跨角色 Mission 闭环）；T3 共营固化（步骤 8-9，推动数字劳动力进入真实执行并形成新范式）。" ;
+    tkos:sourcedFrom tkos:source-tkos-design-management-report-2026-08 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Strategic issues — open confirmation questions surfaced for management (kept Candidate)
+  # ---------------------------------------------------------------------------
+  tkos:issue-tkos-first-target-customer a tkos:StrategicIssue ;
+    tkos:objectId "issue-tkos-first-target-customer" ;
+    tkos:displayName "TKOS 首要目标客户应锁定哪一类" ;
+    tkos:scopeDescription "需高管确认：TKOS 首要目标客户是 AI 原生公司、正在开展 AI 转型的大型企业，还是先从词元云集自身运行开始验证。" ;
+    tkos:sourcedFrom tkos:source-tkos-overall-definition-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-tkos-first-minimum-loop a tkos:StrategicIssue ;
+    tkos:objectId "issue-tkos-first-minimum-loop" ;
+    tkos:displayName "TKOS 第一阶段最小闭环应聚焦哪类经营场景" ;
+    tkos:scopeDescription "需高管确认：第一阶段最小闭环聚焦战略经营、Mission 管理、管理者 Agent 网络，还是一号位决策与推动。" ;
+    tkos:sourcedFrom tkos:source-tkos-overall-definition-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-long-term-identity-confirmation a tkos:StrategicIssue ;
+    tkos:objectId "issue-long-term-identity-confirmation" ;
+    tkos:displayName "是否确认企业经营范式重构与 Token 运营中枢为长期身份" ;
+    tkos:scopeDescription "需管理层确认：以企业经营范式重构与 Token 运营中枢作为词元云集长期身份，AI 企业智能决策网络为主体资源方向、TokenOps 仅保持轻量验证。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-revenue-model-migration a tkos:StrategicIssue ;
+    tkos:objectId "issue-revenue-model-migration" ;
+    tkos:displayName "收入结构由项目部署向系统持续使用与 Token 运营迁移的节奏" ;
+    tkos:scopeDescription "需管理层确认：短期以项目与部署收入为主，中长期向系统持续使用与 Token 运营收入迁移；当前不能把 Token 消纳设为唯一牵引。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07, tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:issue-831-as-loop-validation-node a tkos:StrategicIssue ;
+    tkos:objectId "issue-831-as-loop-validation-node" ;
+    tkos:displayName "831 定位为闭环验证节点而非大平台完成节点" ;
+    tkos:scopeDescription "需确认：831 的成功标准是真实客户、真实使用、真实调用、真实反馈、可复制方案与明确 Owner 同时成立，而非大平台完成。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # August Mission Portfolio baseline (37 candidate missions, pre-Card).
+  # Modelled as one Candidate context asset because the source explicitly states these
+  # are NOT yet Mission Cards (per-mission DRI, rationale, scope, key path come later).
+  # Domain 05's baseline missions were subsequently refined by the FE Domain Mission Card
+  # into FE-M1/M2/M3 (see 2026-08-fe-domain-mission-card-candidates.trig).
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-august-mission-portfolio-baseline a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-august-mission-portfolio-baseline" ;
+    tkos:displayName "8 月公司级 Mission Portfolio 基线候选（纲领级，尚未形成 Card）" ;
+    tkos:scopeDescription "《Outcome-Mission 展开纲领》列出的候选 Mission（名称 + 8 月底核心结果），按 Domain 分组。01 方向与经营选择：01-1 确认 8 月公司级战略 Outcome；01-2 完成 8 个 Domain 授权；01-3 形成公司级 Mission Portfolio；01-4 形成 9 月后经营判断。02 Transformation：02-1 完成现状诊断与目标 Operating Model；02-2 锁定转型范围、阶段路径与客户协同；02-3 推动一号位与关键角色进入真实运行；02-4 完成首轮价值验证与转型复盘。03 Method：03-1 形成 Outcome-Mission 标准方法；03-2 形成 Mission Card 与质量标准；03-3 完成 8 个 Domain Mission 分解；03-4 完成 DRI 协商与承诺；03-5 建立经营运行节奏；03-6 识别、设计并验证 Work Pattern 候选。04 Agents：04-1 明确首批 Agents 组合与边界；04-2 完成一号位 Application 部署；04-3 形成管理者 Agents 与数字劳动力首批场景；04-4 形成 Mission/决策/Review 工作入口；04-5 建立真实使用与产品迭代闭环。05 Engine & Ontology（纲领版，已被 FE Domain Mission Card 的 FE-M1/M2/M3 细化替代）：05-1 定义 Foundry v0.x 对象与关系；05-2 形成公司与灯塔当前有效 Context；05-3 建立 Context 更新、版本与权限机制；05-4 形成 Engine 最小运行能力；05-5 接通 Agents 并验证边界。06 TokenHub：06-1 完成 MVP 产品与技术定义；06-2 完成核心平台开发；06-3 形成基础运行稳定性；06-4 接入内部真实场景。07 人才与组织能力：07-1 锁定核心岗位与招聘优先级；07-2 完成核心候选人招募；07-3 完成核心团队到位；07-4 完成期权与长期激励体系。08 公司运营与保障：08-1 建立基础财务管理体系；08-2 完成办公场地与办公环境建设；08-3 完成研发环境与模型资源保障；08-4 完成设备设施采购；08-5 完成必要合同与合规建设。文档明确：本纲领不替代各 Mission DRI 进一步形成的 Mission Card 与执行计划。" ;
+    tkos:sourcedFrom tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-01T00:00:00+08:00"^^xsd:dateTime .
+}

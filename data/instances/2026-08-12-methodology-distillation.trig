@@ -1,0 +1,274 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Batch 2 — Methodology & ontology design distillation.
+# Sources: TKOS 总体定义 v0.2, TKOS 方法论框架 v1.0, TKOS 本体建模设计 v0.2,
+# AI-Native Mission 工作方法 v1.1, AI 时代企业经营范式重构（路演文字稿）.
+# Every assertion is a Candidate in graph-candidate-and-dispute. Nothing is marked Confirmed.
+
+tkos:graph-candidate-and-dispute {
+
+  # ---------------------------------------------------------------------------
+  # Source records
+  # ---------------------------------------------------------------------------
+  tkos:source-tkos-overall-definition-v0-2 a tkos:SourceRecord ;
+    tkos:objectId "source-tkos-overall-definition-v0-2" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:tkos-overall-definition-v0-2-2026-07" ;
+    tkos:displayName "TKOS 总体定义（高管讨论稿 v0.2）" ;
+    tkos:version "v0.2" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-methodology-framework-v1-0 a tkos:SourceRecord ;
+    tkos:objectId "source-methodology-framework-v1-0" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:tkos-methodology-framework-v1-0-2026-07" ;
+    tkos:displayName "词元云集 TKOS 方法论框架（内部讨论版 v1.0）" ;
+    tkos:version "v1.0" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-ontology-modeling-design-v0-2 a tkos:SourceRecord ;
+    tkos:objectId "source-ontology-modeling-design-v0-2" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:tkos-ontology-modeling-design-v0-2-2026-07" ;
+    tkos:displayName "TKOS 本体建模设计（内部高管研讨稿 v0.2）" ;
+    tkos:version "v0.2" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-ai-native-mission-method-v1-1 a tkos:SourceRecord ;
+    tkos:objectId "source-ai-native-mission-method-v1-1" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:ai-native-mission-work-method-v1-1-2026-08" ;
+    tkos:displayName "AI-Native Mission 工作方法（正式版 v1.1）" ;
+    tkos:version "v1.1" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:source-paradigm-reconstruction-roadshow-2026-07 a tkos:SourceRecord ;
+    tkos:objectId "source-paradigm-reconstruction-roadshow-2026-07" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:paradigm-reconstruction-roadshow-2026-07" ;
+    tkos:displayName "AI 时代企业经营范式重构（对外路演文字稿）" ;
+    tkos:version "对外路演文字稿" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # TKOS overall definition & composition
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-tkos-definition a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-tkos-definition" ;
+    tkos:displayName "TKOS 总体定义" ;
+    tkos:scopeDescription "TKOS（TokenKing Operating System）是一套面向人和 Agent 混合组织的企业经营操作系统。它将经营方法、企业本体、Agent 运行引擎和角色化 Agents 整合在一起，以 Outcome 和 Mission 为核心，连接战略、责任、决策、执行、Review 与组织学习，使企业能够由人和 Agent 共同持续运行。产品灵魂：TKOS 管理的不是人，也不是 Agent，而是企业结果如何由人和 Agent 共同实现。" ;
+    tkos:sourcedFrom tkos:source-tkos-overall-definition-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-tkos-four-components a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-tkos-four-components" ;
+    tkos:displayName "TKOS 四组成部分及职责边界" ;
+    tkos:scopeDescription "Method（规则与组织宪法，缺失则退化为普通 Agent 平台）、Ontology（事实、关系与上下文底座）、Engine（运行、编排与控制中枢）、Agents（角色化智能体与工作入口）。四部分不是平行产品：Method 规定应如何经营，Ontology 表达当前状态，Engine 推动持续运行，Agents 让角色参与使用。" ;
+    tkos:sourcedFrom tkos:source-tkos-overall-definition-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-tkos-five-layers a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-tkos-five-layers" ;
+    tkos:displayName "TKOS 五层结构" ;
+    tkos:scopeDescription "1 Operating Principles（经营原则与判断边界）；2 Operating Method（Outcome/Mission/DRI/Review/复盘）；3 Operating Context（Harness/Context/Ontology/组织记忆）；4 Operating Runtime（Agent/Mission 对象/权限/工作流/可观测性）；5 Operating Playbooks（Work Pattern/模板/场景剧本/复用资产）。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-operating-closed-loop a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-operating-closed-loop" ;
+    tkos:displayName "TKOS 经营闭环主链路" ;
+    tkos:scopeDescription "战略意图/Signal → Issue 与战略自查 → Company Outcome → Domain Outcome → Mission 候选 → Mission Portfolio 取舍 → DRI 协商与承诺 → 人+Agent 执行 → Review 与调整 → 结果验收 → 复盘与资产沉淀。每个环节都是 TKOS 中的经营对象并在运行中相互连接。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0, tkos:source-ai-native-mission-method-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-three-layer-responsibility a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-three-layer-responsibility" ;
+    tkos:displayName "三层责任结构" ;
+    tkos:scopeDescription "公司战略层（CEO：战略意图、Company Outcome、关键取舍与重大资源配置）；Domain 层（Domain DRI：定义本域 Outcome、形成 Mission Portfolio、处理域内资源与优先级）；Mission 层（Mission DRI：对单个 Mission 结果负责，组织人与 Agent 完成并形成 Evidence）。DRI 不是项目经理，而是结果 Owner。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0, tkos:source-ai-native-mission-method-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-human-agent-division a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-human-agent-division" ;
+    tkos:displayName "人与 Agent 的分工原则" ;
+    tkos:scopeDescription "Agent 优先承担：资料检索与事实核验、多方案生成与结构化分析、会议记录与行动提取、Mission 质量预审与依赖识别、状态跟踪与异常识别、标准内容生成与执行、复盘整理与 Context 更新建议。人优先承担：目标设定与问题定义、价值判断与战略取舍、关键关系与组织动员、DRI 承诺与结果责任、异常处置与边界突破、最终验收、确认哪些内容进入组织记忆。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Core design principles (CompanyConstitution → no mandatory shape)
+  # ---------------------------------------------------------------------------
+  tkos:principle-outcome-before-task a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-outcome-before-task" ;
+    tkos:displayName "原则一：Outcome 先于任务" ;
+    tkos:scopeDescription "先定义阶段性结果，再讨论动作。没有清晰 Outcome 的任务只会制造忙碌。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-mission-as-basic-unit a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-mission-as-basic-unit" ;
+    tkos:displayName "原则二：Mission 是基本经营单元" ;
+    tkos:scopeDescription "Mission 不是待办事项，而是围绕一个关键结果，由唯一 DRI 牵引人、Agent 和资源共同完成的经营承诺。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-unique-dri a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-unique-dri" ;
+    tkos:displayName "原则三：唯一 DRI 承担结果责任" ;
+    tkos:scopeDescription "协作可以多人参与，但结果责任只能唯一。DRI 有权提出路径、资源、边界和风险，而不是被动接收任务。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-agent-as-runtime-subject a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-agent-as-runtime-subject" ;
+    tkos:displayName "原则四：Agent 是运行主体而非外挂工具" ;
+    tkos:scopeDescription "Agent 应正式承担检索、分析、生成、执行、记录、追踪与预警等工作，并被赋予清晰权限、质量标准与可回退机制。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-unified-context a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-unified-context" ;
+    tkos:displayName "原则五：Context 必须统一且可更新" ;
+    tkos:scopeDescription "组织成员与 Agent 必须围绕同一套被确认的战略、决策、角色与 Mission 工作。Context 需要版本、确认、冲突与失效管理。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-review-handles-exception a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-review-handles-exception" ;
+    tkos:displayName "原则六：Review 处理异常与判断" ;
+    tkos:scopeDescription "经营 Review 不应是流水汇报，而应集中处理风险、依赖、资源冲突、关键选择与 Mission 调整。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-every-run-forms-asset a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-every-run-forms-asset" ;
+    tkos:displayName "原则七：每次运行都要形成资产" ;
+    tkos:scopeDescription "一个 Mission 结束后不只留下结果，还应沉淀判断、数据、模板、Agent 能力与 Work Pattern。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-human-accountable-agent-enabled a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-human-accountable-agent-enabled" ;
+    tkos:displayName "治理原则：Human accountable, Agent enabled" ;
+    tkos:scopeDescription "人承担责任，Agent 增强能力。每个 Mission 必须有明确的人类 DRI；关键 Mission 的设立、调整与关闭需由人确认；Agent 可识别 Decision/Risk/Evidence/Lesson 候选，但重要资产进入正式上下文前应有确认机制；权限以 Domain/Mission/角色为基础；所有关键变化必须可追溯。" ;
+    tkos:sourcedFrom tkos:source-ontology-modeling-design-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Ontology modeling framework
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-ontology-framework a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-ontology-framework" ;
+    tkos:displayName "TKOS Ontology 总体建模框架" ;
+    tkos:scopeDescription "一个上位锚点（战略宪法/战略意图/阶段性 Outcome）、两个核心经营对象（Domain 稳定经营边界、Mission 最小经营运行单元）、一组持续上下文资产（Decision/Evidence/Artifact/Risk/Lesson），以及关联关系轴与时间演化轴两条贯穿横轴。最简结构：战略锚点在上，Domain 负责划界，Mission 负责运行，上下文资产负责沉淀，关系与时间负责连接。" ;
+    tkos:sourcedFrom tkos:source-ontology-modeling-design-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-ontology-data-states a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-ontology-data-states" ;
+    tkos:displayName "三类数据状态与上下文生产链路" ;
+    tkos:scopeDescription "原始素材（完整事实来源，可追溯但不直接全部进入 Agent 上下文）→ 过程产物（版本、分析与中间结果，按需回溯）→ 当前有效上下文（识别、确认与压缩后对当前及未来经营真正有效的信息）。生产链路：原始素材→过程产物→识别评价确认→当前有效上下文→支持新判断行动→重新写回 Ontology。" ;
+    tkos:sourcedFrom tkos:source-ontology-modeling-design-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-context-asset-types a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-context-asset-types" ;
+    tkos:displayName "Mission 上下文资产五类型" ;
+    tkos:scopeDescription "Decision（关键判断逻辑，避免只剩最终结论）；Evidence（证明进展或结果的事实，支撑 Review 与验收）；Artifact（关键方案、报告、原型、合同、版本与交付物）；Risk/Issue（影响结果的问题、严重性、责任人、处理状态与升级记录）；Lesson/Insight（被验证或证伪的假设、有效方法、失败原因与重要经验）。不是所有对话都进入长期上下文，只保留对后续判断与行动有持续价值的信息。" ;
+    tkos:sourcedFrom tkos:source-ontology-modeling-design-v0-2 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Mission Card standard, DRI commitment, review cadence
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-mission-card-standard a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-mission-card-standard" ;
+    tkos:displayName "标准 Mission Card 字段要求" ;
+    tkos:scopeDescription "Mission 名称（用结果而非动作命名）；Why/背景；预期 Outcome；成功证据（3-5 项可观察验收标准）；唯一 DRI；边界（明确包括与不包括）；关键路径；里程碑（只保留能暴露风险的节点）；资源与权限；依赖；人-Agent 分工；风险与升级；复盘沉淀。" ;
+    tkos:sourcedFrom tkos:source-ai-native-mission-method-v1-1, tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-dri-commitment-conditions a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-dri-commitment-conditions" ;
+    tkos:displayName "Mission 承诺成立的最低条件" ;
+    tkos:scopeDescription "DRI 清楚 Outcome 与成功标准；认可或修订实现路径；获得必要资源与权限；明确依赖和升级条件；愿意对结果而非动作负责。Mission 不是自上而下直接派单，候选 DRI 必须评估定义、资源、时间、权限与风险，必要时提出修改或拒绝承诺。" ;
+    tkos:sourcedFrom tkos:source-ai-native-mission-method-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-review-cadence a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-review-cadence" ;
+    tkos:displayName "经营节奏与 Review 机制" ;
+    tkos:scopeDescription "Mission Portfolio Review（双周或月度，CEO 与 Domain DRI，看优先级、组合、资源冲突、停止与新增）；周度异常 Review（每周，相关 DRI 与依赖方，看偏差、风险、依赖与决策请求）；关键里程碑验收（按 Mission 需要）；阶段复盘（阶段结束，看判断、方法、组织与 Agent 学习）。周度 Review 不逐项讲已完成动作、不把会议变成信息同步。执行纪律：任何新增公司级事项必须先说明支持哪个 Outcome、是否替代现有 Mission、由谁承担 DRI 及所需资源。" ;
+    tkos:sourcedFrom tkos:source-ai-native-mission-method-v1-1, tkos:source-august-outcome-mission-baseline-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Work Pattern candidates (OperatingEntity → no mandatory shape)
+  # ---------------------------------------------------------------------------
+  tkos:workpattern-strategy-research a tkos:WorkPattern ;
+    tkos:objectId "workpattern-strategy-research" ;
+    tkos:displayName "Work Pattern 候选 ｜ 战略问题研究" ;
+    tkos:scopeDescription "候选 Work Pattern：资料检索、假设树、证据核验、观点冲突识别、结论草案。源自方法论候选清单，尚未被真实运行验证。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:workpattern-ceo-operating-meeting a tkos:WorkPattern ;
+    tkos:objectId "workpattern-ceo-operating-meeting" ;
+    tkos:displayName "Work Pattern 候选 ｜ CEO 经营会议" ;
+    tkos:scopeDescription "候选 Work Pattern：会前议题准备、过程分析、观点提炼、决策与 Mission 生成。源自方法论候选清单，尚未被真实运行验证。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:workpattern-mission-decomposition a tkos:WorkPattern ;
+    tkos:objectId "workpattern-mission-decomposition" ;
+    tkos:displayName "Work Pattern 候选 ｜ Mission 分解" ;
+    tkos:scopeDescription "候选 Work Pattern：Outcome 校验、Mission 候选、DRI 匹配、依赖与风险检查。源自方法论候选清单，尚未被真实运行验证。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:workpattern-product-review a tkos:WorkPattern ;
+    tkos:objectId "workpattern-product-review" ;
+    tkos:displayName "Work Pattern 候选 ｜ 产品方案评审" ;
+    tkos:scopeDescription "候选 Work Pattern：战略一致性、用户价值、路径、风险、验证计划。源自方法论候选清单，尚未被真实运行验证。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:workpattern-client-project-review a tkos:WorkPattern ;
+    tkos:objectId "workpattern-client-project-review" ;
+    tkos:displayName "Work Pattern 候选 ｜ 客户项目复盘" ;
+    tkos:scopeDescription "候选 Work Pattern：目标-结果差异、关键假设、可复用资产、下一步建议。源自方法论候选清单，尚未被真实运行验证。" ;
+    tkos:sourcedFrom tkos:source-methodology-framework-v1-0 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Method落地判断（how to tell the method is actually working）
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-method-landing-signs a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-method-landing-signs" ;
+    tkos:displayName "判断 AI-Native Mission 方法真正落地的信号" ;
+    tkos:scopeDescription "团队用 Outcome 而非动作描述结果；Domain DRI 能自主提出 Mission 组合；Mission DRI 敢于协商、承诺与拒绝；周会从进度汇报转向异常、依赖与决策；Agent 真正承担检索、预审、跟踪与沉淀；CEO 参与点集中到战略、资源、关键客户与重大例外；完成的 Mission 沉淀为可复用 Context 与 Work Pattern；Method、Agents、Engine & Ontology 基于同一业务语义协同。" ;
+    tkos:sourcedFrom tkos:source-ai-native-mission-method-v1-1 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+}

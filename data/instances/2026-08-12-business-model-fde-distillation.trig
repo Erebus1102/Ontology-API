@@ -1,0 +1,182 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Batch 3 — Commercial model, FDE transformation model, paradigm reconstruction.
+# Sources: AI 企业智能决策网络商业模式, AI FDE 商业模型战略讨论稿,
+# AI 时代企业经营范式重构（路演文字稿）, 企业 AI 转型 TKOS 设计方案.
+# Every assertion is a Candidate in graph-candidate-and-dispute. Nothing is marked Confirmed.
+
+tkos:graph-candidate-and-dispute {
+
+  # ---------------------------------------------------------------------------
+  # Source record
+  # ---------------------------------------------------------------------------
+  tkos:source-fde-business-model-2026-07 a tkos:SourceRecord ;
+    tkos:objectId "source-fde-business-model-2026-07" ;
+    tkos:externalSourceIdentifier "urn:tkos:source:business-document:ai-fde-business-model-strategy-2026-07" ;
+    tkos:displayName "词元云集 AI FDE 商业模型战略讨论稿" ;
+    tkos:version "战略讨论版" ;
+    tkos:recordedAt "2026-08-12T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Paradigm reconstruction thesis
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-paradigm-shift-thesis a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-paradigm-shift-thesis" ;
+    tkos:displayName "AI 时代企业经营范式重构的核心判断" ;
+    tkos:scopeDescription "支撑旧经营范式的三个底层前提同时松动：外部变化从相对可预判变为不可预测；行业边界从稳定变为不断重组；组织能力从主要来自人变为人+智能杠杆共同构成。未来竞争将体现为不同经营范式之间的综合效率竞争；不改变者的效率代差会成为新竞争压力，可能是 2-5 倍甚至更高的综合竞争效率差。" ;
+    tkos:sourcedFrom tkos:source-paradigm-reconstruction-roadshow-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-new-paradigm-mechanism a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-new-paradigm-mechanism" ;
+    tkos:displayName "新范式：用 Agent 承载上下文，压缩 T、提升 Q" ;
+    tkos:scopeDescription "CEO Agent 提高源头判断质量；管理者 Agent 矩阵在授权边界内校验方案以降低传导损耗；执行端人+Agent 系统压缩执行时间；实时反馈提高闭环频率。旧范式是长 T、低 Q、低频循环；新范式是短 T、高 Q、高频闭环。" ;
+    tkos:sourcedFrom tkos:source-paradigm-reconstruction-roadshow-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-why-start-from-ceo a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-why-start-from-ceo" ;
+    tkos:displayName "为什么新范式必须从 CEO 开始" ;
+    tkos:scopeDescription "CEO 是企业战略上下文、价值判断与经营闭环的源点。若 CEO 判断未被结构化，下面 AI 只能提升局部效率；若 CEO 战略意图不能被管理者 Agent 承接，组织仍会在传导中衰减；若执行反馈不能回到 CEO Agent，企业无法形成高频战略校正。新范式是自上而下的经营样式迁移，而非自下而上的工具普及。" ;
+    tkos:sourcedFrom tkos:source-paradigm-reconstruction-roadshow-2026-07, tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Product matrix — five productised capabilities of the decision network
+  # ---------------------------------------------------------------------------
+  tkos:capability-ceo-agent a tkos:CompanyCapability ;
+    tkos:objectId "capability-ceo-agent" ;
+    tkos:displayName "产品模块 ｜ CEO Agent / 一号位决策 Agent（战略源点）" ;
+    tkos:scopeDescription "对应范式战略源点：提高源头 Q，辅助战略判断、会议预读、追问建议、复盘沉淀。不替 CEO 决策，而是提高 CEO 决策输入与思考结构的质量。831 前须进入真实材料与会议。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07, tkos:source-paradigm-reconstruction-roadshow-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-manager-agent-matrix a tkos:CompanyCapability ;
+    tkos:objectId "capability-manager-agent-matrix" ;
+    tkos:displayName "产品模块 ｜ 管理者 Agent 矩阵（组织承接）" ;
+    tkos:scopeDescription "对应组织承接：降低传导 Q 衰减、压缩沟通 T，使高管与部门负责人在授权边界内校准上位战略。831 前选择 2-3 个管理者角色形成样板。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-agent-ontology-permission a tkos:CompanyCapability ;
+    tkos:objectId "capability-agent-ontology-permission" ;
+    tkos:displayName "产品模块 ｜ Agent Ontology / 权限图谱（上下文与授权）" ;
+    tkos:scopeDescription "对应上下文与授权：让不同 Agent 可访问必要上下文但不越权；将战略信息、判断原则、管理边界结构化。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-digital-workforce a tkos:CompanyCapability ;
+    tkos:objectId "capability-digital-workforce" ;
+    tkos:displayName "产品模块 ｜ 人+Agent 执行系统 / 数字员工（执行端运营）" ;
+    tkos:scopeDescription "对应执行端运营：压缩执行 T，提高任务质量与反馈频率，重构岗位与流程。831 前选择 1-2 个高价值劳动力模板。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-tokenhub-runtime-base a tkos:CompanyCapability ;
+    tkos:objectId "capability-tokenhub-runtime-base" ;
+    tkos:displayName "产品模块 ｜ TokenHub / Agent 运行底座（持续运行）" ;
+    tkos:scopeDescription "对应持续运行：承接模型调用、权限、日志、质量评估、计量与持续优化。为 TKOS 与 TokenOps 提供统一、可靠、可治理的模型与 Token 能力。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07, tkos:source-tkos-design-management-report-2026-08 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # FDE three-layer enterprise reconstruction model
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-fde-three-layer a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-fde-three-layer" ;
+    tkos:displayName "AI FDE 驱动的三层企业重构" ;
+    tkos:scopeDescription "第三条路径：从企业管理原生逻辑出发，自上而下完成战略重构→组织重构→运营重构，最终沉淀数字劳动力岗位体系，并由底层平台承接持续模型调用、Agent 运行与数据治理。区别于企业自下而上使用工具（员工工具升级）与咨询式高管工作坊+找场景（切口快速回到业务场景）。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-fde-strategy-reconstruction a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-fde-strategy-reconstruction" ;
+    tkos:displayName "FDE 第一层 ｜ 战略重构——从老板认知与决策支持破冰" ;
+    tkos:scopeDescription "起点是老板：围绕老板自身战略判断与管理问题建立直观可用的 AI 决策支持入口。产品形态候选：老板 AI 高参、老板决策支持 Agent、老板战略知识库/数字分身。目的是让老板形成对 AI 的真实感知，并把战略思考与管理意图沉淀为组织可调用资产。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-fde-org-reconstruction a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-fde-org-reconstruction" ;
+    tkos:displayName "FDE 第二层 ｜ 组织重构——管理者 Agent 网络" ;
+    tkos:scopeDescription "老板 Agent 与管理层 Agent 之间形成新管理关系：管理层通过自己的 Agent 理解老板意图、获取价值判断与战略上下文；老板 Agent 通过管理层 Agent 追踪业务执行、识别偏差、形成反向反馈。它更像 AI 管理班子，而非传统管理软件。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-fde-operation-reconstruction a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-fde-operation-reconstruction" ;
+    tkos:displayName "FDE 第三层 ｜ 运营重构——部门人+Agent 新运营方式与数字岗位沉淀" ;
+    tkos:scopeDescription "每个组织单元在人+Agent 共同工作的新条件下重新设计职能、流程、岗位与管理方法。数字岗位不凭空定义，而从部门运营重构中自然生成：高频、重复、可标准化的任务由 Agent 承担，必须由人判断的留在人，需人机协同的明确协同方式。部门负责人从管理人做流程转向管理人+Agent 共同完成业务结果。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:capability-digital-position-system a tkos:CompanyCapability ;
+    tkos:objectId "capability-digital-position-system" ;
+    tkos:displayName "数字岗位体系（运营重构产物，候选）" ;
+    tkos:scopeDescription "候选数字岗位源自部门运营重构：人力（招聘筛选、人才盘点、员工问答、培训内容）、战略（行业研究、竞品分析、战略会议、战略执行追踪）、经营管理（经营分析、数据异常解释、项目督办、月报生成）、销售运营（线索清洗、客户跟进、销售材料、客户复盘）、项目管理（项目督办、风险提示、会议纪要、事项追踪）。仍为设计候选，未被真实运行验证。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Revenue model stages & commercialisation path
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-revenue-model-stages a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-revenue-model-stages" ;
+    tkos:displayName "收入结构三阶段迁移" ;
+    tkos:scopeDescription "短期：项目与部署收入（战略诊断、FDE、产品设计、部署实施），先形成现金流与灯塔案例。中期：系统持续使用收入（Agent/Foundry 授权、订阅、托管与扩展），把一次项目变成持续运行关系。长期：Token 与数字劳动力运营收入（模型调用、统一治理、数字劳动力与平台运营）。关键判断：当前不能把 Token 消纳设为唯一牵引；早期项目收入必须成立，但项目必须天然连接软件持续使用与组织扩展，避免退化为一次性咨询。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07, tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-fde-commercial-path a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-fde-commercial-path" ;
+    tkos:displayName "FDE 商业化路径：FDE 服务+产品化模块+平台承接" ;
+    tkos:scopeDescription "战略重构入口（启动费/诊断与共创费）→ 组织重构展开（管理者 Agent 网络部署费）→ 运营重构落地（部门 AI 运营重构项目费）→ 数字岗位沉淀（数字岗位订阅费/运营费）→ 平台长期承接（平台费/token 服务费/治理费）。关键是 FDE 是进入企业的方式，产品化是规模化的目的，平台化是长期收入承接；每次客户项目都必须沉淀可复用资产。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:strategy-content-831-failure-signals a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-831-failure-signals" ;
+    tkos:displayName "831 失败信号" ;
+    tkos:scopeDescription "只有战略材料、只有 Agent Demo、只有项目交付、只有网关功能，或 TokenOps 为追求收入退化成低价 API 分销，均被视为失败信号。831 须同时具备真实客户、真实使用、真实调用、真实反馈、可复制方案与明确 Owner。" ;
+    tkos:sourcedFrom tkos:source-ai-decision-network-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Target customer profile
+  # ---------------------------------------------------------------------------
+  tkos:profile-ai-anxious-traditional-enterprise a tkos:CompanyProfile ;
+    tkos:objectId "profile-ai-anxious-traditional-enterprise" ;
+    tkos:displayName "目标客户画像 ｜ AI 焦虑型传统企业老板与管理层" ;
+    tkos:scopeDescription "目标客户：已产生 AI 焦虑但尚未形成清晰 AI 转型方法的传统企业老板与管理层。典型行业：地产及产业园区、资管、制造、消费、专业服务、销售与客服密集型组织、集团型与多业务线企业。心理状态 FOMO 明显；认知偏差为高估或低估 AI；真实需求不是买工具，而是希望知道 AI 如何改变战略判断、管理方式、组织效率与运营流程。转型意愿来自老板和高层，而非单点工具需求。" ;
+    tkos:sourcedFrom tkos:source-fde-business-model-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Two businesses feed one core capability engine
+  # ---------------------------------------------------------------------------
+  tkos:strategy-content-dual-business-feedback-loop a tkos:StrategyContent ;
+    tkos:objectId "strategy-content-dual-business-feedback-loop" ;
+    tkos:displayName "两类业务分别贡献不同输入，训练同一套核心能力" ;
+    tkos:scopeDescription "高价值场景（企业经营上下文、Agent/数字劳动力部署经验、长期客户关系与业务结果）与高频真实负载（模型选择与调用链、成本质量稳定性数据、路由与优化实验）共同输入 Agent Foundry/Ontology 引擎与路由模型，并由 TokenHub 平台承载。能力提升反过来降低交付成本、改善客户效果，推动更多场景部署与更多真实负载。" ;
+    tkos:sourcedFrom tkos:source-strategy-positioning-2026-07 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-07-01T00:00:00+08:00"^^xsd:dateTime .
+}
