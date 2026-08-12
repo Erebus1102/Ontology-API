@@ -16,6 +16,7 @@ from tkos_runtime.domain.models import ContextPack
 from tkos_runtime.domain.render_units import (
     DECISION_INCIDENT_PREDICATES, RenderOmission, RenderBudgetTooSmall,
     SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RenderedFactUnit,
+    assemble_sectioned_markdown,
 )
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
@@ -173,26 +174,74 @@ _SECTION_TO_SLOT = {
 }
 
 
-def _gap_short_len(name: str) -> int:
-    """Approximate length of a gap line in short format."""
-    return len(name) + 60
+def _epistemic_summary(pack: ContextPack) -> str:
+    """Computable status distribution — no (B)-type judgement phrasing."""
+    return (
+        f"已确认事实 {len(pack.current_facts)} 项，候选视图 {len(pack.candidate_context)} 项"
+        f"（其中信息缺口 {len(pack.context_gaps)} 项），溯源视图 {len(pack.provenance_context)} 项。"
+    )
 
 
-def mandatory_floor(pack) -> int:
-    """Minimum char budget needed to render all non-omittable content.
+def mandatory_view_keys(
+    pack: ContextPack,
+    units_by_section: dict[str, list[RenderedFactUnit]],
+) -> set[tuple[str, str]]:
+    """View keys that must never be omitted: the root issue (matched_root),
+    every gap, and — when the pack has outcome units — at least one outcome."""
+    keys: set[tuple[str, str]] = set()
+    if pack.matched_root:
+        root_frag = _frag(pack.matched_root)
+        for u in units_by_section.get("issue", []):
+            if u.member_id == root_frag:
+                keys.add(u.view_key)
+                break
+    for u in units_by_section.get("gaps", []):
+        keys.add(u.view_key)
+    outcomes = units_by_section.get("outcomes", [])
+    if outcomes:
+        keys.add(outcomes[0].view_key)
+    return keys
 
-    Always includes: header/footer reserve + every gap (short format).
-    When the Pack contains ≥1 Outcome, also reserves one Outcome minimal line (ER1).
+
+def mandatory_floor(
+    pack: ContextPack,
+    units_by_section: dict[str, list[RenderedFactUnit]],
+    mandatory_keys: set[tuple[str, str]] | None = None,
+    type_index: dict[str, set[str]] | None = None,
+) -> int:
+    """Exact minimum char budget: mandatory views + fixed text.
+
+    Computed from the real sectioned assembly — mandatory units in their
+    actual short/long line format (complete three-part anchors), real
+    section titles, real epistemic summary, empty-section placeholders and
+    footer. Includes the worst-case omission summary (every non-mandatory
+    unit omitted), so a request of exactly max_chars == floor renders the
+    mandatory views only and never overflows.
     """
-    header = 200  # title + epistemic summary + section headers + footer reserve
-    floor = header
-    for g in pack.context_gaps:
-        floor += _gap_short_len(g.display_name or g.id)
-    # ER1: when an Outcome exists, include one outcome minimal line
-    if any(classify_role(m.id, build_type_index(pack)) == "outcome"
-           for m in (*pack.current_facts, *pack.candidate_context)):
-        floor += 80
-    return floor
+    if type_index is None:
+        type_index = build_type_index(pack)
+    if mandatory_keys is None:
+        mandatory_keys = mandatory_view_keys(pack, units_by_section)
+
+    mandatory_units = {
+        section: [u for u in units if u.view_key in mandatory_keys]
+        for section, units in units_by_section.items()
+    }
+    # Worst case: every non-mandatory unit ends up in the omission summary.
+    all_omitted = [
+        RenderOmission(
+            member_id=u.member_id, partition=u.partition,
+            role=classify_role(u.member_id, type_index),
+            tier=str(role_tier(classify_role(u.member_id, type_index))),
+            reason="max_chars_exceeded", incident_edges=0,
+        )
+        for units in units_by_section.values()
+        for u in units
+        if u.view_key not in mandatory_keys
+    ]
+    return len(assemble_sectioned_markdown(
+        mandatory_units, _epistemic_summary(pack), all_omitted, pack,
+    ))
 
 
 def allocate_budget(
@@ -200,25 +249,34 @@ def allocate_budget(
     pack: ContextPack,
     max_chars: int,
     type_index: dict[str, set[str]] | None = None,
+    mandatory_keys: set[tuple[str, str]] | None = None,
 ):
-    """Two-pass budget allocation with post-assembly trimming.
+    """Two-pass budget allocation with exact post-assembly trimming.
 
-    First pass: slot-ratio greedy fill (gaps non-reclaimable).
-    Second pass: assemble Markdown, measure real length, reclaim from
-    lowest-priority units if over budget.
+    First pass: mandatory views (root issue + all gaps + one outcome) are
+    pre-selected and bypass slot competition; remaining units fill their
+    ratio slots with borrowing. Raises RenderBudgetTooSmall when max_chars
+    cannot hold the mandatory views (real assembled length).
+    Second pass (enforce_max_chars): assemble real Markdown, reclaim from
+    the lowest-priority non-mandatory units until within budget.
 
-    Returns (selected, omissions). Raises RenderBudgetTooSmall when max_chars < floor.
+    Returns (selected, omissions).
     """
-    floor = mandatory_floor(pack)
+    if type_index is None:
+        type_index = build_type_index(pack)
+    if mandatory_keys is None:
+        mandatory_keys = mandatory_view_keys(pack, units_by_section)
+
+    # Floor: exact real length of mandatory views + fixed text (incl. the
+    # worst-case omission summary). max_chars below this can never succeed.
+    floor = mandatory_floor(pack, units_by_section, mandatory_keys, type_index)
     if max_chars < floor:
         raise RenderBudgetTooSmall(max_chars, floor)
 
-    if type_index is None:
-        type_index = build_type_index(pack)
-
-    # ── First pass: slot-based greedy fill ────────────────────────────────
-    # Section titles + epistemic summary + footer overhead
-    overhead = 350  # approximate; second pass measures real length
+    # ── First pass: mandatory views pre-selected, bypass slot competition ──
+    # Section titles + epistemic summary + footer overhead (approximate;
+    # the second pass measures real length exactly).
+    overhead = 350
     usable = max(1, max_chars - overhead)
 
     # Allocate slot budgets (int)
@@ -227,11 +285,22 @@ def allocate_budget(
 
     selected: dict[str, list[RenderedFactUnit]] = {}
     omissions: list[RenderOmission] = []
+    for section in SECTION_ORDER:
+        selected[section] = []
 
+    for section in SECTION_ORDER:
+        for u in units_by_section.get(section, []):
+            if u.view_key not in mandatory_keys:
+                continue
+            selected[section].append(u)
+            slot_key = _SECTION_TO_SLOT.get(section, "secondary")
+            line_len = len(u.to_markdown_line(short=(section == "gaps"))) + 1
+            slot_used[slot_key] += line_len
+
+    # ── First pass (cont.): slot-ratio greedy fill for the remainder ──────
     for section in SECTION_ORDER:
         units = units_by_section.get(section, [])
         slot_key = _SECTION_TO_SLOT.get(section, "secondary")
-        selected[section] = []
 
         # Order: tier asc, then by member_id for determinism
         ordered = sorted(units, key=lambda u: (
@@ -240,15 +309,10 @@ def allocate_budget(
         ))
 
         for u in ordered:
-            is_gap = (section == "gaps")
-            line = u.to_markdown_line(short=is_gap)
-            line_len = len(line) + 1  # +1 for newline
-
-            # Gaps are non-reclaimable — always include in short format
-            if is_gap:
-                selected[section].append(u)
-                slot_used[slot_key] += line_len
+            if u.view_key in mandatory_keys:
                 continue
+            line = u.to_markdown_line(short=(section == "gaps"))
+            line_len = len(line) + 1  # +1 for newline
 
             # First try the section's own slot
             if slot_used[slot_key] + line_len <= slot_budget[slot_key]:
@@ -273,11 +337,6 @@ def allocate_budget(
                         incident_edges=0,
                     ))
 
-    # ── Second pass: measure real length, trim if over budget ─────────────
-    # Build and measure assembled text; reclaim from lowest-priority sections.
-    # Reclamation order (lowest priority first): secondary > evidence > risks > outcomes
-    # Gaps are never reclaimed. Issue is the root — never reclaimed.
-
     return selected, omissions
 
 
@@ -287,42 +346,20 @@ def enforce_max_chars(
     type_index: dict[str, set[str]],
     max_chars: int,
     pack: ContextPack,
+    mandatory_keys: set[tuple[str, str]] | None = None,
 ) -> tuple[dict[str, list[RenderedFactUnit]], list[RenderOmission]]:
-    """Second pass: measure real Markdown length, trim lowest-priority units.
+    """Second pass: assemble real Markdown, trim lowest-priority units.
 
-    Gaps and the root issue (matched_root) are non-reclaimable.
-    Units are reclaimed in priority order: secondary slots first,
-    then evidence, then risks, then outcomes.
-
-    Uses an inline Markdown-length estimation that matches
-    _assemble_sectioned_markdown's structure without importing the renderer.
+    Reclamation order (lowest priority first): secondary > evidence > risks
+    > outcomes. Mandatory views (root issue, gaps, first outcome) are never
+    reclaimed. Length is measured with the same assembly the renderer uses,
+    so the budget is exact — no estimator drift.
     """
-    # ── Inline Markdown-length estimator (must match _assemble_sectioned_markdown) ──
-    def _est_len(sel, omis) -> int:
-        """Estimate assembled Markdown length without importing renderer."""
-        total = 0
-        query_text = pack.query or "(无查询)"
-        total += len(f"# 决策上下文：{query_text}\n\n")
-        total += len("> \n\n")  # epistemic summary placeholder
-        for section in SECTION_ORDER:
-            title = SECTION_TITLES.get(section, f"## {section}")
-            total += len(title) + 1
-            units = sel.get(section, [])
-            if not units:
-                total += len("（无）\n")
-            else:
-                for u in units:
-                    short = (section == "gaps")
-                    total += len(u.to_markdown_line(short=short)) + 1
-            total += 1  # blank line after section
-        # Omission count summary (not full list)
-        if omis:
-            total += len(f"### 省略 {len(omis)} 项\n\n")
-        total += 100  # footer
-        return total
+    if mandatory_keys is None:
+        mandatory_keys = mandatory_view_keys(pack, selected)
 
     # Build reclaimable unit list with priority
-    # gaps(1), issue(0) — never reclaimed
+    # gaps(1), issue(0) — only via mandatory_keys are they non-reclaimable
     _RECLAIM_PRIORITY = {"secondary": 5, "evidence": 4, "risks": 3,
                           "outcomes": 2, "gaps": 1, "issue": 0}
     _SECTION_TO_RECLAIM_KEY = {
@@ -332,17 +369,12 @@ def enforce_max_chars(
     }
 
     reclaimable: list[tuple[int, str, RenderedFactUnit]] = []  # (priority, section, unit)
-    root_frag = _frag(pack.matched_root)
-
     for section in SECTION_ORDER:
         rkey = _RECLAIM_PRIORITY.get(section, 2)
         mapped = _SECTION_TO_RECLAIM_KEY.get(section, section)
         rk_prio = _RECLAIM_PRIORITY.get(mapped, rkey)
-        if rk_prio <= 1:  # gaps, issue — non-reclaimable
-            continue
         for u in selected.get(section, []):
-            # Root issue is non-reclaimable
-            if u.member_id == root_frag:
+            if u.view_key in mandatory_keys:
                 continue
             reclaimable.append((rk_prio, section, u))
 
@@ -352,7 +384,8 @@ def enforce_max_chars(
         role_tier(classify_role(x[2].member_id, type_index)),
     ))
 
-    current = _est_len(selected, omissions)
+    summary = _epistemic_summary(pack)
+    current = len(assemble_sectioned_markdown(selected, summary, omissions, pack))
     idx = 0
     while current > max_chars and idx < len(reclaimable):
         _, section, unit = reclaimable[idx]
@@ -369,7 +402,7 @@ def enforce_max_chars(
                 reason="max_chars_exceeded",
                 incident_edges=0,
             ))
-        current = _est_len(selected, omissions)
+        current = len(assemble_sectioned_markdown(selected, summary, omissions, pack))
 
     return selected, omissions
 
@@ -452,6 +485,38 @@ def _compile_claim(member, name_index: dict[str, str]) -> str:
     return humanize_relation_text(claim, name_index)
 
 
+def _build_units_by_section(
+    pack: ContextPack,
+    type_index: dict[str, set[str]],
+    name_index: dict[str, str],
+) -> dict[str, list[RenderedFactUnit]]:
+    """Compile all pack members into sectioned RenderedFactUnit lists.
+
+    trace_only roles (source_record, confirmation) never occupy body lines
+    (v1, no exceptions).
+    """
+    units_by_section: dict[str, list[RenderedFactUnit]] = {}
+    for m in _all_members(pack):
+        role = classify_role(m.id, type_index)
+        section = ROLE_TO_SECTION.get(role)
+        if role in ("source_record", "confirmation"):
+            continue
+        if section is None:
+            continue
+        claim = _compile_claim(m, name_index)
+        unit = RenderedFactUnit(
+            member_id=m.id,
+            partition=m.partition,
+            source_graphs=tuple(sorted(m.source_graphs)),
+            canonical_claim=claim,
+            display_name=m.display_name,
+            confirmation_status=m.confirmation_status,
+            expected_section=section,
+        )
+        units_by_section.setdefault(section, []).append(unit)
+    return units_by_section
+
+
 @dataclasses.dataclass
 class CompiledDecisionContext:
     """Output of DecisionContextCompiler.compile()."""
@@ -477,37 +542,25 @@ class DecisionContextCompiler:
         name_index, name_warnings = build_name_index(pack)
         warnings: list[str] = list(name_warnings)
 
+        # Epistemic summary — computable status distribution, no (B)-type phrasing
+        epistemic_summary = _epistemic_summary(pack)
+
         # ── Build units by section ─────────────────────────────────────────
-        units_by_section: dict[str, list[RenderedFactUnit]] = {}
-        for m in _all_members(pack):
-            role = classify_role(m.id, type_index)
-            section = ROLE_TO_SECTION.get(role)
+        units_by_section = _build_units_by_section(pack, type_index, name_index)
 
-            # trace_only roles never occupy body lines (v1, no exceptions)
-            if role in ("source_record", "confirmation"):
-                continue
-            if section is None:
-                continue
-
-            claim = _compile_claim(m, name_index)
-            unit = RenderedFactUnit(
-                member_id=m.id,
-                partition=m.partition,
-                source_graphs=tuple(sorted(m.source_graphs)),
-                canonical_claim=claim,
-                display_name=m.display_name,
-                confirmation_status=m.confirmation_status,
-                expected_section=section,
-            )
-            units_by_section.setdefault(section, []).append(unit)
-
-        # ── Budget selection (two-pass) ─────────────────────────────────────
+        # ── Budget selection (two-pass, exact) ─────────────────────────────
+        # Mandatory views (root issue + all gaps + one outcome) are computed
+        # up front, pre-selected in the first pass, and never reclaimed in
+        # the second pass. max_chars < mandatory_floor → RenderBudgetTooSmall.
+        mandatory_keys = mandatory_view_keys(pack, units_by_section)
         selected, omissions = allocate_budget(
             units_by_section, pack, max_chars, type_index,
+            mandatory_keys=mandatory_keys,
         )
-        # Second pass: measure real length, trim from lowest priority
+        # Second pass: measure real assembled length, trim from lowest priority
         selected, omissions = enforce_max_chars(
             selected, omissions, type_index, max_chars, pack,
+            mandatory_keys=mandatory_keys,
         )
 
         # ── Fill incident_edges for omissions (cross-member reference map) ──
@@ -520,16 +573,6 @@ class DecisionContextCompiler:
             o.incident_edges = incident_map.get(TKOS + o.member_id, 0)
 
         # ── Build decision_context dict ────────────────────────────────────
-        # Epistemic summary — computable status distribution, no (B)-type phrasing
-        n_candidate = len(pack.candidate_context)
-        n_gap = len(pack.context_gaps)
-        n_provenance = len(pack.provenance_context)
-        n_confirmed = len(pack.current_facts)
-        epistemic_summary = (
-            f"已确认事实 {n_confirmed} 项，候选视图 {n_candidate} 项"
-            f"（其中信息缺口 {n_gap} 项），溯源视图 {n_provenance} 项。"
-        )
-
         dc: dict[str, Any] = {
             "compiler_version": "decision-context/v1",
             "issue": {},

@@ -188,7 +188,7 @@ def test_fe_issue_r4_eighteen_assertions():
     i_c = next(i for i, l in enumerate(lines)
                if "[member:outcome-native-agent-1-0-launch-2026-08]" in l)
     i_p = next(i for i, l in enumerate(lines)
-               if "[member:portfolio-fe-2026-08]" in l)
+               if "[member:mission-fe-m2-lighthouse-context-loop]" in l)
     src_c = ANCHOR_RE.search(lines[i_c]).group(3)
     src_p = ANCHOR_RE.search(lines[i_p]).group(3)
     assert src_c != src_p  # attack must actually swap distinct sources

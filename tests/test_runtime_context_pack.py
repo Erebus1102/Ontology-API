@@ -171,5 +171,3 @@ def test_rdf_types_scoped_per_partition_not_cross_copied():
     for v in (cand + prov):
         merged.update(v.rdf_types)
     assert merged == {RISK_TYPE}, merged
-
-

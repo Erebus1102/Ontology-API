@@ -6,6 +6,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Any, Optional
 
+from tkos_runtime.domain.models import ContextPack
 from tkos_runtime.domain.query_plan import TRAVERSAL, TKOS
 
 # Render Schema version (the response contract). Wired into the response as
@@ -55,6 +56,61 @@ ROLE_TO_SECTION = {
     "mission": "outcomes", "criterion": "progress", "milestone": "progress",
     "responsibility": "dependencies",
 }
+
+
+def assemble_sectioned_markdown(
+    units_by_section: dict[str, list["RenderedFactUnit"]],
+    epistemic_summary: str,
+    omissions: list["RenderOmission"],
+    pack: ContextPack,
+) -> str:
+    """Assemble sectioned units into decision-oriented Markdown.
+
+    Single source of truth for deterministic output — used by BOTH the
+    DecisionContextCompiler (mandatory floor + exact post-assembly
+    reclamation) and the renderer (final content), so the compiled budget
+    always matches the rendered length. Omission summary counts only.
+    """
+    lines: list[str] = []
+    query_text = pack.query or "(无查询)"
+    lines.append(f"# 决策上下文：{query_text}")
+    lines.append("")
+
+    # Epistemic summary
+    lines.append(f"> {epistemic_summary}")
+    lines.append("")
+
+    for section in SECTION_ORDER:
+        title = SECTION_TITLES.get(section, f"## {section}")
+        lines.append(title)
+        lines.append("")
+        units = units_by_section.get(section, [])
+        if not units:
+            lines.append("（无）")
+        else:
+            for u in units:
+                short = (section == "gaps")
+                lines.append(u.to_markdown_line(short=short))
+        lines.append("")
+
+    # Omission summary — counts only, not full lists (preserves budget)
+    if omissions:
+        om_by_role: dict[str, int] = {}
+        for o in omissions:
+            role = getattr(o, "role", "unknown") if hasattr(o, "role") else "unknown"
+            om_by_role[role] = om_by_role.get(role, 0) + 1
+        parts = [f"{k}×{v}" for k, v in sorted(om_by_role.items())]
+        lines.append(f"### 省略 {len(omissions)} 项（{', '.join(parts)}）")
+        lines.append("")
+
+    lines.append("---")
+    lines.append(
+        f"pack_id: `{pack.pack_id}`  |  "
+        f"ontology: {pack.ontology_release_id}  |  "
+        f"renderer: {RENDERER_VERSION}"
+    )
+    lines.append("")
+    return "\n".join(lines)
 
 
 @dataclasses.dataclass(frozen=True)

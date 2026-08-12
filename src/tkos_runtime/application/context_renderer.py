@@ -22,7 +22,7 @@ from tkos_runtime.domain.ports import TextPolisher
 from tkos_runtime.domain.render_units import (
     RenderedFactUnit, RenderBudgetTooSmall, DECISION_INCIDENT_PREDICATES,
     SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RENDERER_VERSION,
-    RENDER_SCHEMA_VERSION,
+    RENDER_SCHEMA_VERSION, assemble_sectioned_markdown,
 )
 from tkos_runtime.application.decision_context_compiler import DecisionContextCompiler
 
@@ -356,47 +356,18 @@ def _select_units(
 # ── section-aware Markdown assembly (DCC v1) ─────────────────────────────────
 
 def _assemble_sectioned_markdown(compiled, pack: ContextPack) -> str:
-    """Render compiled sections as decision-oriented Markdown."""
-    lines: list[str] = []
-    query_text = pack.query or "(无查询)"
-    lines.append(f"# 决策上下文：{query_text}")
-    lines.append("")
+    """Render compiled sections as decision-oriented Markdown.
 
-    # Epistemic summary
-    lines.append(f"> {compiled.decision_context.get('epistemic_summary', '')}")
-    lines.append("")
-
-    for section in SECTION_ORDER:
-        title = SECTION_TITLES.get(section, f"## {section}")
-        lines.append(title)
-        lines.append("")
-        units = compiled.units_by_section.get(section, [])
-        if not units:
-            lines.append("（无）")
-        else:
-            for u in units:
-                short = (section == "gaps")
-                lines.append(u.to_markdown_line(short=short))
-        lines.append("")
-
-    # Omission summary — counts only, not full lists (preserves budget)
-    if compiled.omissions:
-        om_by_role: dict[str, int] = {}
-        for o in compiled.omissions:
-            role = getattr(o, "role", "unknown") if hasattr(o, "role") else "unknown"
-            om_by_role[role] = om_by_role.get(role, 0) + 1
-        parts = [f"{k}×{v}" for k, v in sorted(om_by_role.items())]
-        lines.append(f"### 省略 {len(compiled.omissions)} 项（{', '.join(parts)}）")
-        lines.append("")
-
-    lines.append("---")
-    lines.append(
-        f"pack_id: `{pack.pack_id}`  |  "
-        f"ontology: {pack.ontology_release_id}  |  "
-        f"renderer: {RENDERER_VERSION}"
+    Thin wrapper over the shared ``assemble_sectioned_markdown`` (defined in
+    render_units so the compiler's floor/enforcement measure the exact same
+    string the renderer produces).
+    """
+    return assemble_sectioned_markdown(
+        compiled.units_by_section,
+        compiled.decision_context.get("epistemic_summary", ""),
+        compiled.omissions,
+        pack,
     )
-    lines.append("")
-    return "\n".join(lines)
 
 
 # ── section-aware validator helpers ───────────────────────────────────────────
@@ -711,12 +682,12 @@ def render(
         )
     content = _assemble_sectioned_markdown(compiled, pack)
 
-    # Final budget enforcement: post-assembly check
+    # Final hard assertion: the compiler's exact two-pass enforcement
+    # guarantees len(content) <= max_chars (mandatory floor + real-length
+    # reclamation). Over-limit assembly with nothing left to reclaim is a
+    # hard failure (HTTP 422) — never an over-long response.
     if len(content) > max_chars:
-        warnings.append(
-            f"content length {len(content)} exceeds max_chars={max_chars} "
-            f"(post-assembly; budget enforcement may need tuning)"
-        )
+        raise RenderBudgetTooSmall(max_chars, len(content))
 
     # ── Render Schema v2: grounding is always structurally_validated ────
     # NOTE: structural validation cannot detect in-line NL business judgements
