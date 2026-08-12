@@ -1,4 +1,4 @@
-# P0-1 运行时最小只读栈 Implementation Plan (v3)
+# P0-1 运行时最小只读栈 Implementation Plan (v4)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -28,7 +28,7 @@
 - `src/tkos_runtime/domain/{models,query_plan,ports,policies}.py`
 - `src/tkos_runtime/adapters/{rdflib_dataset_store,gram_intent_resolver,rdflib_graph_retriever,rdflib_lineage_repository}.py`
 - `src/tkos_runtime/application/{context_compiler,proof_builder,context_pack_resolver,lineage_resolver}.py`
-- Modify `scripts/resolve_issue_context.py`（接入 `query_plan`）、`Makefile`、`.github/workflows/ci.yml`（删除 SWRL job）。
+- Modify `scripts/resolve_issue_context.py`（接入 `query_plan`）、`Makefile`、`.github/workflows/ci.yml`（删除 SWRL job）、`README.md`。
 - Tests `tests/test_runtime_*.py`。
 
 ---
@@ -457,6 +457,23 @@ def test_revision_invariant_under_cwd(tmp_path, monkeypatch):
 def test_version_metadata():
     s = store(sorted((ROOT/"data/instances").glob("*.trig")))
     assert s.ontology_release_id == "2.4.0"
+
+def test_default_release_root_supports_repository_instances():
+    # 不传 release_root，验证默认推导（parents[2]）能处理 data/instances 下的文件
+    s = RdfDatasetStore(SCHEMA, DATASET, sorted((ROOT/"data/instances").glob("*.trig")))
+    assert len(s.dataset_revision) == 64
+
+def test_object_value_and_statements_in_block_restricted_object():
+    # 允许图中存在指向敏感节点的关系（fixture: mission-growth informedBy assertion-sensitive）
+    s = store([ROOT/"tests/v2.3-context-pack-runtime.trig"])
+    SENS = "https://ontology.tokenking.ai/tkos#assertion-sensitive"
+    allowed = ["graph-confirmed-enterprise", "graph-candidate-and-dispute", "graph-decision-provenance"]
+    # statements_in 已过滤
+    objs = {st.object for st in s.statements_in(allowed)}
+    assert SENS not in objs
+    # object_value 也不得泄漏敏感节点
+    mg = "https://ontology.tokenking.ai/tkos#mission-growth"
+    assert s.object_value(mg, "https://ontology.tokenking.ai/tkos#informedBy", allowed) != SENS
 ```
 
 - [ ] **Step 2: 跑测试确认失败** — FAIL
@@ -494,8 +511,8 @@ class RdfDatasetStore:
         self.restricted_partition_ids = {SENSITIVE}
         self.restricted_node_ids = self._compute_restricted()
         self.ontology_release_id = self._version(schema_path)
-        # release_root 默认为 dataset_path 上两级（ontology/datasets/* -> 仓库根）
-        self._release_root = (release_root or dataset_path.resolve().parent.parent)
+        # release_root 默认上溯至仓库根（file ← datasets ← ontology ← 根，即 parents[2]）
+        self._release_root = (release_root or dataset_path.resolve().parents[2])
         self.dataset_revision = self._revision(dataset_path, instance_paths)
 
     def _read_registered(self) -> set[str]:
@@ -594,11 +611,19 @@ class RdfDatasetStore:
         return sorted(out, key=lambda x: (x.predicate, x.object, x.source_graph))
 
     def object_value(self, subject: str, predicate: str, graph_ids: list[str]) -> str | None:
+        # 端口信任边界：subject 或 object 命中 restricted_node_ids 则不返回
+        if subject in self.restricted_node_ids:
+            return None
         n, p = URIRef(subject), URIRef(predicate)
+        values = []
         for guid in self._uris(graph_ids):
             for o in self._ds.graph(URIRef(guid)).objects(n, p):
-                return str(o)
-        return None
+                if self._ok(subject, str(o)):
+                    values.append((guid, str(o)))  # 按 (图, 对象) 稳定排序取第一个，保证可复现
+        if not values:
+            return None
+        values.sort(key=lambda x: (_frag(x[0]), x[1]))
+        return values[0][1]
 ```
 
 - [ ] **Step 4: 跑测试确认通过** — PASS
@@ -867,9 +892,10 @@ def test_derived_empty_vs_materialized():
 
 def test_gap_type_only_not_prefix():
     c = compiler()
+    RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
     typed = RetrievedMember(TKOS+"weird-id",
-        subject_by_partition={"graph-candidate-and-dispute":[stmt(TKOS+"weird-id",TKOS+"type" if False else "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",TKOS+"ContextGap","graph-candidate-and-dispute")]},
-        incident_by_partition={"graph-candidate-and-dispute":[stmt(TKOS+"weird-id","http://www.w3.org/1999/02/22-rdf-syntax-ns#type",TKOS+"ContextGap","graph-candidate-and-dispute")]})
+        subject_by_partition={"graph-candidate-and-dispute":[stmt(TKOS+"weird-id",RDF_TYPE,TKOS+"ContextGap","graph-candidate-and-dispute")]},
+        incident_by_partition={"graph-candidate-and-dispute":[stmt(TKOS+"weird-id",RDF_TYPE,TKOS+"ContextGap","graph-candidate-and-dispute")]})
     pack = c.compile([typed], IntentAssessment(MG,[]), scope(), meta(), AS_OF, "q", "decision_preparation")
     assert any(m.id == "weird-id" for m in pack.context_gaps)
     prefix_only = RetrievedMember(TKOS+"gap-fake",
@@ -1131,6 +1157,28 @@ def test_lineage_for_stable_id_assertion():
 def test_lineage_unknown_empty():
     lp = make().resolve("does-not-exist-xyz", "decision_preparation")
     assert lp.source_records == [] and lp.asserted_by is None and lp.named_graph is None
+
+def test_lineage_multi_graph_raises(tmp_path):
+    # 自包含 store：同一断言出现在两个事实图 → fetch 必须报错
+    import pytest
+    (tmp_path/"onto.jsonld").write_text(
+        '{"@context":{"owl":"http://www.w3.org/2002/07/owl#","tkos":"https://ontology.tokenking.ai/tkos#"},'
+        '"@graph":[{"@id":"https://ontology.tokenking.ai/tkos#","@type":"owl:Ontology","owl:versionInfo":"test"}]}',
+        encoding="utf-8")
+    (tmp_path/"reg.trig").write_text(
+        '@prefix tkos: <https://ontology.tokenking.ai/tkos#> .\n'
+        'tkos:graph-registry {\n'
+        '  tkos:graph-confirmed-enterprise a tkos:KnowledgeGraphPartition .\n'
+        '  tkos:graph-decision-provenance a tkos:KnowledgeGraphPartition .\n'
+        '}\n', encoding="utf-8")
+    (tmp_path/"multi.trig").write_text(
+        '@prefix tkos: <https://ontology.tokenking.ai/tkos#> .\n'
+        'tkos:graph-confirmed-enterprise { tkos:assert-x a tkos:AttributedAssertion ; tkos:objectId "assert-x" . }\n'
+        'tkos:graph-decision-provenance { tkos:assert-x a tkos:AttributedAssertion ; tkos:objectId "assert-x" . }\n',
+        encoding="utf-8")
+    s = RdfDatasetStore(tmp_path/"onto.jsonld", tmp_path/"reg.trig", [tmp_path/"multi.trig"], release_root=tmp_path)
+    with pytest.raises(ValueError):
+        RdfLineageRepository(s).fetch("assert-x", s.allowed_graphs("decision_preparation"))
 ```
 
 - [ ] **Step 2: 跑测试确认失败** — FAIL
@@ -1216,7 +1264,7 @@ class LineageResolver:
 
 ### Task 11: 旧脚本接入 + CI/Makefile（删 SWRL job）
 
-**Files:** Modify `scripts/resolve_issue_context.py`、`Makefile`、`.github/workflows/ci.yml`
+**Files:** Modify `scripts/resolve_issue_context.py`、`Makefile`、`.github/workflows/ci.yml`、`README.md`
 
 - [ ] **Step 1: scripts/resolve_issue_context.py 接入单一来源**
 
@@ -1230,7 +1278,11 @@ TRAVERSAL = {URIRef(p) for p in query_plan.TRAVERSAL}
 
 - [ ] **Step 2: Makefile 接入 pytest**
 
+将 `test-pytest` 加入 `.PHONY`，并更新 `test-fast`（五个纯 Python 套件：SHACL、Context Pack、conformance、isomorphism、runtime pytest）：
+
 ```make
+.PHONY: ... test-pytest
+...
 test-pytest:
 	$(PYTHON) -m pytest tests/test_runtime_*.py -q
 
@@ -1246,16 +1298,23 @@ test-fast: test-shacl test-context test-conformance test-isomorphism test-pytest
         run: python -m pytest tests/test_runtime_*.py -q
 ```
 
-README「本地验证」注明：Openllet SWRL 回归（`make test-swrl` / `tests/run_v2_3_swrl_openllet.py`）为具备 Openllet 环境时的独立发布门禁，不在 CI。
+- [ ] **Step 4: README.md 更新「本地验证」与 CI 说明**
 
-- [ ] **Step 4: 跑 make test-fast 确认全绿** — `make test-fast` → 全 PASS
-- [ ] **Step 5: 提交** — `git commit -m "chore(runtime): 旧脚本接入 query_plan + CI 删 SWRL job + Makefile pytest"`
+将原"GitHub Actions 在推送与 PR 时自动运行纯 Python 套件（必过门禁），SWRL 套件作为信息性 job"改为：纯 Python 套件（含 runtime pytest）为必过门禁；Openllet SWRL 回归（`make test-swrl` / `tests/run_v2_3_swrl_openllet.py`）为**具备 Openllet 环境时的独立发布门禁，不在 CI**（`openllet/` 被 `.gitignore` 排除）。同时把 `make test-fast` 的描述更新为"五个纯 Python 套件"。
+
+- [ ] **Step 5: 跑 make test-fast 确认全绿** — `make test-fast` → 全 PASS
+- [ ] **Step 6: 提交**
+
+```bash
+git add scripts/resolve_issue_context.py Makefile .github/workflows/ci.yml README.md
+git commit -m "chore(runtime): 旧脚本接入 query_plan + CI 删 SWRL job + Makefile/README pytest"
+```
 
 ---
 
-## Self-Review（v3 自查）
+## Self-Review（v4 自查）
 
-**1. Spec/评审覆盖：** P1.1 LineageResolver 注入 Store 单参 GraphPolicy（test 用 `s` 非 AdmissionPolicy）✓；P1.2 注册表交集（删 Candidate→删除；未知分区不自动授权；双更才进；临时 TriG 测试）✓；P1.3 candidate 边隔离（confirmed 的 supportedByEvidence 允许留 current，仅隔离 evidence-candidate）✓；P1.4 proof 用真实 subject/object + 四元组去重排序 + 精确边断言 ✓；P1.5 release_root 推导 + POSIX 相对路径 + 双 cwd 一致测试 ✓。拍板：TRAVERSAL 扩展集保留 ✓；_is_gap 仅认 type（含两条独立测试）✓；omission 锚点不变 ✓；CI 删 SWRL job ✓。P2：LineageResolver 无 as_of ✓；admission_policy 随 purpose ✓；Lineage 多图归属报错 ✓；无重复 Task 标题 ✓；TRAVERSAL 拼写 ✓；聚合敏感隔离测试（Task 9）✓。
+**1. Spec/评审覆盖：** P1.1 LineageResolver 注入 Store 单参 GraphPolicy（test 用 `s` 非 AdmissionPolicy）✓；P1.2 注册表交集（删 Candidate→删除；未知分区不自动授权；双更才进；临时 TriG 测试）✓；P1.3 candidate 边隔离（confirmed 的 supportedByEvidence 允许留 current，仅隔离 evidence-candidate）✓；P1.4 proof 用真实 subject/object + 四元组去重排序 + 精确边断言 ✓；P1.5 release_root 推导 + POSIX 相对路径 + 双 cwd 一致测试 ✓。**v4 新增 P1：** release_root 默认 `parents[2]`（修正 parent.parent 的少上溯，含默认推导测试）✓；`object_value` 加 `_ok` 信任边界 + 稳定排序取第一个（含端口级 restricted-object 测试，与 statements_in 同测）✓；README.md 纳入 Task 11 的 Files 与提交范围 ✓。拍板：TRAVERSAL 扩展集保留 ✓；_is_gap 仅认 type（含两条独立测试）✓；omission 锚点不变 ✓；CI 删 SWRL job ✓。P2：LineageResolver 无 as_of ✓；admission_policy 随 purpose ✓；Lineage 多图归属报错 + **独立负向测试** ✓；无重复 Task 标题（11 个唯一）✓；gap 测试 `if False else` 已清理为 `RDF_TYPE` ✓；Makefile `.PHONY` 含 test-pytest + 注释更新 ✓；`object_value` 多值稳定排序 ✓；聚合敏感隔离测试（Task 9）✓。
 
 **2. Placeholder scan：** 无 TBD/TODO；Task 11 各步给出具体命令与代码。
 
