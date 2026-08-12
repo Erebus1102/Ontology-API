@@ -1,0 +1,22 @@
+# TKOS Runtime — Caddy 反代配置（Mac 本机）
+#
+# 使用前：
+#   1. 把 api.your-domain.com 换成实际域名（当前：api.tokenking-ontologyfetch.com）
+#   2. DNS 加 A 记录：api.tokenking-ontologyfetch.com → 本机公网 IP
+#   3. 路由器/防火墙放行 80 与 443（ACME 证书签发需要 80 可达）
+#
+# Caddy 自动申请并续期 Let's Encrypt 证书；首次启动后约 1 分钟证书就绪。
+
+api.tokenking-ontologyfetch.com {
+    reverse_proxy tkos:8000
+
+    # 请求体上限（render 请求带完整 ContextPack，默认 1MB 可能不够）
+    request_body {
+        max_size 10MB
+    }
+
+    # 业务端点日志（Caddy access log 默认已输出到 stdout）
+    log {
+        output stdout
+    }
+}

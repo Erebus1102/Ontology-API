@@ -196,6 +196,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="ISO-8601 as-of timestamp")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL,
                         help="read-API base URL (default: http://localhost:8000)")
+    parser.add_argument("--api-key", default=None,
+                        help="Bearer API key (TKOS_API_KEY) — required against "
+                             "auth-protected deployments (post a7b6655)")
     parser.add_argument("--actor-id", default=DEFAULT_ACTOR_ID,
                         help="actor id sent in the request body")
     parser.add_argument("--enterprise-id", default=DEFAULT_ENTERPRISE_ID,
@@ -224,8 +227,11 @@ def main(argv: list[str] | None = None) -> int:
         # trust_env defaults to False: the harness is a local-dev acceptance
         # client, and ambient HTTP(S)_PROXY settings in the operator's shell
         # should not be allowed to break a request to localhost.
+        headers = {}
+        if args.api_key:
+            headers["Authorization"] = f"Bearer {args.api_key}"
         with httpx.Client(timeout=args.timeout, trust_env=args.trust_env) as client:
-            resp = client.post(url, json=request_body)
+            resp = client.post(url, json=request_body, headers=headers)
     except httpx.RequestError as exc:
         print(f"ERROR: request failed: {exc}", file=sys.stderr)
         return 3

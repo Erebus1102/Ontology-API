@@ -16,7 +16,9 @@ dependencies = [
 api = [
   "fastapi>=0.116,<1",
   "uvicorn[standard]>=0.35,<1",
+  "gunicorn>=22,<24",
   "httpx>=0.27,<1",
+  "openai>=1.0,<2",
   "python-dotenv>=1.0,<2",
 ]
 dev = [

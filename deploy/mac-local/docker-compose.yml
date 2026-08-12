@@ -1,0 +1,43 @@
+# TKOS Runtime — Mac 本机反代部署（Caddy 自动 HTTPS）
+#
+# 两个服务：
+#   tkos   — 运行时容器（gunicorn/uvicorn，只读内存图）
+#   caddy  — 反向代理 + Let's Encrypt 自动证书
+#
+# 用法：
+#   cp .env.example .env && 编辑（TKOS_API_KEY / LLM_* / 域名）
+#   编辑 Caddyfile 里的域名后：
+#   docker compose up -d
+#
+# 对外路径： https://<Caddyfile 中域名>/v1/context-packs:resolve
+#            https://<Caddyfile 中域名>/v1/context-packs:render
+# 本机直连调试： http://127.0.0.1:8000（仅回环，不对外）
+
+services:
+  tkos:
+    image: tkos-runtime:latest   # 生产用具体 tag：tkos-runtime:<code-sha>-<dataset-rev12>
+    container_name: tkos-runtime
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"    # 仅本机调试直连；对外流量走 caddy
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    container_name: tkos-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"                  # HTTP→HTTPS 跳转 + ACME challenge
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data         # 证书持久化
+      - caddy_config:/config
+    depends_on:
+      - tkos
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,29 @@
+# TKOS Runtime — systemd unit (ECS pilot).
+#
+# Manages the container lifecycle across reboots: systemd restarts the
+# service, docker --restart unless-stopped (docker-run.sh) covers crashes
+# while the host runs.
+#
+# Install on the ECS host:
+#   sudo cp deploy/ecs/tkos-runtime.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now tkos-runtime
+#
+# Logs: journalctl -u tkos-runtime -f
+
+[Unit]
+Description=TKOS Ontology Runtime (FastAPI)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/tkos/deploy/ecs
+ExecStart=/opt/tkos/deploy/ecs/docker-run.sh
+ExecStop=/usr/bin/docker rm -f tkos-runtime
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

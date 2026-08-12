@@ -144,6 +144,16 @@ def test_ready_200_after_startup():
     assert body["checks"]["startup_shacl"] in ("pass", "fail", "skipped")
 
 
+def test_startup_shacl_runs_and_passes_when_enabled(monkeypatch):
+    """TKOS_STARTUP_SHACL=1 → startup SHACL actually runs and passes on the
+    loaded graph (deployment blocker: was returning 'skipped' unconditionally)."""
+    monkeypatch.setenv("TKOS_STARTUP_SHACL", "1")
+    client = TestClient(create_app())
+    resp = client.get("/ready")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["checks"]["startup_shacl"] == "pass"
+
+
 def test_ready_503_while_not_ready():
     """When _state.ready is False, /ready returns 503.
 

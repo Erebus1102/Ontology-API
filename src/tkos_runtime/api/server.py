@@ -16,6 +16,7 @@ Error mapping:
 """
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -62,6 +63,7 @@ from tkos_runtime.domain.query_plan import QUERY_PLAN_VERSION
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SCHEMA = _REPO_ROOT / "ontology" / "schema" / "tkos-ontology.jsonld"
 _DATASET = _REPO_ROOT / "ontology" / "datasets" / "tkos-runtime-dataset.trig"
+_SHAPES = _REPO_ROOT / "ontology" / "shapes" / "tkos-validation-shapes.jsonld"
 
 
 # ---------------------------------------------------------------------------
@@ -111,14 +113,36 @@ def _run_startup_shacl_if_enabled(store: RdfDatasetStore) -> str:
 
     Returns ``"pass"``, ``"fail"``, or ``"skipped"``.
 
-    Note: v1 skips startup SHACL by default. The store does not yet expose
-    raw rdflib graphs for external validation; when it does, wire pyshacl
-    here via ``store._ds`` (the internal rdflib Dataset).
+    Defense-in-depth (deployment design §5.1): re-validate the loaded graph
+    locally before the Pod accepts traffic — CI already gates publishes, this
+    catches a corrupted image at startup. Fails closed: any validation error
+    → ``"fail"`` (do not accept traffic over an unvalidated graph).
     """
     if os.environ.get("TKOS_STARTUP_SHACL") != "1":
         return "skipped"
-    # v1: store doesn't expose raw graphs yet — skip until store API grows
-    return "skipped"
+    try:
+        from pyshacl import validate as shacl_validate
+        from rdflib import Graph
+
+        shapes = Graph().parse(str(_SHAPES), format="json-ld")
+        ontology = Graph().parse(str(_SCHEMA), format="json-ld")
+        merged = Graph()
+        # Union of all loaded graphs (schema + dataset + instances) — the same
+        # materialised view the store serves, mirroring run_instance_conformance.
+        for graph in store._ds.graphs():
+            for triple in graph:
+                merged.add(triple)
+        conforms, _, _ = shacl_validate(
+            data_graph=merged,
+            shacl_graph=shapes,
+            ont_graph=ontology,
+            inference="rdfs",
+            advanced=True,
+        )
+        return "pass" if conforms else "fail"
+    except Exception as exc:  # noqa: BLE001 — fail closed on any validation error
+        logging.getLogger(__name__).warning("startup SHACL failed: %s", exc)
+        return "fail"
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +297,9 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 raise HTTPException(
                     status_code=422, detail=f"invalid pack: {exc}"
                 ) from exc
+            # authZ: purpose gate must cover client-supplied packs too — the
+            # pack declares its own purpose; verify the principal may use it.
+            assert_purpose(pack.purpose, principal)
             pack_origin = "client_supplied"
 
         # Build polisher for LLM modes

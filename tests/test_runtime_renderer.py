@@ -395,6 +395,44 @@ def test_render_endpoint_with_pack_input(monkeypatch):
     assert body["rendered"]["content"]
 
 
+def test_render_client_supplied_pack_purpose_not_permitted_is_403(monkeypatch):
+    """Client-supplied packs must NOT bypass the purpose gate (deployment
+    blocker: purpose asserted only on the resolve_request branch)."""
+    monkeypatch.setenv(
+        "TKOS_API_KEYS_JSON",
+        '{"k1": {"name": "restricted", "purposes": ["mission_review"]}}',
+    )
+    from fastapi.testclient import TestClient
+    from tkos_runtime.api.server import create_app
+
+    client = TestClient(create_app())
+    # Pack declares decision_preparation, token only allows mission_review.
+    pack_dict = pack_to_dict(_pack(purpose="decision_preparation"))
+    resp = client.post("/v1/context-packs:render", json={
+        "pack": pack_dict,
+        "render_options": {"mode": "deterministic"},
+    }, headers={"Authorization": "Bearer k1"})
+    assert resp.status_code == 403, resp.text
+
+
+def test_render_client_supplied_pack_permitted_purpose_is_200(monkeypatch):
+    """A client-supplied pack whose purpose IS permitted still renders."""
+    monkeypatch.setenv(
+        "TKOS_API_KEYS_JSON",
+        '{"k1": {"name": "restricted", "purposes": ["mission_review"]}}',
+    )
+    from fastapi.testclient import TestClient
+    from tkos_runtime.api.server import create_app
+
+    client = TestClient(create_app())
+    pack_dict = pack_to_dict(_pack(purpose="mission_review"))
+    resp = client.post("/v1/context-packs:render", json={
+        "pack": pack_dict,
+        "render_options": {"mode": "deterministic"},
+    }, headers={"Authorization": "Bearer k1"})
+    assert resp.status_code == 200, resp.text
+
+
 def test_render_both_inputs_is_422(monkeypatch):
     """Exactly one of pack or resolve_request required."""
     monkeypatch.setenv("TKOS_API_KEY", "test-key")

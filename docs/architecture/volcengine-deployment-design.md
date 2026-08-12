@@ -1,6 +1,6 @@
 # TKOS Ontology Runtime — 火山引擎部署设计
 
-> 状态：设计稿（未执行部署、未改源码）
+> 状态：设计稿 → **部分执行中，已切换为 Mac 本机反代方案**（2026-08-12）：健康端点 + authN/authZ + 启动 SHACL + 客户端 pack purpose 门禁已落地（`server.py`）；容器镜像（Dockerfile + .dockerignore + `PIP_INDEX_URL` build-arg）构建与容器冒烟通过。**当前部署路径 = `deploy/mac-local/`**（docker compose：TKOS 容器 + Caddy 反代 + 自动 HTTPS，域名+公网 IP）。本文档的火山引擎设计保留为**备用路径**（`deploy/ecs/` 产物就绪，需要时启用）。
 > 范围：本体服务（FastAPI Runtime）+ 推理（SHACL/SWRL）+ API 运行 + LLM 端点 + 数据/制品分发 + CI/CD + 配置/密钥 + 扩展路径 + 安全前置
 > 日期：2026-08-12
 > 配套文档：[runtime-architecture.md](./runtime-architecture.md)、[api-contracts-v1.md](../api/api-contracts-v1.md)、[distillation-and-cold-start.md](./distillation-and-cold-start.md)

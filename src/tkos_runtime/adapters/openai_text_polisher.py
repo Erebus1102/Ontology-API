@@ -16,7 +16,7 @@ class OpenAITextPolisher:
         base_url: API base URL（默认从 LLM_BASE_URL 环境变量读取）。
         api_key: API 认证令牌（默认从 LLM_AUTH_TOKEN 环境变量读取）。
         model: 模型名（默认从 LLM_MODEL 环境变量读取）。
-        timeout: HTTP 请求超时秒数（默认 30）。
+        timeout: HTTP 请求超时秒数（默认读 LLM_TIMEOUT 环境变量，缺省 120）。
         max_retries: 最大重试次数（默认 1）。
     """
 
@@ -25,13 +25,16 @@ class OpenAITextPolisher:
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: float = 30.0,
+        timeout: Optional[float] = None,
         max_retries: int = 1,
     ):
         self._base_url = base_url or os.environ.get("LLM_BASE_URL", "")
         self._api_key = api_key or os.environ.get("LLM_AUTH_TOKEN", "")
         self._model = model or os.environ.get("LLM_MODEL", "")
-        self._timeout = timeout
+        self._timeout = (
+            timeout if timeout is not None
+            else float(os.environ.get("LLM_TIMEOUT", "120"))
+        )
         self._max_retries = max_retries
         if not self._base_url or not self._api_key:
             raise ValueError(
