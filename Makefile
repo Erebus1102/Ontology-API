@@ -2,7 +2,7 @@
 ##
 ## Quick start:
 ##   make install      # python -m pip install -e '.[dev]'
-##   make test-fast    # the three pure-Python suites (no Java/Openllet needed)
+##   make test-fast    # full pure-Python gate (legacy runners + runtime pytest)
 ##   make test         # full regression gate, adds the Openllet SWRL acceptance test
 ##
 ## Each recipe runs a single runner and fails fast on any non-zero exit, so the
@@ -11,7 +11,7 @@
 
 PYTHON ?= python3
 
-.PHONY: install generate test test-fast test-shacl test-context test-conformance test-isomorphism test-swrl
+.PHONY: install generate test test-fast test-shacl test-context test-conformance test-isomorphism test-runtime test-swrl
 
 install:
 	$(PYTHON) -m pip install -e '.[dev]'
@@ -33,8 +33,11 @@ test-conformance:
 test-isomorphism:
 	$(PYTHON) tests/run_schema_isomorphism.py
 
+test-runtime:
+	$(PYTHON) -m pytest tests/test_runtime_*.py tests/test_agent_harness.py -v
+
 # Pure-Python gate for the fast local feedback loop.
-test-fast: test-shacl test-context test-conformance test-isomorphism
+test-fast: test-shacl test-context test-conformance test-isomorphism test-runtime
 
 # Full regression gate. Adds the Openllet SWRL acceptance test, which needs Java
 # and a built Openllet CLI (openllet/openllet.sh builds it on first run via Maven).

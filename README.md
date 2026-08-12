@@ -2,7 +2,7 @@
 
 TKOS Ontology Runtime 面向企业 Agent、董办和项目团队，提供经营本体查询、业务文档蒸馏、判断溯源和受控知识更新。
 
-当前版本包含 V2.4 OWL 本体、SHACL 约束、SWRL 推理测试、真实业务候选实例和本地 Context Resolver 原型。HTTP API、RDF Store、异步 Worker、生产身份权限与事务写入仍待实现。
+当前版本包含 V2.4 OWL 本体、SHACL 约束、SWRL 推理测试、真实业务候选实例、API 1 进程内 Runtime Library（保留命名图身份+敏感隔离+分区切片准入）以及本地 FastAPI HTTP 服务。API 3（Assertion Lineage）、RDF Store、异步 Worker、生产身份权限、事务写入与独立部署制品仍待实现。
 
 ## 目标能力
 
@@ -122,15 +122,18 @@ Ontology-API/
 - SHACL 正向与负向约束测试
 - Openllet SWRL 验收推导测试
 - RDF Dataset 命名图契约
-- 真实业务候选实例和本地议题 Resolver 原型
+- API 1 Runtime Library：进程内 Context Pack Resolver（保留图身份、敏感节点隔离、分区切片准入、确定性 BFS、cwd 无关 revision、Agent API 契约验证客户端）
+- API 1 本地 FastAPI HTTP 服务（`POST /v1/context-packs:resolve`）
 
 仍待实现：
 
+- API 3 Assertion Lineage（计划中，本轮降级）
 - Ontology Release Package Manifest 与四类制品的 JSON Schema
-- 保留命名图身份的生产 GraphRetriever
-- HTTP API、服务身份、组织策略和 Token 预算
-- RDF Store、异步蒸馏 Worker、事务写入与发布指针
+- 生产 RDF Store、异步蒸馏 Worker、事务写入与发布指针
+- 服务身份、组织策略和 Token 预算
 - Reasoning Runtime 能力接口及 Adapter
+- 独立部署制品（当前仅支持仓库内本地运行）
+- 真实 Agent 集成（当前通过模拟客户端验证 API 契约）
 - API 兼容、故障降级、权限和真实业务端到端测试
 
 实现顺序：
@@ -144,16 +147,16 @@ Ontology-API/
 
 ## 本地验证
 
-安装 Python 依赖：
+安装全部开发和 API 依赖：
 
 ```bash
 python3 -m pip install -e '.[dev]'
 ```
 
-聚合运行（推荐）。`make test-fast` 跑四个纯 Python 套件，`make test` 在此基础上追加 Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）：
+聚合运行（推荐）。`make test-fast` 跑全部纯 Python 套件（4 个旧门禁 + 38 项 Runtime/API/Harness pytest 测试），`make test` 在此基础上追加 Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）：
 
 ```bash
-make test-fast    # SHACL + Context Pack + 实例一致性 + 模式同构
+make test-fast    # SHACL + Context Pack + 实例一致性 + 模式同构 + Runtime/API/Harness (38 tests)
 make test         # 上述 + Openllet SWRL 验收
 make generate     # 从 JSON-LD 重生成 Turtle 与 Protégé 视图派生制品
 ```
@@ -166,11 +169,28 @@ python3 tests/run_v2_3_context_pack.py       # Context Pack 读侧过滤
 python3 tests/run_instance_conformance.py    # 真实实例硬门禁 + 夹具可见性
 python3 tests/run_schema_isomorphism.py      # JSON-LD ⇔ Turtle ⇔ Protégé 视图同构守卫
 python3 tests/run_v2_3_swrl_openllet.py      # Openllet SWRL 验收推导
+python3 -m pytest tests/test_runtime_*.py tests/test_agent_harness.py -v   # Runtime/API/Harness (38 tests)
 ```
 
 `run_instance_conformance.py` 把 `data/instances/*.trig` 合并为生产式装载图并硬断言 SHACL 合规；测试夹具的违例按 `by-design / read-side / legacy` 分类输出，仅作可见性提示。
 
-GitHub Actions（`.github/workflows/ci.yml`）在推送与 PR 时自动运行纯 Python 套件（必过门禁），SWRL 套件作为信息性 job。
+GitHub Actions（`.github/workflows/ci.yml`）在推送与 PR 时自动运行上述全部纯 Python 套件（必过门禁），SWRL 套件作为信息性 job。
+
+### 启动本地 API 服务
+
+```bash
+python3 -m uvicorn tkos_runtime.api.server:app --reload --port 8000
+```
+
+### Agent API 契约验证
+
+`scripts/agent_harness.py` 作为独立 HTTP 客户端，模拟 Agent 消费 Context Pack API 的行为——它不导入 tkos_runtime 内部模块，通过 HTTP 与 API 服务通信，验证返回的 Pack 包含图溯源、认知诚实标记、版本元数据和 proof 边。
+
+```bash
+python3 scripts/agent_harness.py
+```
+
+> **注意**：当前仅验证了 API 契约对独立 HTTP 客户端可用，尚未接入真实 CEO-Agent 代码。真实 Agent 端到端联调（Agent 消费 Pack、注入 User Prompt、输出引用 Pack member ID）仍在后续阶段。
 
 运行真实议题查询原型：
 
@@ -179,4 +199,4 @@ python3 scripts/resolve_issue_context.py \
   --query '是否在本季度同时完成产品 1.0 上线和灯塔项目交付'
 ```
 
-该脚本用于验证匹配与关系展开。生产实现必须保留命名图身份、组织范围、策略结果、Release 和省略记录。
+该脚本复用了当前 Runtime 的 TRAVERSAL 谓词集（`domain/query_plan.py` 为单一来源）；生产实现必须保留命名图身份、组织范围、策略结果、Release 和省略记录。

@@ -52,3 +52,28 @@ def test_resolve_no_intent_match_is_404():
     bad = dict(BASE_REQ, query="zzz zzz zzz")
     resp = client.post("/v1/context-packs:resolve", json=bad)
     assert resp.status_code == 404, resp.text
+
+
+def test_as_of_without_timezone_is_422():
+    """Naive datetimes cannot be compared against timezone-aware instance data."""
+    client = TestClient(create_app())
+    bad = dict(BASE_REQ, as_of="2026-08-11T23:59:59")
+    resp = client.post("/v1/context-packs:resolve", json=bad)
+    assert resp.status_code == 422, resp.text
+    assert "timezone" in resp.json()["detail"].lower()
+
+
+def test_as_of_with_timezone_is_accepted():
+    """Explicit +08:00 offset is valid."""
+    client = TestClient(create_app())
+    good = dict(BASE_REQ, as_of="2026-08-11T23:59:59+08:00")
+    resp = client.post("/v1/context-packs:resolve", json=good)
+    assert resp.status_code == 200, resp.text
+
+
+def test_as_of_zulu_suffix_is_accepted():
+    """Z suffix is normalised to +00:00 (Python 3.9 compat)."""
+    client = TestClient(create_app())
+    good = dict(BASE_REQ, as_of="2026-08-11T15:59:59Z")
+    resp = client.post("/v1/context-packs:resolve", json=good)
+    assert resp.status_code == 200, resp.text

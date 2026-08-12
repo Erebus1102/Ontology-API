@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  # Required gate: the three pure-Python suites. Fast and reliable.
+  # Required gate: all pure-Python suites (legacy runners + runtime pytest).
   python-tests:
     runs-on: ubuntu-latest
     steps:
@@ -25,6 +25,8 @@ jobs:
         run: python tests/run_instance_conformance.py
       - name: Schema isomorphism guard (jsonld ⇔ ttl ⇔ protege-view)
         run: python tests/run_schema_isomorphism.py
+      - name: Runtime + API + Agent harness (38 tests)
+        run: python -m pytest tests/test_runtime_*.py tests/test_agent_harness.py -v
 
   # Informational: the SWRL acceptance test needs Java + a Maven build of the
   # vendored Openllet CLI. Kept non-blocking for now so a heavy/vendored build

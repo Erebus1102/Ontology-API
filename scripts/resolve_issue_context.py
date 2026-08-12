@@ -16,20 +16,11 @@ from typing import Any
 
 from rdflib import Dataset, Graph, Literal, Namespace, RDF, URIRef
 
+from tkos_runtime.domain.query_plan import TRAVERSAL
+
 
 ROOT = Path(__file__).resolve().parents[1]
 TKOS = Namespace("https://ontology.tokenking.ai/tkos#")
-
-TRAVERSAL = {
-    TKOS.informedBy, TKOS.researchedBy, TKOS.hasContextGap, TKOS.hasRisk,
-    TKOS.contributesTo, TKOS.belongsTo, TKOS.hasOutcome, TKOS.hasPortfolio,
-    TKOS.inPortfolio, TKOS.expects, TKOS.hasResponsibleAssignment,
-    TKOS.assignmentHolder, TKOS.assignmentRole, TKOS.assignmentScope,
-    TKOS.dependsOn, TKOS.hasMilestone, TKOS.hasProgressSnapshot,
-    TKOS.hasCriterion, TKOS.hasRationale, TKOS.hasScope, TKOS.hasKeyPath,
-    TKOS.supportedByEvidence, TKOS.sourcedFrom, TKOS.confirmedBy,
-    TKOS.challengingEvidence, TKOS.challengesClaim,
-}
 
 
 def fragment(value: URIRef) -> str:

@@ -11,6 +11,7 @@ are unchanged — this module only:
 Error mapping:
   * ``ValueError`` (raised by ``AdmissionPolicy.allowed_graphs`` on unknown
     purpose) -> HTTP 422.
+  * Naive (timezone-less) ``as_of`` -> HTTP 422.
   * ``NoMatchError`` (no intent match) -> HTTP 404.
 """
 from __future__ import annotations
@@ -62,9 +63,14 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
     @app.post("/v1/context-packs:resolve")
     def resolve(req: ResolveRequest) -> dict:
         try:
-            as_of = datetime.fromisoformat(req.as_of)
+            as_of = datetime.fromisoformat(req.as_of.replace("Z", "+00:00"))
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=f"invalid as_of: {exc}") from exc
+        if as_of.tzinfo is None:
+            raise HTTPException(
+                status_code=422,
+                detail="as_of must include a timezone offset (e.g. +08:00 or Z)",
+            )
         try:
             pack = resolver.resolve(
                 query=req.query,
