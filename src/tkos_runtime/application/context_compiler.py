@@ -25,25 +25,32 @@ class ContextCompiler:
         current, candidate, provenance, derived, gaps, omissions = [], [], [], [], [], []
         for m in sorted(members, key=lambda x: x.subject):
             parts = sorted(set(m.subject_by_partition) | set(m.incident_by_partition))
-            # Pass 1: decide + collect admitted rdf:type (ER3 two-phase, Admission-gated)
+            # Pass 1: decide each partition (Admission-gated). rdf_types are
+            # collected ONLY from each partition's OWN accepted subject slice —
+            # cross-view type merging is the job of type_index, not the member
+            # view (a Candidate type must not leak into the Provenance view, and
+            # a type asserted only in a rejected partition must enter no view).
             decisions: dict[str, AdmissionDecision] = {}
-            member_types: set[str] = set()
+            types_by_partition: dict[str, list[str]] = {}
             for part in parts:
                 subj = m.subject_by_partition.get(part, [])
                 d = self._policy.decide(part, subj, as_of)
                 decisions[part] = d
                 if d.accept:
-                    for s in subj:
-                        if s.predicate == RDF_TYPE:
-                            member_types.add(s.object)
-            # Pass 2: build views with full admitted type set
+                    types_by_partition[part] = sorted(
+                        s.object for s in subj if s.predicate == RDF_TYPE
+                    )
+            # Pass 2: build views, each carrying its OWN admitted types only.
             for part in parts:
                 d = decisions[part]
                 if not d.accept:
                     omissions.append(Omission(_frag(m.subject), part, d.stage or "unknown", d.reason or ""))
                     continue
                 subj = m.subject_by_partition.get(part, [])
-                view = self._to_member(m, part, m.incident_by_partition.get(part, subj), subj, d, sorted(member_types))
+                view = self._to_member(
+                    m, part, m.incident_by_partition.get(part, subj), subj, d,
+                    rdf_types=types_by_partition.get(part, []),
+                )
                 if part == "graph-confirmed-enterprise": current.append(view)
                 elif part == "graph-candidate-and-dispute":
                     candidate.append(view)

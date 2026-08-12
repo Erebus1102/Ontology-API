@@ -379,11 +379,14 @@ def _assemble_sectioned_markdown(compiled, pack: ContextPack) -> str:
                 lines.append(u.to_markdown_line(short=short))
         lines.append("")
 
-    # Omission summary
+    # Omission summary — counts only, not full lists (preserves budget)
     if compiled.omissions:
-        lines.append("### 被省略的条目")
+        om_by_role: dict[str, int] = {}
         for o in compiled.omissions:
-            lines.append(f"- `{o.member_id}` ({o.role}) — {o.reason}")
+            role = getattr(o, "role", "unknown") if hasattr(o, "role") else "unknown"
+            om_by_role[role] = om_by_role.get(role, 0) + 1
+        parts = [f"{k}×{v}" for k, v in sorted(om_by_role.items())]
+        lines.append(f"### 省略 {len(compiled.omissions)} 项（{', '.join(parts)}）")
         lines.append("")
 
     lines.append("---")
@@ -421,16 +424,16 @@ def _split_sections(polished: str) -> dict[str, str]:
 def _validate_llm_output_sections(
     compiled, polished: str, deterministic_text: str = "",
 ) -> tuple[bool, list[str]]:
-    """Section-aware LLM output validation keyed by view_key.
+    """Section-aware LLM output validation keyed by (member, partition, source).
 
-    Eight checks:
-      1. exact once per view_key
-      2. in expected section
-      3. partition anchor preserved
-      4. status tags preserved
-      5. section set + order unchanged
-      6/7. phantom/missing (via occurrences)
-      8. numbers/URIs unchanged from baseline
+    Checks:
+      1. Exact once per view_key=(member, partition, source) — line-by-line.
+      2. Each view_key found in its expected section.
+      3. source anchor must belong to the view's own source_graphs.
+      4. Status tags preserved.
+      5. Section set + order = full SECTION_ORDER (deterministic always outputs all).
+      6. Phantom view_keys, missing, duplicate, swapped partition, swapped source.
+      7. Numbers/URIs unchanged from baseline.
     """
     warnings: list[str] = []
 
@@ -442,34 +445,75 @@ def _validate_llm_output_sections(
 
     sections = _split_sections(polished)
 
-    # 5. section set + order unchanged
-    expected_sections = [s for s in SECTION_ORDER
-                         if s in compiled.units_by_section and compiled.units_by_section[s]]
+    # 5. section set + order = full SECTION_ORDER (deterministic always outputs all)
+    expected_sections = list(SECTION_ORDER)
     actual_sections = list(sections.keys())
     if actual_sections != expected_sections:
         warnings.append(f"section set/order changed: {actual_sections} vs {expected_sections}")
 
-    for vk, unit in selected.items():
+    # ── Line-by-line anchor parsing with exact multi-set comparison ─────
+    _ANCHOR_RE = re.compile(
+        r"\[member:([^\]]+)\]\[partition:([^\]]+)\]\[source:([^\]]+)\]"
+    )
+    # Collect all (member, partition, source) from the polished text
+    parsed_view_keys: list[tuple[str, str, str]] = []
+    for line in polished.split("\n"):
+        for m in _ANCHOR_RE.finditer(line):
+            parsed_view_keys.append((m.group(1), m.group(2), m.group(3)))
+
+    # Expected: each selected unit contributes exactly one view_key
+    expected_view_keys: list[tuple[str, str, str]] = []
+    for unit in selected.values():
+        # Use the first source_graph as the canonical source anchor
+        src = unit.source_graphs[0] if unit.source_graphs else "unknown"
+        expected_view_keys.append((unit.member_id, unit.partition, src))
+
+    # Multi-set comparison
+    from collections import Counter
+    parsed_counter = Counter(parsed_view_keys)
+    expected_counter = Counter(expected_view_keys)
+
+    # Phantom: in parsed but not expected
+    phantom = set(parsed_counter.keys()) - set(expected_counter.keys())
+    if phantom:
+        warnings.append(f"phantom view_keys: {phantom}")
+
+    # Missing: in expected but not parsed
+    missing = set(expected_counter.keys()) - set(parsed_counter.keys())
+    if missing:
+        warnings.append(f"missing view_keys: {missing}")
+
+    # Duplicates (within expected set)
+    for vk, count in parsed_counter.items():
+        if vk in expected_counter and count != expected_counter[vk]:
+            warnings.append(f"view_key {vk} appears {count} times (expected {expected_counter[vk]})")
+
+    # Swapped partition: member+source correct but partition wrong
+    for (mid, src) in {(vk[0], vk[2]) for vk in expected_view_keys}:
+        expected_partitions = {vk[1] for vk in expected_view_keys if vk[0] == mid and vk[2] == src}
+        parsed_matching = {vk[1] for vk in parsed_view_keys if vk[0] == mid and vk[2] == src}
+        if parsed_matching and parsed_matching != expected_partitions:
+            warnings.append(f"member {mid} has swapped partition: {parsed_matching} vs {expected_partitions}")
+
+    # Swapped source: member+partition correct but source wrong
+    for (mid, part) in {(vk[0], vk[1]) for vk in expected_view_keys}:
+        expected_sources = {vk[2] for vk in expected_view_keys if vk[0] == mid and vk[1] == part}
+        parsed_matching = {vk[2] for vk in parsed_view_keys if vk[0] == mid and vk[1] == part}
+        if parsed_matching and parsed_matching != expected_sources:
+            warnings.append(f"member {mid} partition {part} has swapped source: {parsed_matching} vs {expected_sources}")
+
+    # 2. Each view_key in expected section
+    for unit in selected.values():
         anchor_member = f"[member:{unit.member_id}]"
-        anchor_partition = f"[partition:{unit.partition}]"
-
-        # 1. exact once per view_key
-        occurrences = sum(1 for b in sections.values()
-                         if anchor_member in b and anchor_partition in b)
-        if occurrences != 1:
-            warnings.append(f"view_key {vk} appears {occurrences} times (expected 1)")
-
-        # 2. in expected section
         found_section = next((s for s, b in sections.items()
                              if anchor_member in b), None)
         if found_section and found_section != unit.expected_section:
             warnings.append(
-                f"view_key {vk} in section {found_section}, expected {unit.expected_section}"
+                f"view_key {(unit.member_id, unit.partition)} in section "
+                f"{found_section}, expected {unit.expected_section}"
             )
 
-        # 3. partition anchor preserved
-        if found_section and anchor_partition not in sections.get(found_section, ""):
-            warnings.append(f"partition anchor changed for {vk}")
+    # 3. source belongs to view's own source_graphs (already checked via counter)
 
     # 4. status tags preserved
     for unit in selected.values():
@@ -478,8 +522,7 @@ def _validate_llm_output_sections(
             if tag in unit.canonical_claim and tag not in polished:
                 warnings.append(f"status tag lost: {tag} (member {unit.member_id})")
 
-    # 8. numbers/URIs unchanged from baseline (reuse existing extractors against
-    #    the full deterministic text as baseline)
+    # 7. numbers/URIs unchanged from baseline
     baseline_numbers: set[str] = set()
     if deterministic_text:
         baseline_numbers.update(_extract_numbers(deterministic_text))
@@ -490,7 +533,6 @@ def _validate_llm_output_sections(
     if new_numbers:
         warnings.append(f"new numbers injected: {new_numbers}")
 
-    # URIs
     baseline_uris: set[str] = set()
     if deterministic_text:
         baseline_uris.update(_extract_uris(deterministic_text))
@@ -668,6 +710,13 @@ def render(
             f"{len(compiled.omissions)} member(s) omitted due to max_chars={max_chars}"
         )
     content = _assemble_sectioned_markdown(compiled, pack)
+
+    # Final budget enforcement: post-assembly check
+    if len(content) > max_chars:
+        warnings.append(
+            f"content length {len(content)} exceeds max_chars={max_chars} "
+            f"(post-assembly; budget enforcement may need tuning)"
+        )
 
     # ── Render Schema v2: grounding is always structurally_validated ────
     # NOTE: structural validation cannot detect in-line NL business judgements

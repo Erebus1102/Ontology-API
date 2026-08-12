@@ -108,3 +108,68 @@ def test_rdf_types_roundtrip_and_default_empty():
     legacy_pack = dict_to_pack(legacy)
     assert legacy_pack.current_facts[0].rdf_types == []
 
+
+def test_rdf_types_scoped_per_partition_not_cross_copied():
+    """P1 regression: ContextPackMember.rdf_types carries ONLY the current view's
+    OWN admitted types. Cross-view type merging is the job of type_index (Task 1),
+    not the member view. A Candidate type must NOT leak into the Provenance view;
+    a type asserted only in an Admission-rejected partition must enter NO accepted
+    view.
+    """
+    from tkos_runtime.domain.models import GraphStatement, RetrievedMember, IntentAssessment, ScopeResolution
+    from tkos_runtime.application.context_compiler import ContextCompiler
+    RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    SUBJ = TKOS + "risk-x"
+    RISK_TYPE = TKOS + "Risk"
+    SENS_TYPE = TKOS + "SensitiveNote"
+
+    def stmt(p, o, g):
+        return GraphStatement(SUBJ, p, o, g)
+
+    # One member spanning three partitions:
+    #   candidate   — typed Risk, status Candidate  → ADMITTED
+    #   provenance  — no type, just a confirmsEntity edge → ADMITTED
+    #   sensitive   — typed SensitiveNote            → REJECTED (partition_not_allowed)
+    m = RetrievedMember(SUBJ,
+        subject_by_partition={
+            "graph-candidate-and-dispute": [
+                stmt(RDF_TYPE, RISK_TYPE, "graph-candidate-and-dispute"),
+                stmt(TKOS+"hasConfirmationStatus", TKOS+"Candidate", "graph-candidate-and-dispute"),
+                stmt(TKOS+"displayName", "风险X", "graph-candidate-and-dispute"),
+            ],
+            "graph-decision-provenance": [
+                stmt(TKOS+"confirmsEntity", TKOS+"other", "graph-decision-provenance"),
+            ],
+            "graph-sensitive-persona": [
+                stmt(RDF_TYPE, SENS_TYPE, "graph-sensitive-persona"),
+            ],
+        },
+        incident_by_partition={})
+
+    pack = ContextCompiler(store=None, policy=AdmissionPolicy()).compile(
+        [m], IntentAssessment(SUBJ, []),
+        ScopeResolution([], [], "not_enforced", ""),
+        {"ontology_release_id": "2.4.0", "dataset_revision": "x" * 64},
+        AS_OF, "q", "decision_preparation",
+    )
+
+    cand = [v for v in pack.candidate_context if v.id == "risk-x"]
+    prov = [v for v in pack.provenance_context if v.id == "risk-x"]
+    assert cand and prov, "both candidate and provenance views should be admitted"
+
+    # (1) Candidate view carries its OWN type only.
+    assert cand[0].rdf_types == [RISK_TYPE], cand[0].rdf_types
+    # (2) Provenance view has no type in its own slice → rdf_types == [].
+    #     (A Candidate type must NOT be copied into the Provenance view.)
+    assert prov[0].rdf_types == [], prov[0].rdf_types
+    # (3) A type asserted only in an Admission-rejected partition leaks nowhere.
+    assert all(SENS_TYPE not in v.rdf_types for v in (cand + prov))
+    assert any(o.partition == "graph-sensitive-persona" for o in pack.omissions)
+    # (4) Per-view isolation does not break downstream cross-view merging
+    #     (type_index's job): unioning admitted views still recovers {Risk}.
+    merged: set[str] = set()
+    for v in (cand + prov):
+        merged.update(v.rdf_types)
+    assert merged == {RISK_TYPE}, merged
+
+

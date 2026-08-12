@@ -8,7 +8,12 @@ from typing import Any, Optional
 
 from tkos_runtime.domain.query_plan import TRAVERSAL, TKOS
 
-RENDERER_VERSION = "context-render/2.0"
+# Render Schema version (the response contract). Wired into the response as
+# ``render_schema_version`` only once Task 5 lands the v2 schema — until then
+# the live response still reports the implementation version below.
+RENDER_SCHEMA_VERSION = "context-render/2.0"
+# Renderer implementation version (unchanged from pre-DCC baseline).
+RENDERER_VERSION = "context-renderer/p0-v1"
 
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 

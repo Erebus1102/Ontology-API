@@ -15,7 +15,7 @@ from typing import Any
 from tkos_runtime.domain.models import ContextPack
 from tkos_runtime.domain.render_units import (
     DECISION_INCIDENT_PREDICATES, RenderOmission, RenderBudgetTooSmall,
-    SECTION_ORDER, ROLE_TO_SECTION, RenderedFactUnit,
+    SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RenderedFactUnit,
 )
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
@@ -49,11 +49,20 @@ PARTITION_PRIORITY = {"graph-confirmed-enterprise":0,"graph-candidate-and-disput
                       "graph-decision-provenance":2,"graph-derived-context":3}
 
 def _all_members(pack: ContextPack):
-    yield from pack.current_facts
-    yield from pack.candidate_context
-    yield from pack.provenance_context
-    yield from pack.context_gaps
-    yield from pack.derived_claims
+    """Iterate all members, deduplicated by (member_id, partition).
+
+    A ContextGap-typed member appears in both candidate_context and
+    context_gaps; dedup ensures each view_key is compiled exactly once.
+    """
+    seen: set[tuple[str, str]] = set()
+    for bucket in (pack.current_facts, pack.candidate_context,
+                   pack.provenance_context, pack.context_gaps,
+                   pack.derived_claims):
+        for m in bucket:
+            vk = (m.id, m.partition)
+            if vk not in seen:
+                seen.add(vk)
+                yield m
 
 def build_type_index(pack: ContextPack) -> dict[str, set[str]]:
     idx: dict[str, set[str]] = {}
@@ -87,7 +96,13 @@ def _real_display_name(member) -> str | None:
 def _candidate_name(member) -> str | None:
     return _real_display_name(member) or member.scope or None
 
-def build_name_index(pack) -> dict[str, str]:
+def build_name_index(pack) -> tuple[dict[str, str], list[str]]:
+    """Build id → display name index.
+
+    Returns (idx, warnings) where warnings carries name-conflict diagnostics
+    (e.g. a member whose name differs across partitions). Surface warnings in
+    decision_context.warnings so they are not silently dropped.
+    """
     candidates: dict[str, list[tuple[int, str, str]]] = {}  # id -> [(priority, iri, name)]
     for m in _all_members(pack):
         name = _candidate_name(m)
@@ -106,7 +121,7 @@ def build_name_index(pack) -> dict[str, str]:
     # fragment fallback for all members
     for m in _all_members(pack):
         idx.setdefault(m.id, m.id)
-    return idx  # caller may surface warnings separately if needed
+    return idx, warnings
 
 # test-facing alias: same logic over a bare member list
 def build_name_index_from_members_test(members) -> dict[str, str]:
@@ -186,7 +201,11 @@ def allocate_budget(
     max_chars: int,
     type_index: dict[str, set[str]] | None = None,
 ):
-    """Two-pass budget allocation: greedy fill by slot ratio, gaps non-reclaimable.
+    """Two-pass budget allocation with post-assembly trimming.
+
+    First pass: slot-ratio greedy fill (gaps non-reclaimable).
+    Second pass: assemble Markdown, measure real length, reclaim from
+    lowest-priority units if over budget.
 
     Returns (selected, omissions). Raises RenderBudgetTooSmall when max_chars < floor.
     """
@@ -197,9 +216,10 @@ def allocate_budget(
     if type_index is None:
         type_index = build_type_index(pack)
 
-    # fixed_text: section titles + footer + epistemic summary (generous estimate)
-    fixed_text = 500
-    usable = max(1, max_chars - fixed_text)
+    # ── First pass: slot-based greedy fill ────────────────────────────────
+    # Section titles + epistemic summary + footer overhead
+    overhead = 350  # approximate; second pass measures real length
+    usable = max(1, max_chars - overhead)
 
     # Allocate slot budgets (int)
     slot_budget: dict[str, int] = {k: int(usable * v) for k, v in SLOT_RATIO.items()}
@@ -252,6 +272,104 @@ def allocate_budget(
                         reason="max_chars_exceeded",
                         incident_edges=0,
                     ))
+
+    # ── Second pass: measure real length, trim if over budget ─────────────
+    # Build and measure assembled text; reclaim from lowest-priority sections.
+    # Reclamation order (lowest priority first): secondary > evidence > risks > outcomes
+    # Gaps are never reclaimed. Issue is the root — never reclaimed.
+
+    return selected, omissions
+
+
+def enforce_max_chars(
+    selected: dict[str, list[RenderedFactUnit]],
+    omissions: list[RenderOmission],
+    type_index: dict[str, set[str]],
+    max_chars: int,
+    pack: ContextPack,
+) -> tuple[dict[str, list[RenderedFactUnit]], list[RenderOmission]]:
+    """Second pass: measure real Markdown length, trim lowest-priority units.
+
+    Gaps and the root issue (matched_root) are non-reclaimable.
+    Units are reclaimed in priority order: secondary slots first,
+    then evidence, then risks, then outcomes.
+
+    Uses an inline Markdown-length estimation that matches
+    _assemble_sectioned_markdown's structure without importing the renderer.
+    """
+    # ── Inline Markdown-length estimator (must match _assemble_sectioned_markdown) ──
+    def _est_len(sel, omis) -> int:
+        """Estimate assembled Markdown length without importing renderer."""
+        total = 0
+        query_text = pack.query or "(无查询)"
+        total += len(f"# 决策上下文：{query_text}\n\n")
+        total += len("> \n\n")  # epistemic summary placeholder
+        for section in SECTION_ORDER:
+            title = SECTION_TITLES.get(section, f"## {section}")
+            total += len(title) + 1
+            units = sel.get(section, [])
+            if not units:
+                total += len("（无）\n")
+            else:
+                for u in units:
+                    short = (section == "gaps")
+                    total += len(u.to_markdown_line(short=short)) + 1
+            total += 1  # blank line after section
+        # Omission count summary (not full list)
+        if omis:
+            total += len(f"### 省略 {len(omis)} 项\n\n")
+        total += 100  # footer
+        return total
+
+    # Build reclaimable unit list with priority
+    # gaps(1), issue(0) — never reclaimed
+    _RECLAIM_PRIORITY = {"secondary": 5, "evidence": 4, "risks": 3,
+                          "outcomes": 2, "gaps": 1, "issue": 0}
+    _SECTION_TO_RECLAIM_KEY = {
+        "decisions": "secondary",
+        "dependencies": "risks",
+        "progress": "outcomes",
+    }
+
+    reclaimable: list[tuple[int, str, RenderedFactUnit]] = []  # (priority, section, unit)
+    root_frag = _frag(pack.matched_root)
+
+    for section in SECTION_ORDER:
+        rkey = _RECLAIM_PRIORITY.get(section, 2)
+        mapped = _SECTION_TO_RECLAIM_KEY.get(section, section)
+        rk_prio = _RECLAIM_PRIORITY.get(mapped, rkey)
+        if rk_prio <= 1:  # gaps, issue — non-reclaimable
+            continue
+        for u in selected.get(section, []):
+            # Root issue is non-reclaimable
+            if u.member_id == root_frag:
+                continue
+            reclaimable.append((rk_prio, section, u))
+
+    # Sort: highest reclaim priority first, then higher tier first
+    reclaimable.sort(key=lambda x: (
+        -x[0],
+        role_tier(classify_role(x[2].member_id, type_index)),
+    ))
+
+    current = _est_len(selected, omissions)
+    idx = 0
+    while current > max_chars and idx < len(reclaimable):
+        _, section, unit = reclaimable[idx]
+        idx += 1
+
+        sel_list = selected.get(section, [])
+        if unit in sel_list:
+            sel_list.remove(unit)
+            omissions.append(RenderOmission(
+                member_id=unit.member_id,
+                partition=unit.partition,
+                role=classify_role(unit.member_id, type_index),
+                tier=str(role_tier(classify_role(unit.member_id, type_index))),
+                reason="max_chars_exceeded",
+                incident_edges=0,
+            ))
+        current = _est_len(selected, omissions)
 
     return selected, omissions
 
@@ -356,8 +474,8 @@ class DecisionContextCompiler:
 
     def compile(self, pack: ContextPack, max_chars: int = 12000) -> CompiledDecisionContext:
         type_index = build_type_index(pack)
-        name_index = build_name_index(pack)
-        warnings: list[str] = []
+        name_index, name_warnings = build_name_index(pack)
+        warnings: list[str] = list(name_warnings)
 
         # ── Build units by section ─────────────────────────────────────────
         units_by_section: dict[str, list[RenderedFactUnit]] = {}
@@ -383,12 +501,35 @@ class DecisionContextCompiler:
             )
             units_by_section.setdefault(section, []).append(unit)
 
-        # ── Budget selection ───────────────────────────────────────────────
+        # ── Budget selection (two-pass) ─────────────────────────────────────
         selected, omissions = allocate_budget(
             units_by_section, pack, max_chars, type_index,
         )
+        # Second pass: measure real length, trim from lowest priority
+        selected, omissions = enforce_max_chars(
+            selected, omissions, type_index, max_chars, pack,
+        )
+
+        # ── Fill incident_edges for omissions (cross-member reference map) ──
+        incident_map: dict[str, int] = {}
+        for m in _all_members(pack):
+            for s in m.statements:
+                if s.predicate in DECISION_INCIDENT_PREDICATES:
+                    incident_map[s.object] = incident_map.get(s.object, 0) + 1
+        for o in omissions:
+            o.incident_edges = incident_map.get(TKOS + o.member_id, 0)
 
         # ── Build decision_context dict ────────────────────────────────────
+        # Epistemic summary — computable status distribution, no (B)-type phrasing
+        n_candidate = len(pack.candidate_context)
+        n_gap = len(pack.context_gaps)
+        n_provenance = len(pack.provenance_context)
+        n_confirmed = len(pack.current_facts)
+        epistemic_summary = (
+            f"已确认事实 {n_confirmed} 项，候选视图 {n_candidate} 项"
+            f"（其中信息缺口 {n_gap} 项），溯源视图 {n_provenance} 项。"
+        )
+
         dc: dict[str, Any] = {
             "compiler_version": "decision-context/v1",
             "issue": {},
@@ -402,21 +543,44 @@ class DecisionContextCompiler:
             "secondary": [],
             "derived": [],
             "render_omissions": [],
-            "epistemic_summary": "",
+            "epistemic_summary": epistemic_summary,
+            "warnings": list(warnings),
         }
 
-        # Root issue: first issue-role member from the budget-selected set
+        # Root issue: use pack.matched_root for precise lookup.
+        # The root issue is non-reclaimable — always included even under budget.
+        root_frag = _frag(pack.matched_root)
+        root_unit = None
         for section in SECTION_ORDER:
             for u in selected.get(section, []):
-                role = classify_role(u.member_id, type_index)
-                if role == "issue" and not dc["issue"]:
-                    dc["issue"] = {
-                        "member_id": u.member_id,
-                        "name": name_index.get(u.member_id, u.member_id),
-                        "claim": u.canonical_claim,
-                        "partition": u.partition,
-                        "source_graphs": list(u.source_graphs),
-                    }
+                if u.member_id == root_frag:
+                    root_unit = u
+                    break
+            if root_unit:
+                break
+        # Fallback: first issue-role member from budget-selected set
+        if root_unit is None:
+            for section in SECTION_ORDER:
+                for u in selected.get(section, []):
+                    role = classify_role(u.member_id, type_index)
+                    if role == "issue":
+                        root_unit = u
+                        break
+                if root_unit:
+                    break
+
+        if root_unit is not None:
+            dc["issue"] = {
+                "view_key": list(root_unit.view_key),
+                "member_id": root_unit.member_id,
+                "name": name_index.get(root_unit.member_id, root_unit.member_id),
+                "claim": root_unit.canonical_claim,
+                "partition": root_unit.partition,
+                "source_graphs": list(root_unit.source_graphs),
+                "query": pack.query,
+                "matched_root": pack.matched_root,
+                "epistemic_summary": epistemic_summary,
+            }
 
         # Map sections to decision_context keys
         _SECTION_TO_DC = {
@@ -440,10 +604,15 @@ class DecisionContextCompiler:
                     "epistemic_status": u.confirmation_status,
                 })
 
-        # All gaps in decision_context.gaps (full, not just budget-selected)
-        gap_ids_from_units = {u.member_id for u in selected.get("gaps", [])}
+        # Ensure all gaps from context_gaps are represented in dc["gaps"]
+        # (dedup by view_key — the generic mapper above already added
+        # budget-selected gaps; fill in any remaining)
+        gap_vk_from_mapper: set[tuple[str, str]] = {
+            (g["member_id"], g["partition"]) for g in dc["gaps"]
+        }
         for g in pack.context_gaps:
-            if g.id not in gap_ids_from_units:
+            vk = (g.id, g.partition)
+            if vk not in gap_vk_from_mapper:
                 dc["gaps"].append({
                     "view_key": [g.id, g.partition],
                     "member_id": g.id,
@@ -461,24 +630,16 @@ class DecisionContextCompiler:
                 "name": name_index.get(m.id, m.id),
             })
 
-        # Render omissions
+        # Render omissions (with tier + incident_edges)
         for o in omissions:
             dc["render_omissions"].append({
                 "member_id": o.member_id,
                 "partition": o.partition,
                 "role": o.role,
+                "tier": o.tier,
+                "incident_edges": o.incident_edges,
                 "reason": o.reason,
             })
-
-        # Epistemic summary — computable status distribution, no (B)-type phrasing
-        n_candidate = len(pack.candidate_context)
-        n_gap = len(pack.context_gaps)
-        n_provenance = len(pack.provenance_context)
-        n_confirmed = len(pack.current_facts)
-        dc["epistemic_summary"] = (
-            f"已确认事实 {n_confirmed} 项，候选视图 {n_candidate} 项"
-            f"（其中信息缺口 {n_gap} 项），溯源视图 {n_provenance} 项。"
-        )
 
         return CompiledDecisionContext(
             decision_context=dc,
