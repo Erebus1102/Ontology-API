@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TKOS Ontology Runtime API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     面向企业 Agent 的本体查询与决策上下文编译 API。
 
@@ -82,7 +82,7 @@ paths:
                 dataset_revision: 25a3dc2dafed3042
                 code_sha: 961ff13
                 policy_version: read-admission/p0-v1
-                query_plan_version: bfs-2gram/p0-v1
+                query_plan_version: bfs-2gram/v3-1
                 renderer_version: context-renderer/p0-v1
                 app_version: 0.1.0
         '401':
@@ -165,6 +165,7 @@ paths:
                   - $ref: '#/components/schemas/HTTPValidationError'
                   - $ref: '#/components/schemas/ErrorResponse'
   /v1/context-packs:render:
+    deprecated: true
     post:
       tags: [决策上下文渲染]
       summary: 解析并渲染决策上下文
@@ -323,22 +324,8 @@ components:
     ResolveRequest:
       type: object
       additionalProperties: false
-      required: [enterprise_id, purpose, query, as_of]
+      required: [query, as_of]
       properties:
-        enterprise_id:
-          type: string
-          minLength: 1
-          description: 企业知识空间标识。
-        organization_scope:
-          type: array
-          items: {type: string}
-          default: []
-          description: 请求期望的组织范围。当前版本仅透传并回显。
-        purpose:
-          type: string
-          minLength: 1
-          example: decision_preparation
-          description: 决定可读取数据图和准入策略的业务用途，同时受 Token 的 allowed_purposes 约束。
         query:
           type: string
           minLength: 1
@@ -347,9 +334,42 @@ components:
           type: string
           format: date-time
           description: 带时区的 ISO 8601 时间。无时区输入返回 422。
+        scenario:
+          type: string
+          description: 产品四场景之一 (meeting_supervision/strategic_research/expert_panel/task_followup)；缺省按 Key 默认场景。
+        render:
+          type: boolean
+          default: false
+        token_budget:
+          type: integer
+          minimum: 100
+          maximum: 100000
+          description: 仅 render 时有意义。
+        enterprise_id:
+          type: string
+          minLength: 1
+          deprecated: true
+          description: 企业知识空间标识。
+        organization_scope:
+          type: array
+          items: {type: string}
+          default: []
+          deprecated: true
+          description: 请求期望的组织范围。当前版本仅透传并回显。
+        purpose:
+          type: string
+          minLength: 1
+          example: decision_preparation
+          deprecated: true
+          description: 决定可读取数据图和准入策略的业务用途，同时受 Token 的 allowed_purposes 约束。
         actor_id:
           type: [string, 'null']
+          deprecated: true
           description: 调用主体业务标识，供审计和后续范围控制扩展。
+        persona_id:
+          type: string
+          deprecated: true
+          description: 过渡期仍接受的 Persona 锚点；v1 起由 Key 推导。
     RenderOptions:
       type: object
       additionalProperties: false
@@ -380,6 +400,7 @@ components:
       required: [render_options]
       properties:
         pack:
+          deprecated: true
           oneOf:
             - $ref: '#/components/schemas/ContextPack'
             - type: 'null'
@@ -398,7 +419,7 @@ components:
             pack: {type: 'null'}
     ContextPack:
       type: object
-      required: [pack_id, schema_version, as_of, query, purpose, matched_root, scope_resolution, current_facts, candidate_context, provenance_context, proof, derived_claims, reasoning_status, context_gaps, conflicts, omissions, contributing_graphs, admission_policy, ontology_release_id, dataset_revision, policy_version, query_plan_version]
+      required: [pack_id, schema_version, as_of, query, purpose, matched_root, scope_resolution, current_facts, candidate_context, provenance_context, proof, derived_claims, reasoning_status, context_gaps, conflicts, omissions, contributing_graphs, admission_policy, ontology_release_id, dataset_revision, policy_version, query_plan_version, api_version, request_id, ontology_release]
       properties:
         pack_id: {type: string}
         schema_version: {type: string, example: context-pack/1.0-draft}
@@ -450,6 +471,14 @@ components:
         dataset_revision: {type: string}
         policy_version: {type: string}
         query_plan_version: {type: string}
+        api_version: {type: string, example: v1}
+        request_id: {type: string}
+        ontology_release:
+          type: object
+          required: [company, persona]
+          properties:
+            company: {type: string}
+            persona: {type: [string, 'null'], default: null}
         intent_facets:
           oneOf:
             - $ref: '#/components/schemas/IntentFacets'
