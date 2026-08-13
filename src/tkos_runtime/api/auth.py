@@ -84,11 +84,6 @@ def _load_credentials() -> dict[str, Principal]:
     """
     principals: dict[str, Principal] = {}
 
-    # single shared key (v1 recommended)
-    single = os.environ.get("TKOS_API_KEY", "").strip()
-    if single:
-        principals[single] = Principal(name="default", allowed_purposes={"*"})
-
     # multi-token with fine-grained purposes (v1.1)
     multi_raw = os.environ.get("TKOS_API_KEYS_JSON", "").strip()
     if multi_raw:
@@ -115,6 +110,12 @@ def _load_credentials() -> dict[str, Principal]:
                     confirmer=bool(entry.get("confirmer", False)),
                     default_scenario=entry.get("default_scenario"),
                 )
+
+    # single shared key (v1 recommended) — applied last so it wins on
+    # token collision with TKOS_API_KEYS_JSON (single-token wins, C.4)
+    single = os.environ.get("TKOS_API_KEY", "").strip()
+    if single:
+        principals[single] = Principal(name="default", allowed_purposes={"*"})
 
     return principals
 
