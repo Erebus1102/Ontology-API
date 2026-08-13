@@ -23,6 +23,7 @@ generate:
 
 test-shacl:
 	$(PYTHON) tests/run_v2_3_shacl.py
+	$(PYTHON) tests/run_v2_x_shacl.py
 
 test-context:
 	$(PYTHON) tests/run_v2_3_context_pack.py

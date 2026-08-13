@@ -98,7 +98,7 @@
     {"@id":"tkos:ProductShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Product"},"sh:property":[
       {"sh:path":{"@id":"tkos:objectId"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:string"},"sh:maxCount":1}
     ],"sh:sparql":[
-      {"sh:message":"Product objectId 必须唯一","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this ?other WHERE { $this a tkos:Product ; tkos:objectId ?id . ?other a tkos:Product ; tkos:objectId ?id . FILTER(?other < $this) }"}
+      {"sh:message":"Product objectId 必须唯一","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this ?other WHERE { $this a tkos:Product ; tkos:objectId ?id . ?other a tkos:Product ; tkos:objectId ?id . FILTER(STR(?other) < STR($this)) }"}
     ]}
   ]
 }
