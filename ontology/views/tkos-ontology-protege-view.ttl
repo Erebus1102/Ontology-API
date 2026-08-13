@@ -92,11 +92,6 @@ tkos:No1Agent a owl:Class ;
     rdfs:label "一号位 Agent"@zh ;
     rdfs:subClassOf tkos:Agent .
 
-tkos:OperatingDecision a owl:Class ;
-    rdfs:label "经营决策"@zh ;
-    rdfs:subClassOf tkos:Decision,
-        tkos:OperatingEntity .
-
 tkos:OperatingModule a owl:Class ;
     rdfs:label "经营模块"@zh ;
     rdfs:subClassOf tkos:OntologyModule .
@@ -322,11 +317,6 @@ tkos:criterionStatement a owl:DatatypeProperty ;
     rdfs:label "成功标准陈述"@zh ;
     rdfs:domain tkos:SuccessCriterion ;
     rdfs:range xsd:string .
-
-tkos:decidedAs a owl:ObjectProperty ;
-    rdfs:label "确认成决策"@zh ;
-    rdfs:domain tkos:StrategicChoice ;
-    rdfs:range tkos:StrategicDecision .
 
 tkos:decisionMadeBy a owl:ObjectProperty ;
     rdfs:label "决策主体"@zh ;
@@ -608,11 +598,6 @@ tkos:scopeDescription a owl:DatatypeProperty ;
     rdfs:domain tkos:BusinessEntity ;
     rdfs:range xsd:string .
 
-tkos:selectedAs a owl:ObjectProperty ;
-    rdfs:label "形成选择"@zh ;
-    rdfs:domain tkos:Judgement ;
-    rdfs:range tkos:StrategicChoice .
-
 tkos:signalSourceType a owl:DatatypeProperty ;
     rdfs:label "信号来源类型"@zh ;
     rdfs:comment "取值 external|internal|ceo_personal。"@zh ;
@@ -880,11 +865,6 @@ tkos:ProductModule a owl:Class ;
     rdfs:subClassOf tkos:CompanyCapability,
         tkos:ContextAsset .
 
-tkos:StrategicDecision a owl:Class ;
-    rdfs:label "战略决策"@zh ;
-    rdfs:subClassOf tkos:Decision,
-        tkos:StrategicEntity .
-
 tkos:WorkPattern a owl:Class ;
     rdfs:label "工作模式"@zh ;
     rdfs:subClassOf tkos:OperatingEntity .
@@ -955,12 +935,24 @@ tkos:ContextGap a owl:Class ;
     rdfs:label "上下文缺口"@zh ;
     rdfs:subClassOf tkos:ContextAsset .
 
+tkos:Decision a owl:Class ;
+    rdfs:label "决策"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:allValuesFrom tkos:DecisionStatus ;
+            owl:onProperty tkos:hasStatus ],
+        tkos:ContextAsset,
+        tkos:DecisionProvenanceEntity .
+
 tkos:EvidenceChallenge a owl:Class ;
     rdfs:label "证据挑战关系"@zh ;
     rdfs:subClassOf tkos:DecisionProvenanceEntity .
 
 tkos:IntentAssessment a owl:Class ;
     rdfs:label "意图判定"@zh ;
+    rdfs:subClassOf tkos:AttributedAssertion .
+
+tkos:Judgement a owl:Class ;
+    rdfs:label "判断"@zh ;
     rdfs:subClassOf tkos:AttributedAssertion .
 
 tkos:MissionReview a owl:Class ;
@@ -982,11 +974,6 @@ tkos:Risk a owl:Class ;
 tkos:SourceRecord a owl:Class ;
     rdfs:label "来源记录"@zh ;
     rdfs:subClassOf tkos:ContextAsset .
-
-tkos:StrategicChoice a owl:Class ;
-    rdfs:label "战略选择"@zh ;
-    rdfs:subClassOf tkos:ContextAsset,
-        tkos:StrategicEntity .
 
 tkos:StrategicResearch a owl:Class ;
     rdfs:label "战略研究"@zh ;
@@ -1062,10 +1049,6 @@ tkos:FeedbackRecord a owl:Class ;
     rdfs:comment "对目标（产物/共识/任务/Context Pack）的结构化反馈，含质量与经验评分。"@zh ;
     rdfs:subClassOf tkos:ContextAsset .
 
-tkos:Judgement a owl:Class ;
-    rdfs:label "判断"@zh ;
-    rdfs:subClassOf tkos:AttributedAssertion .
-
 tkos:MissionPortfolio a owl:Class ;
     rdfs:label "任务组合"@zh ;
     rdfs:subClassOf tkos:OperatingEntity .
@@ -1103,14 +1086,6 @@ tkos:hasStatus a owl:ObjectProperty ;
 tkos:CompanyReality a owl:Class ;
     rdfs:label "公司现实"@zh ;
     rdfs:subClassOf tkos:StrategicEntity .
-
-tkos:Decision a owl:Class ;
-    rdfs:label "决策"@zh ;
-    rdfs:subClassOf [ a owl:Restriction ;
-            owl:allValuesFrom tkos:DecisionStatus ;
-            owl:onProperty tkos:hasStatus ],
-        tkos:ContextAsset,
-        tkos:DecisionProvenanceEntity .
 
 tkos:DecisionLearning a owl:Class ;
     rdfs:label "决策学习"@zh ;
@@ -1236,6 +1211,11 @@ tkos:RuleCondition a owl:Class ;
     rdfs:label "规则条件"@zh ;
     rdfs:subClassOf tkos:OperatingEntity .
 
+tkos:StrategicEntity a owl:Class ;
+    rdfs:label "战略对象"@zh ;
+    rdfs:comment "承载公司现实、战略意图、战略判断、战略选择与战略决策的经营对象。"@zh ;
+    rdfs:subClassOf tkos:BusinessEntity .
+
 tkos:varCondition a swrl:Variable .
 
 tkos:DomainOutcome a owl:Class ;
@@ -1254,11 +1234,6 @@ tkos:GovernanceEntity a owl:Class ;
     rdfs:comment "承载主体、角色、责任承担、政策、确认、版本与知识图分区的经营对象。"@zh ;
     rdfs:subClassOf tkos:BusinessEntity .
 
-tkos:StrategicEntity a owl:Class ;
-    rdfs:label "战略对象"@zh ;
-    rdfs:comment "承载公司现实、战略意图、战略判断、战略选择与战略决策的经营对象。"@zh ;
-    rdfs:subClassOf tkos:BusinessEntity .
-
 tkos:OperatingEntity a owl:Class ;
     rdfs:label "业务运营对象"@zh ;
     rdfs:comment "承载 Outcome、Domain、Mission 与经营运行结构的经营对象。"@zh ;
@@ -1275,23 +1250,23 @@ tkos:Mission a owl:Class ;
     rdfs:label "Mission"@en,
         "经营任务"@zh ;
     rdfs:subClassOf [ a owl:Restriction ;
-            owl:onClass tkos:Domain ;
-            owl:onProperty tkos:belongsTo ;
+            owl:onClass tkos:MissionOutcome ;
+            owl:onProperty tkos:expects ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
-        [ a owl:Restriction ;
-            owl:onClass tkos:RoleAssignment ;
-            owl:onProperty tkos:hasResponsibleAssignment ;
-            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom tkos:MissionStatus ;
-            owl:onProperty tkos:hasStatus ],
         [ a owl:Restriction ;
             owl:onClass tkos:DomainOutcome ;
             owl:onProperty tkos:contributesTo ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
-            owl:onClass tkos:MissionOutcome ;
-            owl:onProperty tkos:expects ;
+            owl:onClass tkos:Domain ;
+            owl:onProperty tkos:belongsTo ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom tkos:MissionStatus ;
+            owl:onProperty tkos:hasStatus ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:RoleAssignment ;
+            owl:onProperty tkos:hasResponsibleAssignment ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         tkos:OperatingEntity .
 
