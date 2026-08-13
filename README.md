@@ -2,21 +2,23 @@
 
 `tkos-ontology-runtime` —— 面向企业一号位 Agent 的经营本体 Runtime。提供受用途、时间、确认状态与图分区准入的决策上下文（Context Pack），支撑战略闭环 `Signal → Issue → Research → Judgement 版本链 → Agreement → Mission`。
 
-> 当前版本：**Runtime 1.0（P1.1）**，已部署火山引擎 ECS（`115.190.213.44:8000`，cn-beijing）。
+> 当前版本：**Runtime 2.0 基座**（分支 `runtime-2.0-foundation`，待合并部署；ECS 当前运行 1.0/P1.1 镜像 `115.190.213.44:8000`，cn-beijing）。
 > 完整协作规则见 [CLAUDE.md](CLAUDE.md)；MVP 设计权威见 [`docs/mvp/`](docs/mvp/)。
 
 ## 当前能力
 
 | 能力 | 端点 | 状态 |
 |---|---|---|
-| 议题 → 结构化 Context Pack | `POST /v1/context-packs:resolve` | ✅ |
-| Context Pack + Markdown 渲染 | `POST /v1/context-packs:render` | ✅（2.0 并入 resolve） |
+| 议题 → 结构化 Context Pack（v1 形态：`scenario`/`render:true`/`token_budget` + 版本固定块） | `POST /v1/context-packs:resolve` | ✅ |
+| Context Pack + Markdown 渲染 | resolve 的 `render:true`（独立 `:render` 标 deprecated，迭代 1 删除） | ✅ |
 | 运维与健康 | `GET /health` `/ready` `/version` | ✅ |
-| 认证授权 | Bearer + purpose 门禁 | ✅ |
+| 认证授权 | Bearer + purpose 门禁 + Key 模型（tenant/role/on_behalf_of/confirmer/default_scenario，跨租户 404） | ✅ |
 | 断言溯源 | `GET /v1/assertions/{id}/lineage` | ⏳ 迭代 1 |
 | 候选写入与确认 | `POST /v1/submissions` | ⏳ 迭代 2 |
 
 **P1.1 契约亮点**：解析器不再对并列候选兜底——得分与名称证据并列时返回 **409 歧义**（候选含本体 `type` + `matched_evidence`）；知识库未覆盖时返回 **404** 并附 `alternatives` 候选建议；命中根议题的 Pack 附 `intent_facets`（entity / requested_role / operation）。
+
+**2.0 基座亮点**：V3.0 本体手术（`Agreement`/`FeedbackRecord`/`Product` 落地，`StrategicChoice`/`StrategicDecision`/`OperatingDecision` 删除，类数 103→103）；Key 即租户/角色/Persona 锚点，purpose 由 `scenario`/`default_scenario` 推导；响应统一携带版本固定块（`api_version`/`request_id`/`ontology_release`/`dataset_revision`/`policy_version`/`query_plan_version`，`X-Request-ID` 回显）；旧字段与独立 `:render` 进入 deprecated 过渡期（仍接受不 422），迭代 1 物理删除。
 
 ## 五层架构
 
@@ -42,7 +44,7 @@ Layer 1  Enterprise Source           飞书、文档、会议、业务系统、�
 ├── ontology/                 规范本体：schema(OWL/JSON-LD) · shapes(SHACL) · datasets(trig) · views(Protégé)
 ├── data/instances/           真实业务候选实例与确认事件
 ├── src/tkos_runtime/         可部署服务（api · application · domain · adapters）
-├── tests/                    183 pytest + 4 门禁脚本 + Openllet SWRL
+├── tests/                    197 pytest + 4 门禁脚本 + Openllet SWRL
 ├── scripts/                  原型与维护脚本
 ├── deploy/ecs/               ECS 单节点部署（systemd + docker-run）
 └── Makefile                  test / generate / install 聚合入口
@@ -57,7 +59,7 @@ Layer 1  Enterprise Source           飞书、文档、会议、业务系统、�
 python3 -m pip install -e '.[dev]'
 
 # 2. 测试（聚合，推荐）
-make test-fast   # SHACL + Context Pack + 实例一致 + 模式同构 + Runtime/API/Harness（183 pytest）
+make test-fast   # SHACL + Context Pack + 实例一致 + 模式同构 + Runtime/API/Harness（197 pytest）
 make test        # 上述 + Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）
 
 # 3. 重生成派生本体制品（编辑 JSON-LD 后必须）
@@ -82,8 +84,8 @@ GitHub Actions（`.github/workflows/ci.yml`）在 push/PR 时跑全部纯 Python
 
 ## 契约与验证
 
-- **OpenAPI**：[`docs/api/tkos-runtime-openapi.yaml`](docs/api/tkos-runtime-openapi.yaml)（含 P1.1 的 409/404/`intent_facets` 与 `/version` 指纹）。
-- **Apifox**：项目 `8708985`「Tokenking」，AI 分支 `ai/20260813-from-main-tkos-runtime-api`（5 端点 + 指南文档 + 13 测试用例）。
+- **OpenAPI**：[`docs/api/tkos-runtime-openapi.yaml`](docs/api/tkos-runtime-openapi.yaml)（v0.2.0：v1 形态 `scenario`/`render`/`token_budget` + 版本块 schema + 旧字段 deprecated 标注；含 P1.1 的 409/404/`intent_facets` 与 `/version` 指纹）。
+- **Apifox**：项目 `8708985`「Tokenking」，AI 分支 `ai/20260813-from-main-tkos-runtime-api`（5 端点 + 指南文档 v1 收敛 + 17 测试用例，v1 双轨）。
 - **Agent 契约验证**：`scripts/agent_harness.py` 作为独立 HTTP 客户端模拟 Agent 消费 Context Pack（不导入内部模块，纯 HTTP）。
 
 ```bash
@@ -98,7 +100,7 @@ python3 scripts/resolve_issue_context.py \
 
 ECS 单节点试点（cn-beijing，公网 `115.190.213.44:8000`，HTTP 受控联调；正式使用前切 HTTPS）。部署制品与流程见 [`deploy/ecs/`](deploy/ecs/)：
 
-- 镜像 `tkos-runtime:<code_sha>-<dataset_revision>`（当前 `961ff13-25a3dc2dafed30`）
+- 镜像 `tkos-runtime:<code_sha>-<dataset_revision>`（ECS 当前实际运行 `bce5ab8-29249ff944020a02`，V2.4.1 状态；2.0 基座合并后按 `docs/mvp/05` 部署）
 - `tkos-runtime.service`（systemd）+ `docker-run.sh`
 - `env.production.example`（`TKOS_API_KEY` 等只入 `.env`，不入仓库）
 
@@ -107,7 +109,7 @@ ECS 单节点试点（cn-beijing，公网 `115.190.213.44:8000`，HTTP 受控联
 | 阶段 | 内容 | 文档 |
 |---|---|---|
 | 1.0（已交付） | resolve + render 读路径、authN/authZ、ECS 部署、P1.1 歧义/缺口契约 | — |
-| **2.0 基座** | V3.0 本体手术 + v1 契约对齐 + Key 模型（lineage / submissions 的共同前置） | [`docs/mvp/04`](docs/mvp/04-iteration-2.0-foundation.md) |
+| **2.0 基座（已实现，待合并部署）** | V3.0 本体手术 + v1 契约对齐（deprecated 过渡）+ Key 模型（lineage / submissions 的共同前置） | [`docs/mvp/04`](docs/mvp/04-iteration-2.0-foundation.md) |
 | 迭代 1 | `lineage` 端点 + 角色时序投影（验收 5/7） | `docs/mvp/03` §3.3 |
 | 迭代 2 | `submissions` 写入闭环 + 9 类提交 + 确认/物化（验收 1-4/6） | `docs/mvp/03` §3.4 |
 | 后续 | 在线推理、异步蒸馏 Job、Persona 本体包、真实 Agent 联调 | `docs/mvp/01` §6 |
