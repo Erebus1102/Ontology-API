@@ -1,5 +1,5 @@
 # tests/test_runtime_contract_v1.py
-"""B1 v1-contract convergence tests for POST /v1/context-packs:resolve.
+"""B1/B2 v1-contract convergence tests for POST /v1/context-packs:resolve.
 
 Covers the 2.0 v1 request shape:
   * scenario (enum-validated against the registry in docs/mvp/01 §5) derives
@@ -7,6 +7,8 @@ Covers the 2.0 v1 request shape:
   * purpose derived from scenario + Key default_scenario (C1 Principal)
   * legacy fields (enterprise_id/organization_scope/purpose/actor_id) are
     still accepted during the deprecation transition (transition red line).
+B2: render 并入 resolve（render:true 返回 Markdown + structured pack）；
+    :render 端点的 client-supplied pack 路径仍接受（deprecated，未删除）。
 """
 from __future__ import annotations
 
@@ -102,3 +104,49 @@ def test_resolve_key_default_scenario_derives_purpose(monkeypatch):
     # Key-default path also exercises the non-trivial task_followup ->
     # mission_review mapping
     assert r.json()["purpose"] == "mission_review"
+
+
+# ---------------------------------------------------------------------------
+# B2: render 并入 resolve（render:true）+ client-supplied pack 过渡红线
+# ---------------------------------------------------------------------------
+
+def test_resolve_render_true_returns_markdown(client_with_auth):
+    """render:true — resolve 单调用返回渲染 Markdown；结构化 pack 随附在
+    structured（2.0 render 并入 resolve 的契约）。"""
+    r = client_with_auth.post(
+        "/v1/context-packs:resolve",
+        headers=_auth_headers(),
+        json={"query": "灯塔项目进展如何",
+              "as_of": "2026-08-11T00:00:00+08:00",
+              "render": True},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "rendered" in body
+    assert body["rendered"]["rendering_status"] == "completed"
+    assert body["rendered"]["content"]
+    # structured pack carried alongside the rendering
+    assert "structured" in body
+    assert body["structured"]["matched_root"]
+
+
+def test_render_client_supplied_pack_still_accepted(client_with_auth):
+    """过渡红线：:render 端点的 client-supplied pack 路径仍可用
+    （deprecated 但未删除）。"""
+    resolved = client_with_auth.post(
+        "/v1/context-packs:resolve",
+        headers=_auth_headers(),
+        json={"query": "灯塔项目进展如何",
+              "as_of": "2026-08-11T00:00:00+08:00"},
+    )
+    assert resolved.status_code == 200, resolved.text
+    r = client_with_auth.post(
+        "/v1/context-packs:render",
+        headers=_auth_headers(),
+        json={"pack": resolved.json(),
+              "render_options": {"format": "markdown",
+                                 "mode": "deterministic"}},
+    )
+    assert r.status_code == 200, r.text
+    assert "rendered" in r.json()
+    assert r.json()["rendered"]["rendering_status"] == "completed"

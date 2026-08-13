@@ -99,6 +99,41 @@ def _ambiguous_409(exc: AmbiguousMatchError, query: str) -> HTTPException:
         ],
         "suggested_action": "disambiguate_query"})
 
+
+def _render_exception_to_http(exc: Exception) -> HTTPException:
+    """Map ``render()`` failures to HTTP errors — the single authoritative
+    mapping shared by the resolve ``render:true`` branch and the standalone
+    ``:render`` endpoint (no duplicated mappings). Callers chain via
+    ``raise ... from exc``.
+
+    * ``RenderBudgetTooSmall`` -> 422 {code: render_budget_too_small,
+      requested_max_chars, minimum_required_chars}
+    * ``ContextRootMissingError`` -> 500 {code: context_root_missing,
+      matched_root, stage}（编译期完整性错误，绝不 fallback）
+    * ``ValueError`` -> 422（消息作 detail）
+    * ``RuntimeError`` -> 500（消息作 detail）
+
+    Any other exception type is re-raised unchanged (generic 500).
+    """
+    if isinstance(exc, RenderBudgetTooSmall):
+        return HTTPException(status_code=422, detail={
+            "code": "render_budget_too_small",
+            "requested_max_chars": exc.requested_max_chars,
+            "minimum_required_chars": exc.minimum_required_chars,
+        })
+    if isinstance(exc, ContextRootMissingError):
+        # P0-2: 编译期完整性错误 = 运行时 500，绝不 fallback 到无关对象。
+        return HTTPException(status_code=500, detail={
+            "code": "context_root_missing",
+            "matched_root": exc.matched_root,
+            "stage": exc.stage,
+        })
+    if isinstance(exc, ValueError):
+        return HTTPException(status_code=422, detail=str(exc))
+    if isinstance(exc, RuntimeError):
+        return HTTPException(status_code=500, detail=str(exc))
+    raise exc
+
 # version constants for /version fingerprint aggregation
 from tkos_runtime.application.context_renderer import RENDERER_VERSION
 from tkos_runtime.domain.query_plan import QUERY_PLAN_VERSION
@@ -318,7 +353,29 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
             raise _knowledge_gap_404(exc, req.query) from exc
         except AmbiguousMatchError as exc:
             raise _ambiguous_409(exc, req.query) from exc
-        return pack_to_dict(pack)
+        # B2: render:true — render 并入 resolve；结构化 pack 始终随附
+        # （structured），渲染失败经共享映射（与 :render 端点同语义）。
+        pack_dict = pack_to_dict(pack)
+        if req.render:
+            try:
+                result = render(
+                    pack,
+                    mode="deterministic",
+                    format="markdown",
+                    max_chars=req.token_budget or 12000,
+                    language="zh-CN",
+                )
+            except RenderBudgetTooSmall as exc:
+                raise _render_exception_to_http(exc) from exc
+            except ContextRootMissingError as exc:
+                raise _render_exception_to_http(exc) from exc
+            except ValueError as exc:
+                raise _render_exception_to_http(exc) from exc
+            except RuntimeError as exc:
+                raise _render_exception_to_http(exc) from exc
+            result["structured"] = pack_dict
+            return result
+        return pack_dict
 
     @app.post("/v1/context-packs:render")
     def resolve_and_render(
@@ -362,6 +419,10 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 raise _ambiguous_409(exc, rr.get("query", "")) from exc
             pack_origin = "server_resolved"
         else:
+            # B2: client-supplied pack 过渡期保留但标 deprecated（迭代 1 删除）。
+            logging.getLogger(__name__).warning(
+                "deprecated render field: pack — use resolve render:true"
+            )
             try:
                 pack = dict_to_pack(req.pack)  # type: ignore[arg-type]
             except Exception as exc:
@@ -392,22 +453,13 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 pack_origin=pack_origin,
             )
         except RenderBudgetTooSmall as exc:
-            raise HTTPException(status_code=422, detail={
-                "code": "render_budget_too_small",
-                "requested_max_chars": exc.requested_max_chars,
-                "minimum_required_chars": exc.minimum_required_chars,
-            }) from exc
+            raise _render_exception_to_http(exc) from exc
         except ContextRootMissingError as exc:
-            # P0-2: 编译期完整性错误 = 运行时 500，绝不 fallback 到无关对象。
-            raise HTTPException(status_code=500, detail={
-                "code": "context_root_missing",
-                "matched_root": exc.matched_root,
-                "stage": exc.stage,
-            }) from exc
+            raise _render_exception_to_http(exc) from exc
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+            raise _render_exception_to_http(exc) from exc
         except RuntimeError as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise _render_exception_to_http(exc) from exc
 
         if opts.include_structured:
             result["structured"] = pack_to_dict(pack)
