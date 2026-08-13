@@ -13,9 +13,14 @@ from pydantic import BaseModel, Field
 
 
 class ResolveRequest(BaseModel):
-    enterprise_id: str
-    organization_scope: List[str] = Field(default_factory=list)
-    purpose: str
     query: str
     as_of: str
+    scenario: Optional[str] = None
+    render: bool = False
+    token_budget: Optional[int] = Field(default=None, ge=100, le=100000)
+    # deprecated（过渡期仍接受，迭代 1 删除）
+    enterprise_id: Optional[str] = None
+    organization_scope: List[str] = Field(default_factory=list)
+    purpose: Optional[str] = None
     actor_id: Optional[str] = None
+    persona_id: Optional[str] = None

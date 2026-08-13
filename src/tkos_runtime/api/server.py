@@ -43,6 +43,7 @@ from tkos_runtime.adapters.rdflib_dataset_store import RdfDatasetStore
 from tkos_runtime.adapters.rdflib_graph_retriever import RdfGraphRetriever
 from tkos_runtime.application.context_compiler import ContextCompiler
 from tkos_runtime.application.context_pack_resolver import ContextPackResolver
+from tkos_runtime.application.scenarios import resolve_purpose
 from tkos_runtime.domain.models import (
     AmbiguousMatchError, ContextRootMissingError, NoMatchError,
 )
@@ -271,7 +272,28 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
         req: ResolveRequest,
         principal: Principal = Depends(require_token),
     ) -> dict:
-        assert_purpose(req.purpose, principal)
+        # B1: legacy v0 fields accepted during transition — deprecated, not 422.
+        for field in (
+            "enterprise_id", "organization_scope", "purpose",
+            "actor_id", "persona_id",
+        ):
+            if field in req.model_fields_set:
+                logging.getLogger(__name__).warning(
+                    "deprecated resolve field: %s", field
+                )
+        # purpose 由 scenario + Key 推导；旧请求带 purpose 则兼容（deprecated）
+        try:
+            purpose = (
+                req.purpose
+                if req.purpose is not None
+                else resolve_purpose(req.scenario, principal.default_scenario)
+            )
+        except ValueError as exc:   # 未知 scenario → 422
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "unknown_scenario", "detail": str(exc)},
+            ) from exc
+        assert_purpose(purpose, principal)
         try:
             as_of = datetime.fromisoformat(req.as_of.replace("Z", "+00:00"))
         except ValueError as exc:
@@ -284,7 +306,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
         try:
             pack = resolver.resolve(
                 query=req.query,
-                purpose=req.purpose,
+                purpose=purpose,
                 as_of=as_of,
                 organization_scope=list(req.organization_scope),
                 principal_scopes=principal.allowed_scopes,
