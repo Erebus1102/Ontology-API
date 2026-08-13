@@ -24,9 +24,3 @@ docs
 deploy
 业务文档
 *.md
-
-# Git-untracked instance files — the image must match git state exactly
-# (reproducible artifact; dataset_revision is computed from loaded files).
-data/instances/2026-08-12-strategy-distillation.trig
-data/instances/2026-08-12-methodology-distillation.trig
-data/instances/2026-08-12-business-model-fde-distillation.trig
