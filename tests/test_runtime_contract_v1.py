@@ -9,6 +9,8 @@ Covers the 2.0 v1 request shape:
     still accepted during the deprecation transition (transition red line).
 B2: render 并入 resolve（render:true 返回 Markdown + structured pack）；
     :render 端点的 client-supplied pack 路径仍接受（deprecated，未删除）。
+B3: 统一版本固定块（api_version/request_id/ontology_release/
+    dataset_revision/policy_version/query_plan_version）+ request_id 中间件。
 """
 from __future__ import annotations
 
@@ -150,3 +152,68 @@ def test_render_client_supplied_pack_still_accepted(client_with_auth):
     assert r.status_code == 200, r.text
     assert "rendered" in r.json()
     assert r.json()["rendered"]["rendering_status"] == "completed"
+
+
+# ---------------------------------------------------------------------------
+# B3: 统一版本固定块 + request_id 中间件
+# ---------------------------------------------------------------------------
+
+def test_resolve_response_carries_version_block(client_with_auth):
+    r = client_with_auth.post(
+        "/v1/context-packs:resolve",
+        headers=_auth_headers(),
+        json={"query": "灯塔项目有哪些风险",
+              "as_of": "2026-08-11T00:00:00+08:00"},
+    )
+    assert r.status_code == 200, r.text
+    j = r.json()
+    for k in ("api_version", "request_id", "dataset_revision",
+              "policy_version", "query_plan_version"):
+        assert k in j
+    assert j["api_version"] == "v1"
+    assert isinstance(j["ontology_release"]["company"], str) and j["ontology_release"]["company"]
+    assert j["ontology_release"]["persona"] is None
+    assert r.headers["X-Request-ID"] == j["request_id"]
+
+
+def test_render_response_carries_version_block(client_with_auth):
+    """B3: :render 端点（client-supplied pack）与 resolve 一样在顶层携带
+    六键版本固定块（render() 字典缺 dataset_revision/policy_version/
+    query_plan_version，由 attach_version_block 补齐）。"""
+    resolved = client_with_auth.post(
+        "/v1/context-packs:resolve",
+        headers=_auth_headers(),
+        json={"query": "灯塔项目进展如何",
+              "as_of": "2026-08-11T00:00:00+08:00"},
+    )
+    assert resolved.status_code == 200, resolved.text
+    r = client_with_auth.post(
+        "/v1/context-packs:render",
+        headers=_auth_headers(),
+        json={"pack": resolved.json(),
+              "render_options": {"format": "markdown",
+                                 "mode": "deterministic"}},
+    )
+    assert r.status_code == 200, r.text
+    j = r.json()
+    for k in ("api_version", "request_id", "dataset_revision",
+              "policy_version", "query_plan_version"):
+        assert k in j, k
+    assert j["api_version"] == "v1"
+    assert isinstance(j["ontology_release"]["company"], str) and j["ontology_release"]["company"]
+    assert j["ontology_release"]["persona"] is None
+    assert r.headers["X-Request-ID"] == j["request_id"]
+
+
+def test_request_id_respects_client_header(client_with_auth):
+    """B3: 客户端 X-Request-ID 头原样进入响应体 request_id 并回显响应头。"""
+    r = client_with_auth.post(
+        "/v1/context-packs:resolve",
+        headers={**_auth_headers(), "X-Request-ID": "my-trace-1"},
+        json={"query": "灯塔项目进展如何",
+              "as_of": "2026-08-11T00:00:00+08:00"},
+    )
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["request_id"] == "my-trace-1"
+    assert r.headers["X-Request-ID"] == "my-trace-1"

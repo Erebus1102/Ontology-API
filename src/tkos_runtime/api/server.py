@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -35,7 +36,7 @@ try:
 except ImportError:
     pass
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from tkos_runtime.adapters.gram_intent_resolver import GramIntentResolver
@@ -51,7 +52,7 @@ from tkos_runtime.domain.policies import AdmissionPolicy
 from tkos_runtime.api.models import ResolveRequest
 from tkos_runtime.adapters.openai_text_polisher import OpenAITextPolisher
 from tkos_runtime.api.render_models import RenderRequest
-from tkos_runtime.api.serializer import dict_to_pack, pack_to_dict
+from tkos_runtime.api.serializer import attach_version_block, dict_to_pack, pack_to_dict
 from tkos_runtime.application.context_renderer import render
 from tkos_runtime.domain.render_units import RenderBudgetTooSmall
 
@@ -295,6 +296,15 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
     # ── auth: load credentials onto app state ──
     app.state.principals = _load_credentials()
 
+    # ── request_id middleware: trace every response (version block + header) ──
+    @app.middleware("http")
+    async def _request_id(request: Request, call_next):
+        rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
+        request.state.request_id = rid
+        resp = await call_next(request)
+        resp.headers["X-Request-ID"] = rid
+        return resp
+
     # ── readiness: run optional startup SHACL, then set ready ──
     _state.startup_shacl_status = _run_startup_shacl_if_enabled(store)
     _state.ready = (_state.startup_shacl_status != "fail")
@@ -304,6 +314,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
 
     @app.post("/v1/context-packs:resolve")
     def resolve(
+        request: Request,
         req: ResolveRequest,
         principal: Principal = Depends(require_token),
     ) -> dict:
@@ -374,11 +385,12 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
             except RuntimeError as exc:
                 raise _render_exception_to_http(exc) from exc
             result["structured"] = pack_dict
-            return result
-        return pack_dict
+            return attach_version_block(result, request.state.request_id, pack)
+        return attach_version_block(pack_dict, request.state.request_id, pack)
 
     @app.post("/v1/context-packs:render")
     def resolve_and_render(
+        request: Request,
         req: RenderRequest,
         principal: Principal = Depends(require_token),
     ) -> dict:
@@ -463,7 +475,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
 
         if opts.include_structured:
             result["structured"] = pack_to_dict(pack)
-        return result
+        return attach_version_block(result, request.state.request_id, pack)
 
     return app
 

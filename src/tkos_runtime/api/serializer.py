@@ -29,6 +29,31 @@ def pack_to_dict(pack: ContextPack) -> dict[str, Any]:
     return dataclasses.asdict(pack)
 
 
+def attach_version_block(
+    d: dict[str, Any], request_id: str, pack: ContextPack
+) -> dict[str, Any]:
+    """Attach the unified version block (spec docs/mvp/03 §2) to a response
+    dict, returning the same dict.
+
+    Transport keys are assigned: ``api_version``, ``request_id``,
+    ``ontology_release{company, persona}`` (persona fixed to None this round).
+    The pack-sourced governance keys (``dataset_revision`` / ``policy_version``
+    / ``query_plan_version``) use ``setdefault`` so values already present on
+    resolve paths (via ``pack_to_dict``) are preserved, while the ``render()``
+    dict — which lacks them — is completed to the same six-key block.
+
+    ``d`` is expected to be a fresh dict (``asdict`` result or a ``render()``
+    return value), so mutating it in place is safe.
+    """
+    d["api_version"] = "v1"
+    d["request_id"] = request_id
+    d["ontology_release"] = {"company": pack.ontology_release_id, "persona": None}
+    d.setdefault("dataset_revision", pack.dataset_revision)
+    d.setdefault("policy_version", pack.policy_version)
+    d.setdefault("query_plan_version", pack.query_plan_version)
+    return d
+
+
 def dict_to_pack(d: dict[str, Any]) -> ContextPack:
     """Reconstruct a ``ContextPack`` from a dict (e.g. JSON from a prior /resolve call).
 
