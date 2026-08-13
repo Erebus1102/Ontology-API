@@ -17,7 +17,7 @@ ROLE_TABLE: list[tuple[str, tuple[str, ...]]] = [
     ("dependency", ("Dependency",)),
     ("evidence", ("Evidence","EvidenceSupport","EvidenceChallenge","AttributedAssertion")),
     ("context_gap", ("ContextGap",)),
-    ("decision", ("Decision","StrategicDecision","OperatingDecision","DecisionRecord","StrategicChoice","Judgement","StrategicResearch","StrategicSignal")),
+    ("decision", ("Decision","Agreement","DecisionRecord","Judgement","StrategicResearch","StrategicSignal")),
     ("mission", ("Mission","MissionScope","MissionRationale","MissionPortfolio")),
     ("criterion", ("SuccessCriterion",)),
     ("milestone", ("Milestone",)),

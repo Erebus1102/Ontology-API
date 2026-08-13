@@ -78,7 +78,7 @@ def _pack(**overrides):
         context_gaps=[], conflicts=[], omissions=[],
         contributing_graphs=[], admission_policy="",
         ontology_release_id="2.4.0", dataset_revision="a" * 64,
-        policy_version="read-admission/p0-v1", query_plan_version="bfs-2gram/p0-v1",
+        policy_version="read-admission/p0-v1", query_plan_version="bfs-2gram/v3-1",
     )
     defaults.update(overrides)
     return ContextPack(**defaults)
