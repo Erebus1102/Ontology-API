@@ -18,33 +18,12 @@ from tkos_runtime.domain.render_units import (
     SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RenderedFactUnit,
     assemble_sectioned_markdown,
 )
-
-TKOS = "https://ontology.tokenking.ai/tkos#"
-
-# role -> tuple of class fragments (full IRI = TKOS + fragment); priority required>secondary>trace_only
-ROLE_TABLE: list[tuple[str, tuple[str, ...]]] = [
-    ("issue", ("StrategicIssue",)),
-    ("outcome", ("Outcome","CompanyOutcome","DomainOutcome","MissionOutcome","OutcomeContribution")),
-    ("progress", ("ProgressSnapshot","DomainProgressSnapshot","OutcomeProgressSnapshot","PerformanceFact")),
-    ("risk", ("Risk","HighRisk")),
-    ("dependency", ("Dependency",)),
-    ("evidence", ("Evidence","EvidenceSupport","EvidenceChallenge","AttributedAssertion")),
-    ("context_gap", ("ContextGap",)),
-    ("decision", ("Decision","StrategicDecision","OperatingDecision","DecisionRecord","StrategicChoice","Judgement","StrategicResearch","StrategicSignal")),
-    ("mission", ("Mission","MissionScope","MissionRationale","MissionPortfolio")),
-    ("criterion", ("SuccessCriterion",)),
-    ("milestone", ("Milestone",)),
-    ("capability", ("CompanyCapability","KeyPath")),
-    ("rationale", ("LeadershipInsight","Lesson","ReviewConclusion")),
-    ("responsibility", ("RoleAssignment","DirectlyResponsibleRole","DirectlyResponsibleIndividual")),
-    ("source_record", ("SourceRecord",)),
-    ("confirmation", ("Confirmation","ConfirmationEvent","RevisionEvent")),
-]
-_ROLE_FRAG = {role: {TKOS+f for f in frags} for role, frags in ROLE_TABLE}
-_TIER = {"issue":1,"outcome":1,"progress":1,"risk":1,"dependency":1,"evidence":1,
-         "context_gap":1,"decision":1,
-         "mission":2,"criterion":2,"milestone":2,"capability":2,"rationale":2,"responsibility":2,
-         "source_record":3,"confirmation":3}
+# P1 下沉：角色机制（ROLE_TABLE/classify_role/role_tier）移入 domain/roles.py
+# 纯域层，adapter（gram_intent_resolver）与 compiler 共用同一判定。
+# 模块级名字保留（tests/test_decision_context_compiler.py 导入不变）。
+from tkos_runtime.domain.roles import (
+    ROLE_TABLE, _ROLE_FRAG, _TIER, TKOS, classify_role, role_tier,
+)
 
 PARTITION_PRIORITY = {"graph-confirmed-enterprise":0,"graph-candidate-and-dispute":1,
                       "graph-decision-provenance":2,"graph-derived-context":3}
@@ -77,16 +56,6 @@ def build_type_index_from_members(members) -> dict[str, set[str]]:
     for m in members:
         idx.setdefault(m.id, set()).update(m.rdf_types)
     return idx
-
-def classify_role(member_id: str, type_index: dict[str, set[str]]) -> str:
-    types = type_index.get(member_id, set())
-    for role, frags in ROLE_TABLE:
-        if types & _ROLE_FRAG[role]:
-            return role
-    return "other"
-
-def role_tier(role: str) -> int:
-    return _TIER.get(role, 9)
 
 def _real_display_name(member) -> str | None:
     # display_name is real only if it differs from the id fragment
@@ -523,7 +492,12 @@ def proven_related_issue_views(
 
     视图粒度不按 member_id 合并跨分区视图（评审四审：保留
     view_key=(member_id, partition)）。
-    """
+
+    **证明范围（P1 显式契约，proof_scope="entity"）**：实体级证明——
+    边证明的是**实体**（该实体任一视图声明的边即成立），同一实体的
+    其他分区视图随之视为 proven（与评审四审行为保持一致；备选方案
+    "视图级证明"——要求边与视图同分区——已由用户否决）。"""
+
     root = pack.matched_root
     root_frag = _frag(root) if root else None
     if not root_frag:
@@ -564,6 +538,7 @@ def proven_related_issue_views(
             "partition": part,
             "predicate": _frag(predicate),
             "edge_source_graph": edge_sg,
+            "proof_scope": "entity",
         })
     return result
 
@@ -835,6 +810,7 @@ class DecisionContextCompiler:
                 if rel_m.source_graphs else [],
                 "predicate": pv["predicate"],
                 "edge_source_graph": pv["edge_source_graph"],
+                "proof_scope": pv["proof_scope"],
             }
         else:
             dc["related_issue"] = None

@@ -13,10 +13,27 @@ class NoMatchError(Exception):
     """
 
     def __init__(self, message: str, unmatched_terms: list[str] | None = None,
-                 match_reasons: list[str] | None = None):
+                 match_reasons: list[str] | None = None,
+                 candidates: list[tuple[int, str, str]] | None = None):
         super().__init__(message)
         self.unmatched_terms = list(unmatched_terms or [])
         self.match_reasons = list(match_reasons or [])
+        # (score, id_fragment, display_name)——P1：404 建议候选（门禁后）。
+        self.candidates = list(candidates or [])
+
+
+class AmbiguousMatchError(Exception):
+    """Intent 匹配歧义：top1/top2 有效维度（exact_match、name_evidence、
+    effective_score）完全并列 → API 层 409 ``ontology_context_ambiguous``。
+
+    严格规则：得分与名称证据均无并列分离 → 拒绝猜测（无 IRI 兜底）。
+    ``candidates`` = 完整 role_ranked 上的**全部并列项**（不受 top5 截断）。
+    """
+
+    def __init__(self, message: str,
+                 candidates: list[tuple[int, str, str]]):
+        super().__init__(message)
+        self.candidates = list(candidates)
 
 
 class ContextRootMissingError(Exception):
@@ -103,10 +120,20 @@ class ScopeResolution:
     reason: str
 
 
+@dataclass(frozen=True)
+class IntentFacets:
+    """P1 意图切面。entity: 归一化实体串（空格连接，无则 None）；
+    requested_role: risk|progress|issue|None；operation: list|status|None。"""
+    entity: str | None
+    requested_role: str | None
+    operation: str | None
+
+
 @dataclass
 class IntentAssessment:
     root: str
     alternatives: list[tuple[int, str, str]]
+    intent_facets: IntentFacets | None = None
 
 
 @dataclass
@@ -158,3 +185,4 @@ class ContextPack:
     dataset_revision: str
     policy_version: str
     query_plan_version: str
+    intent_facets: dict | None = None

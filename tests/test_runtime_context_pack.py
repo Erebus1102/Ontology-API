@@ -52,7 +52,10 @@ def test_fe_issue_seven_contracts():
     assert pack.ontology_release_id == "2.4.0" and len(pack.dataset_revision) == 64
 
 def test_confirmed_current_and_expired_omission_with_fixture():
-    pack = resolver([ROOT/"tests/v2.3-context-pack-runtime.trig"]).resolve("增长", "decision_preparation", AS_OF, [])
+    # 探测查询用 member 精确 displayName（P1 严格规则下"增长"六路并列 → 409，
+    # 探测必须唯一命中；本测试验证的是 omission 行为而非 resolver 匹配）
+    pack = resolver([ROOT/"tests/v2.3-context-pack-runtime.trig"]).resolve(
+        "验证增长路径的经营任务", "decision_preparation", AS_OF, [])
     assert any(m.id == "mission-growth" for m in pack.current_facts)
     for m in pack.current_facts:
         assert all(s.source_graph == "graph-confirmed-enterprise" for s in m.statements)
@@ -67,7 +70,9 @@ def test_confirmed_current_and_expired_omission_with_fixture():
     assert exp and exp[0].stage == "valid_time" and exp[0].reason
 
 def test_aggregate_sensitive_isolation():
-    pack = resolver([ROOT/"tests/v2.3-context-pack-runtime.trig"]).resolve("增长", "decision_preparation", AS_OF, [])
+    # 同 test_confirmed_*：探测查询唯一命中 mission-growth，不触发 P1 409
+    pack = resolver([ROOT/"tests/v2.3-context-pack-runtime.trig"]).resolve(
+        "验证增长路径的经营任务", "decision_preparation", AS_OF, [])
     SENS = "assertion-sensitive"
     assert pack.matched_root.rsplit("#",1)[-1] != SENS
     assert all(SENS not in a["id"] for a in pack.alternative_matches)

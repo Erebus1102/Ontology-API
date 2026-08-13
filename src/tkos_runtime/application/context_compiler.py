@@ -1,5 +1,6 @@
 # src/tkos_runtime/application/context_compiler.py
 from __future__ import annotations
+import dataclasses
 from datetime import datetime
 from tkos_runtime.domain.models import (RetrievedMember, ContextPackMember, ContextPack,
     IntentAssessment, ScopeResolution, Omission, AdmissionDecision)
@@ -70,7 +71,9 @@ class ContextCompiler:
             contributing_graphs=contributing,
             admission_policy=f"purpose={purpose}; read-admission/p0-v1",
             ontology_release_id=metadata["ontology_release_id"], dataset_revision=metadata["dataset_revision"],
-            policy_version="read-admission/p0-v1", query_plan_version="bfs-2gram/p0-v1")
+            policy_version="read-admission/p0-v1", query_plan_version="bfs-2gram/p0-v1",
+            intent_facets=(dataclasses.asdict(intent.intent_facets)
+                           if intent.intent_facets else None))
 
     def _is_gap(self, subj_stmts) -> bool:
         # 仅认 rdf:type ContextGap（名称前缀不承担分类）

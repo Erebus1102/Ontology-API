@@ -2,7 +2,10 @@
 from __future__ import annotations
 import re
 
-from tkos_runtime.domain.models import IntentAssessment, NoMatchError
+from tkos_runtime.domain.models import (
+    AmbiguousMatchError, IntentAssessment, IntentFacets, NoMatchError,
+)
+from tkos_runtime.domain.roles import classify_role
 
 DISPLAY = "https://ontology.tokenking.ai/tkos#displayName"
 SCOPE = "https://ontology.tokenking.ai/tkos#scopeDescription"
@@ -30,6 +33,21 @@ STOPWORDS = frozenset({
 # 让 gap-product1-mvp-acceptance 反超 capability-tokenhub-runtime-base）。
 # 全文命中仍是压倒性优先（100+len）。
 ENGLISH_TOKEN_WEIGHT = 30
+
+RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+
+# P1 角色触发词（原文子串匹配，首个命中生效；顺序即优先级——风险
+# constrain 排在 prefer 之前，如"灯塔项目有哪些风险"命中的是 constrain）。
+# "进展/进度"只 prefer 不 constrain：constrain 会把 capability-tokenhub
+# 整个排除，破坏既有契约（"TokenHub 模块当前进度如何"必须保持 root=
+# capability-tokenhub-runtime-base）。
+ROLE_TRIGGERS = [("风险", "risk", "constrain"),
+                 ("进展", "progress", "prefer"),
+                 ("进度", "progress", "prefer"),
+                 ("议题", "issue", "prefer")]
+# prefer 加成：6+B>8 → B≥3、8+B>8 → B≥1，B=5 两边 margin 3；且
+# TokenHub 进度 9+5=14 远低于 capability 39（契约 #5 安全，margin 25）。
+PREFERENCE_BOOST = 5
 
 # 中文疑问模板：整段移除（模板是语法不是主题）。"进展如何/有哪些/
 # 有没有/是不是"整体不属于业务内容——其中"进展/哪些"等词若逐字保留
@@ -95,7 +113,7 @@ class GramIntentResolver:
         self._store = store
 
     def resolve(self, query: str, allowed_graph_ids: list[str]) -> IntentAssessment:
-        text, name_text, names = self._index(allowed_graph_ids)
+        text, name_text, names, type_index = self._index(allowed_graph_ids)
         q = query.lower().strip()
         grams = {q[i:i+2] for i in range(max(0, len(q)-1))}
 
@@ -123,6 +141,55 @@ class GramIntentResolver:
             all_tokens.update(toks)
         unmatched_terms = [t for t in high_info_eng if t not in all_tokens]
 
+        # ── P1：角色触发词检测（原文子串，首个命中生效）────────────────
+        # 顺序即优先级：风险（constrain）排在 prefer 触发词之前——
+        # "灯塔项目有哪些风险" 命中的是 constrain；"产品 1.0 上线进展
+        # 如何" 命中 prefer（进展只优先、不排除非 ProgressSnapshot）。
+        trigger: tuple[str, str, str] | None = None
+        for word, role, mode in ROLE_TRIGGERS:
+            if word in q:
+                trigger = (word, role, mode)
+                break
+
+        # ── P1：baseline 候选池（先评分后否决，所有 raise 携带候选）──
+        # 候选只来自 _index 遍历的 allowed_graph_ids 语句 → 构造上不
+        # 可能含敏感图节点（仍有结构断言测试）。exact_match 标记全文
+        # 精确命中（100+len(q)，压倒性优先）；name_evidence =
+        # |{grams} ∩ name_text[node]|——名称证据压 scope 噪声（"灯塔
+        # 项目有哪些风险" constrain 后 name-evidence 1 vs 0 →
+        # resource-conflict，压制 scope 噪声的灯塔风险）。
+        baseline: list[dict] = []
+        for node, hay in text.items():
+            exact = bool(q and q in hay)
+            if exact:
+                base = 100 + len(q)  # 全文命中：压倒性优先
+            else:
+                base = sum(1 for g in grams if g in hay)
+                base += ENGLISH_TOKEN_WEIGHT * sum(
+                    1 for t in high_info_eng
+                    if t in node_name_tokens.get(node, ()))
+            if base > 0:
+                name_ev = sum(1 for g in grams
+                              if g in name_text.get(node, ""))
+                baseline.append({"node": node, "exact": exact, "base": base,
+                                 "name_ev": name_ev, "eff": base})
+
+        def _rank_key(e):
+            # 统一排序键（评审收紧 #1）：全文精确命中恒压过名称片段多
+            # 的候选；name 证据压 scope 噪声；与 409 歧义判定共用同一
+            # 组有效维度（评审收紧 #3）。
+            return (-int(e["exact"]), -e["name_ev"], -e["eff"], e["node"])
+
+        def _amb_key(e):
+            return (e["exact"], e["name_ev"], e["eff"])
+
+        def _cands(entries):
+            return [(e["eff"], _frag(e["node"]),
+                     names.get(e["node"], _frag(e["node"])))
+                    for e in entries]
+
+        baseline_ranked = sorted(baseline, key=_rank_key)
+
         # ── P0 门禁（评审 B2 反例）：未知关键实体参与否决 ──────────────
         # "TokenHub 要不要上 bedrock 模型"：tokenhub 已知、bedrock 未知。
         # 未知实体本身就是知识缺口 → 立即拒绝，禁止已知实体继续选根
@@ -133,45 +200,20 @@ class GramIntentResolver:
                 f"{unmatched_terms}）",
                 unmatched_terms=unmatched_terms,
                 match_reasons=[f"未知关键实体参与否决：{unmatched_terms}"],
+                candidates=_cands(baseline_ranked[:5]),
             )
 
-        # ── 中文主题跨度准入（评审四审）────────────────────────────────
+        # ── 中文主题跨度准入（评审四审，条件不变）──────────────────────
         # 只认"业务主题片段"（span）：疑问模板整段移除、停用词按 2-字
         # 词切断、功能字按单字跳过，剩余为连续中文片段。旧的"任一剩余
         # 2-gram 未在全库出现即否决"把自然语言边界碎片（"上线|进展"→
         # 线进、"哪些|风险"→些风）误判为未知主题，误拒 4 条合法查询。
         # 跨界碎片现在只可能出现在 span 内部，由下方覆盖率规则容忍。
-        cn_spans = _cn_spans(q)
-
-        scored = []
-        for node, hay in text.items():
-            if q and q in hay:
-                sc = 100 + len(q)  # 全文命中：压倒性优先
-            else:
-                sc = sum(1 for g in grams if g in hay)
-                sc += ENGLISH_TOKEN_WEIGHT * sum(
-                    1 for t in high_info_eng
-                    if t in node_name_tokens.get(node, ()))
-            if sc > 0:
-                scored.append((sc, node))
-        ranked = sorted(scored, key=lambda x: (-x[0], x[1]))[:5]
-        if not ranked:
-            raise NoMatchError(
-                f"未匹配到对象：{query!r}", unmatched_terms=unmatched_terms)
-
-        # ── P0 门禁（评审三审 + 四审修订）：剩余中文主题必须覆盖 ──────
-        # 每个 span 用**覆盖率**判定：span 内 2-gram 在全库（name +
-        # scope）出现比例 < 0.5 = 未知主题 → 否决，未覆盖的 2-gram 计入
-        # unmatched_terms（"TokenHub 应该如何定价"：tokenhub 已知强命中，
-        # 但 span[定价] 覆盖率 0——知识库不存在任何定价内容 → 404；
-        # "TokenHub 要不要采用新的收费方案"：span[收费方案] 仅 方案
-        # 有覆盖，收费/费方 零出现 → 1/3 < 0.5 → 404，保持三审回归）。
-        # 覆盖率 >= 0.5 = 已知主题（容忍 span 内部跨界碎片："交付进展"
-        # 的"付进"、"上线进展"的"线进"都是边界巧合，不得否决）。
         # 注：覆盖判定用全文而非仅 name 字段——"产品 1.0 当前进度如何"
         # 的"进度"在 displayName/objectId 零覆盖、但作为已知知识存在于
         # scopeDescription（四审误拒案例必须 200）；而"定价/收费"全文
         # 0 处，才是真正的未知主题。
+        cn_spans = _cn_spans(q)
         all_grams: set[str] = set()
         for hay in text.values():
             all_grams.update(hay[i:i+2] for i in range(max(0, len(hay)-1)))
@@ -191,9 +233,38 @@ class GramIntentResolver:
                     f"剩余中文主题未在知识库全文获得覆盖："
                     f"{unknown_grams}"),
                     f"未知关键实体: {unmatched_terms or '（无）'}"],
+                candidates=_cands(baseline_ranked[:5]),
             )
 
-        # ── P0 门禁：top1 必须至少有一个非泛词强命中 ───────────────────
+        if not baseline_ranked:
+            raise NoMatchError(
+                f"未匹配到对象：{query!r}", unmatched_terms=unmatched_terms,
+                candidates=[])
+
+        # ── P1：角色约束/优先（第二候选池 role_ranked）────────────────
+        # 正常 root / 409 / 强命中门 404 建议 → role_ranked；
+        # constrain 池空 404 建议 → baseline_ranked[:5]。
+        role_ranked = baseline_ranked
+        if trigger is not None:
+            _w, role, mode = trigger
+            if mode == "constrain":
+                role_ranked = [e for e in baseline_ranked
+                               if classify_role(e["node"], type_index) == role]
+                if not role_ranked:
+                    raise NoMatchError(
+                        f"知识库未覆盖该角色主题：{query!r}（角色约束 "
+                        f"{role} 无候选实体）",
+                        match_reasons=[f"角色约束 {role} 无候选实体"],
+                        candidates=_cands(baseline_ranked[:5]))
+            else:  # prefer：给 preferred 角色且 base>0 的节点 +boost
+                role_ranked = [
+                    {**e, "eff": e["base"] + PREFERENCE_BOOST}
+                    if classify_role(e["node"], type_index) == role else e
+                    for e in baseline_ranked
+                ]
+            role_ranked = sorted(role_ranked, key=_rank_key)
+
+        # ── P0 门禁：top1 必须至少有一个非泛词强命中（条件不变）────────
         # 无强命中 = 得分全部来自字符碎片巧合（"bedrock"→13 分案例）。
         # 知识不足必须显式拒绝（→ 404 knowledge gap），不得强制选最接近。
         # 英文强命中只认 name 字段 token（scope 提及不构成命中——评审
@@ -202,7 +273,7 @@ class GramIntentResolver:
         # 覆盖，不再要求 top1 name 字段命中（"进度"只在 scope 出现、
         # name 零覆盖——四审误拒案例）。查询既无英文强命中、也无任何
         # 中文主题 span（如"模型现在应该怎么选择"）→ 碎片巧合 → 拒绝。
-        top_node = ranked[0][1]
+        top_node = role_ranked[0]["node"]
         strong_hits = [t for t in high_info_eng
                        if t in node_name_tokens.get(top_node, ())]
         if not strong_hits and not cn_spans:
@@ -214,13 +285,36 @@ class GramIntentResolver:
                 f"知识库未覆盖查询主题：{query!r}（缺失关键词 "
                 f"{unmatched_terms or '（无）'}）",
                 unmatched_terms=unmatched_terms, match_reasons=reasons,
+                candidates=_cands(role_ranked[:5]),
             )
-        return IntentAssessment(root=top_node,
-            alternatives=[(sc, _frag(n), names.get(n, _frag(n))) for sc, n in ranked[1:]])
+
+        # ── P1：歧义规则（409 严格规则，在完整 role_ranked 上判定）───
+        # 仅当 top1/top2 的有效维度（exact_match, name_evidence,
+        # effective_score）完全并列 → 拒绝猜测（无 IRI 兜底）；候选 =
+        # **全部并列节点**（不设上限——当前数据规模可控；alternative_
+        # matches 与 404 alternatives 才限制为五项）。单候选不 409。
+        if (len(role_ranked) >= 2
+                and _amb_key(role_ranked[0]) == _amb_key(role_ranked[1])):
+            tied = [e for e in role_ranked
+                    if _amb_key(e) == _amb_key(role_ranked[0])]
+            raise AmbiguousMatchError(
+                f"查询意图存在歧义：{query!r}（多个候选对象在得分与"
+                f"名称证据上并列，无法唯一确定）",
+                candidates=_cands(tied))
+
+        return IntentAssessment(
+            root=top_node,
+            alternatives=_cands(role_ranked[1:5]),
+            intent_facets=_build_facets(query, top_node, trigger, name_text),
+        )
 
     def _index(self, graph_ids):
         text, names = {}, {}
         name_text: dict[str, list[str]] = {}
+        # P1：同一次遍历加收 rdf:type 索引——角色约束（constrain）按
+        # classify_role(node, type_index) 过滤（252 主体中 248 有直接
+        # rdf:type；其余 4 个 classify "other"，不可进 constrain 池）。
+        type_index: dict[str, set[str]] = {}
         for s in self._store.statements_in(graph_ids):
             v = str(s.object)
             if s.predicate in (DISPLAY, SCOPE, OBJECT_ID):
@@ -230,8 +324,44 @@ class GramIntentResolver:
                 name_text.setdefault(s.subject, []).append(v)
             if s.predicate == DISPLAY:
                 names.setdefault(s.subject, v)
+            if s.predicate == RDF_TYPE:
+                type_index.setdefault(s.subject, set()).add(v)
         return (
             {n: " ".join(v).lower() for n, v in text.items()},
             {n: " ".join(v).lower() for n, v in name_text.items()},
             names,
+            type_index,
         )
+
+
+def _build_facets(query: str, root: str,
+                  trigger: tuple[str, str, str] | None,
+                  name_text: dict[str, str]) -> IntentFacets:
+    """P1 意图切面（确定性启发式，仅 200 路径；测试精确锚定）。
+
+    段顺序：1 产品 X.Y artifact（恒保留——覆盖"产品"停用词）→ 2 英文
+    token → 3 中文 span（减角色触发词、减含数字段）。过滤：CJK 段仅当
+    为 root name 子串保留；英文 token 仅当在 root name token 集保留。
+    """
+    q = query.lower().strip()
+    segments: list[str] = list(re.findall(r"产品\s*\d+(?:\.\d+)*", q))
+    name = name_text.get(root, "")
+    name_tokens = {t for t in _ENGLISH_TOKEN.findall(name) if len(t) >= 2}
+    for t in _ENGLISH_TOKEN.findall(q):
+        if len(t) >= 2 and t not in STOPWORDS and t in name_tokens:
+            segments.append(t)
+    trigger_words = {w for w, _, _ in ROLE_TRIGGERS}
+    for s in _cn_spans(q):
+        if any(c.isdigit() for c in s):
+            continue
+        for w in trigger_words:
+            s = s.replace(w, "")
+        s = s.strip()
+        if len(s) >= 2 and s in name:
+            segments.append(s)
+    return IntentFacets(
+        entity=" ".join(segments) if segments else None,
+        requested_role=trigger[1] if trigger else None,
+        operation="list" if "有哪些" in q
+        else ("status" if trigger and trigger[1] == "progress" else None),
+    )

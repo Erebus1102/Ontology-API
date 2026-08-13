@@ -116,4 +116,5 @@ def dict_to_pack(d: dict[str, Any]) -> ContextPack:
         dataset_revision=ds_rev,
         policy_version=d.get("policy_version", ""),
         query_plan_version=d.get("query_plan_version", ""),
+        intent_facets=d.get("intent_facets"),
     )

@@ -43,7 +43,9 @@ from tkos_runtime.adapters.rdflib_dataset_store import RdfDatasetStore
 from tkos_runtime.adapters.rdflib_graph_retriever import RdfGraphRetriever
 from tkos_runtime.application.context_compiler import ContextCompiler
 from tkos_runtime.application.context_pack_resolver import ContextPackResolver
-from tkos_runtime.domain.models import ContextRootMissingError, NoMatchError
+from tkos_runtime.domain.models import (
+    AmbiguousMatchError, ContextRootMissingError, NoMatchError,
+)
 from tkos_runtime.domain.policies import AdmissionPolicy
 from tkos_runtime.api.models import ResolveRequest
 from tkos_runtime.adapters.openai_text_polisher import OpenAITextPolisher
@@ -64,14 +66,31 @@ from tkos_runtime.api.auth import (
 def _knowledge_gap_404(exc: NoMatchError, query: str) -> HTTPException:
     """P0: 知识不足响应（用户审定的 schema）——与编译期完整性错误严格
     区分：NoMatchError 是匹配层的"知识未命中"（404），ContextRootMissingError
-    是编译期的完整性错误（500，绝不 fallback）。"""
+    是编译期的完整性错误（500，绝不 fallback）。
+
+    P1: alternatives 由 exc.candidates 填充（门禁后候选建议；英文/中文
+    知识否决与 constrain 池空各按候选池契约提供 baseline[:5]）。"""
     return HTTPException(status_code=404, detail={
         "code": "ontology_context_not_found",
         "query": query,
         "unmatched_terms": list(exc.unmatched_terms),
-        "alternatives": [],
+        "alternatives": [
+            {"score": s, "id": i, "name": n}
+            for s, i, n in exc.candidates
+        ],
         "suggested_action": "submit_context_gap",
     })
+
+
+def _ambiguous_409(exc: AmbiguousMatchError, query: str) -> HTTPException:
+    """P1: 歧义响应（用户审定的严格规则）——top1/top2 有效维度完全并列
+    → 拒绝猜测（无 IRI 兜底）；candidates = 完整并列集（不受 top5 截断）。"""
+    return HTTPException(status_code=409, detail={
+        "code": "ontology_context_ambiguous", "query": query,
+        "candidates": [
+            {"score": s, "id": i, "name": n} for s, i, n in exc.candidates
+        ],
+        "suggested_action": "disambiguate_query"})
 
 # version constants for /version fingerprint aggregation
 from tkos_runtime.application.context_renderer import RENDERER_VERSION
@@ -268,6 +287,8 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except NoMatchError as exc:
             raise _knowledge_gap_404(exc, req.query) from exc
+        except AmbiguousMatchError as exc:
+            raise _ambiguous_409(exc, req.query) from exc
         return pack_to_dict(pack)
 
     @app.post("/v1/context-packs:render")
@@ -307,6 +328,8 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             except NoMatchError as exc:
                 raise _knowledge_gap_404(exc, rr.get("query", "")) from exc
+            except AmbiguousMatchError as exc:
+                raise _ambiguous_409(exc, rr.get("query", "")) from exc
             pack_origin = "server_resolved"
         else:
             try:

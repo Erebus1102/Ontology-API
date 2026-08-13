@@ -217,6 +217,8 @@ def test_anchor_contract_matches_root_and_query():
     assert dc["related_issue"]["member_id"] == "issue-other"
     assert dc["related_issue"]["predicate"] == "researchedBy"
     assert dc["related_issue"]["edge_source_graph"] == "graph-candidate-and-dispute"
+    # P1：证明范围显式 = 实体级（边证明实体，同实体全部视图 proven）
+    assert dc["related_issue"]["proof_scope"] == "entity"
 
 
 def test_related_issue_none_without_edge():
@@ -258,11 +260,13 @@ def test_any_type_root_compiles_generic_anchor():
     assert "（无）" in related_block
 
 
-def test_related_issue_view_granularity_two_partitions():
-    """评审四审契约：proven 视图按 view_key=(member_id, partition) 粒度，
-    不按 member_id 合并跨分区视图。同 member 双分区、边只声明在其中一个
-    分区 → 两个 proven 视图都进"关联经营议题"章节；related_issue 取稳定
-    排序序首的视图（候选分区在前）。"""
+def test_related_issue_entity_level_proof_covers_all_partition_views():
+    """评审四审 + P1 契约：proven 视图按 view_key=(member_id, partition)
+    粒度，不按 member_id 合并跨分区视图；证明范围 = 实体级
+    （proof_scope="entity"——边证明实体，同一实体其他分区视图随之
+    proven；"视图级证明"备选已被用户否决）。同 member 双分区、边只
+    声明在其中一个分区 → 两个 proven 视图都进"关联经营议题"章节；
+    related_issue 取稳定排序序首的视图（候选分区在前）。"""
     pack = _pack(
         candidate_context=[
             _m("research-root", "graph-candidate-and-dispute",
@@ -286,6 +290,9 @@ def test_related_issue_view_granularity_two_partitions():
     assert dc["related_issue"]["member_id"] == "issue-other"
     assert dc["related_issue"]["predicate"] == "researchedBy"
     assert dc["related_issue"]["edge_source_graph"] == "graph-edge-view"
+    # P1 显式契约：实体级证明——边在 graph-edge-view 视图声明，但
+    # graph-candidate-and-dispute 视图（无自声明的边）同样 proven
+    assert dc["related_issue"]["proof_scope"] == "entity"
     # 两个分区视图都进 issue 章节（proven 成员的全部视图，不合并）
     issue_units = compiled.units_by_section["issue"]
     assert sorted((u.member_id, u.partition) for u in issue_units) == [

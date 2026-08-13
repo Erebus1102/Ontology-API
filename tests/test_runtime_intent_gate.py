@@ -41,7 +41,7 @@ from fastapi.testclient import TestClient
 
 from tkos_runtime.adapters.rdflib_dataset_store import RdfDatasetStore
 from tkos_runtime.adapters.gram_intent_resolver import GramIntentResolver
-from tkos_runtime.domain.models import NoMatchError
+from tkos_runtime.domain.models import AmbiguousMatchError, NoMatchError
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA, DATASET = (
@@ -199,47 +199,62 @@ def test_review_R3_tokenhub_progress_still_matches():
 
 
 def test_review_R4_launch_progress_matches():
-    """四审误拒回归：产品 1.0 上线进展如何 → 200（旧规则把跨界碎片
-    线进=上线|进展 当未知主题否决；span[上线] 覆盖率 1/1 通过）。"""
+    """四审误拒回归 + P1 歧义：产品 1.0 上线进展如何 → span 通过
+    （线进 跨界碎片由覆盖率容忍），但 P1 严格规则下 409——issue/risk
+    displayName 各含 8 个查询 2-gram（8/8 并列居顶；进展 prefer 把快照
+    升至 eff 11，但 name 证据 6 < 8 仍居其下——收紧排序键 name_ev 先于
+    eff 的直接数据结果）。候选 = 完整并列集。"""
     s = _full_store()
-    ia = GramIntentResolver(s).resolve(
-        "产品 1.0 上线进展如何", s.allowed_graphs("decision_preparation"))
-    assert ia.root
+    with pytest.raises(AmbiguousMatchError) as ei:
+        GramIntentResolver(s).resolve(
+            "产品 1.0 上线进展如何", s.allowed_graphs("decision_preparation"))
+    assert {c[1] for c in ei.value.candidates} == {
+        "issue-product1-lighthouse-synchronous-delivery",
+        "risk-product1-lighthouse-resource-conflict",
+    }
 
 
 def test_review_R4_current_progress_matches():
-    """四审误拒回归：产品 1.0 当前进度如何 → 200（进度 只在 scope 有
-    覆盖、name 零覆盖——旧强命中门要求 top1 name 命中而误拒；四审起
-    中文准入 = span 覆盖率，不再要求 name 字段）。"""
+    """四审误拒回归 + P1 精确锚定：产品 1.0 当前进度如何 → 200，
+    root 精确 == component-availability（进展 prefer 13+5 vs 12）。
+    进度 只在 scope 有覆盖、name 零覆盖——旧强命中门要求 top1 name
+    命中而误拒；四审起中文准入 = span 覆盖率，不再要求 name 字段。"""
     s = _full_store()
     ia = GramIntentResolver(s).resolve(
         "产品 1.0 当前进度如何", s.allowed_graphs("decision_preparation"))
-    assert ia.root
+    assert ia.root == TKOS + "progress-product1-component-availability-2026-08-11"
 
 
 def test_review_R4_lighthouse_risks_matches():
-    """四审误拒回归：灯塔项目有哪些风险 → 200（有哪/些风 为"有哪些"
-    模板与边界碎片——模板整段移除、碎片由覆盖率容忍）。"""
+    """四审误拒回归 + P1 精确锚定：灯塔项目有哪些风险 → 200，root
+    精确 == resource-conflict（constrain Risk + name 证据 1 vs 0）。
+    有哪/些风 为"有哪些"模板与边界碎片——模板整段移除、碎片由覆盖
+    率容忍。"""
     s = _full_store()
     ia = GramIntentResolver(s).resolve(
         "灯塔项目有哪些风险", s.allowed_graphs("decision_preparation"))
-    assert ia.root
+    assert ia.root == TKOS + "risk-product1-lighthouse-resource-conflict"
 
 
 def test_review_R4_fe_risks_matches():
-    """四审误拒回归：FE 当前有哪些风险 → 200。"""
+    """四审误拒回归 + P1 歧义：FE 当前有哪些风险 → 409（严格规则），
+    候选集合恰 == 两个 Risk 实体（2/1 并列）。"""
     s = _full_store()
-    ia = GramIntentResolver(s).resolve(
-        "FE 当前有哪些风险", s.allowed_graphs("decision_preparation"))
-    assert ia.root
+    with pytest.raises(AmbiguousMatchError) as ei:
+        GramIntentResolver(s).resolve(
+            "FE 当前有哪些风险", s.allowed_graphs("decision_preparation"))
+    assert {c[1] for c in ei.value.candidates} == {
+        "risk-fe-m1-context-conflict",
+        "risk-fe-m1-no-product-consumption",
+    }
 
 
-def test_review_R4_model_selection_render_200(client_with_auth):
-    """"模型现在应该怎么选择"（原 B4 反例）：span[选择] 在全库 13 处有
-    覆盖（barrier-five-control-points 的 scope 含"模型选择与路由权"）
-    → 200，root=barrier。二轮曾因 name-only 强命中门 404；四审中文准入
-    改为 span 覆盖率后此查询合法命中，且 barrier root 可编译渲染
-    （B4 编译器修复的成果：修复前该 root 编译 500）。"""
+def test_review_R4_model_selection_render_409(client_with_auth):
+    """"模型现在应该怎么选择"（原 B4 反例）：span[选择] 覆盖率通过，
+    但 P1 严格规则下 409——8 个节点名称证据 tier（displayName 含
+    "模型"或"选择"之一，1/1）完全并列居顶（barrier 的模型+选择都在
+    scope、name 零证据，0/2 排其下——收紧排序键 name_ev 先于 eff）。
+    候选 = 完整并列集（不受 top5 截断）；无正文产物。"""
     req = dict(BASE_REQ, query="模型现在应该怎么选择")
     resp = client_with_auth.post(
         "/v1/context-packs:render", json={
@@ -248,9 +263,20 @@ def test_review_R4_model_selection_render_200(client_with_auth):
                                "include_structured": True, "max_chars": 6000,
                                "language": "zh-CN"},
         }, headers=_auth_headers())
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["decision_context"]["anchor"]["member_id"] == (
-        "barrier-five-control-points")
+    assert resp.status_code == 409, resp.text
+    detail = resp.json()["detail"]
+    assert detail["code"] == "ontology_context_ambiguous"
+    assert {c["id"] for c in detail["candidates"]} == {
+        "criterion-domain-outcome-01-2026-08",
+        "domain-01-direction-choice-2026-08",
+        "issue-fangdongdong-business-ontology-design-choice",
+        "research-fangdongdong-decision-system-value-model",
+        "risk-fe-m3-model-conflict",
+        "source-fde-business-model-2026-07",
+        "strategy-content-act-model",
+        "strategy-content-tq-model",
+    }
+    assert "rendered" not in resp.json()
 
 
 # ── API 端到端 ──────────────────────────────────────────────────────────
@@ -290,6 +316,10 @@ def test_bedrock_resolve_404_structured(client_with_auth):
     assert "deepresearch" in detail["unmatched_terms"]
     assert "bedrock" in detail["unmatched_terms"]
     assert detail["suggested_action"] == "submit_context_gap"
+    # P1：404 alternatives = 门禁后候选建议（NoMatchError.candidates）
+    assert detail["alternatives"]
+    assert all({"score", "id", "name"} <= set(a)
+               for a in detail["alternatives"])
 
 
 def test_bedrock_render_404_structured(client_with_auth):
@@ -307,6 +337,7 @@ def test_bedrock_render_404_structured(client_with_auth):
     detail = resp.json()["detail"]
     assert detail["code"] == "ontology_context_not_found"
     assert detail["unmatched_terms"]
+    assert detail["alternatives"]
     assert "rendered" not in resp.json()
 
 
