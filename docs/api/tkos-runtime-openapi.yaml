@@ -1,0 +1,758 @@
+openapi: 3.1.0
+info:
+  title: TKOS Ontology Runtime API
+  version: 0.1.0
+  description: |
+    面向企业 Agent 的本体查询与决策上下文编译 API。
+
+    服务先依据用途、时间、确认状态和图分区生成结构化 Context Pack，再按需编译为带来源锚点的 Markdown。响应严格区分已确认事实、候选信息、信息缺口和决策溯源。
+
+    当前公网地址用于联调验证，仍为 HTTP。Bearer Token 和业务材料会以明文经过网络，正式使用前应切换 HTTPS。
+servers:
+  - url: http://115.190.213.44:8000
+    description: TKOS 公网联调环境（HTTP，仅限受控测试）
+tags:
+  - name: 运行状态
+    description: Kubernetes、负载均衡和人工排障使用的存活与就绪检查。
+  - name: 版本信息
+    description: 返回当前代码、本体、实例数据和查询策略指纹。
+  - name: Context Pack
+    description: 根据议题或查询意图，从允许的数据图中解析并返回结构化决策上下文。
+  - name: 决策上下文渲染
+    description: 将 Context Pack 编译为适合 Agent Prompt 的 Markdown，并保留成员、分区和来源锚点。
+paths:
+  /health:
+    get:
+      tags: [运行状态]
+      summary: 存活检查
+      description: 只表示 HTTP 进程可以响应，不检查本体数据是否已加载。
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: 服务进程存活。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+  /ready:
+    get:
+      tags: [运行状态]
+      summary: 就绪检查
+      description: 检查 RDF Store 是否完成加载以及启动 SHACL 门禁是否通过。
+      operationId: getReady
+      security: []
+      responses:
+        '200':
+          description: 服务可以接收业务请求。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+              example:
+                status: ready
+                checks:
+                  store_loaded: true
+                  startup_shacl: pass
+        '503':
+          description: 服务尚未完成初始化或启动校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotReadyResponse'
+  /version:
+    get:
+      tags: [版本信息]
+      summary: 查询运行时版本指纹
+      description: 用于复现某次 Context Pack 所使用的代码、本体、实例数据和规则版本。
+      operationId: getVersion
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 当前运行时版本指纹。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+              example:
+                ontology_release_id: 2.4.0
+                dataset_revision: 25a3dc2dafed3042
+                code_sha: 961ff13
+                policy_version: read-admission/p0-v1
+                query_plan_version: bfs-2gram/p0-v1
+                renderer_version: context-renderer/p0-v1
+                app_version: 0.1.0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/context-packs:resolve:
+    post:
+      tags: [Context Pack]
+      summary: 按议题解析 Context Pack
+      description: |
+        识别最匹配的本体对象，以双向 BFS 展开允许的业务关系，再按数据图、用途、确认状态和有效时间执行准入。
+
+        `organization_scope` 当前被记录并回显，`scope_resolution.enforcement` 会明确返回 `not_enforced`。调用方不得据此声称已完成组织级授权过滤。
+      operationId: resolveContextPack
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequest'
+            examples:
+              feQuarterlyDecision:
+                summary: FE 本季度双线交付议题
+                value:
+                  enterprise_id: tokenking
+                  organization_scope: []
+                  purpose: decision_preparation
+                  query: 是否在本季度同时完成产品 1.0 上线和灯塔项目交付
+                  as_of: '2026-08-13T23:59:59+08:00'
+      responses:
+        '200':
+          description: Context Pack 已解析。认知状态由不同数组和每个成员的 partition 明确表达。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextPack'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 查询未匹配到允许图中的本体对象。`alternatives` 为门禁后候选建议（每项含 score/id/name，最多 5 项）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGapResponse'
+              example:
+                detail:
+                  code: ontology_context_not_found
+                  query: TokenKing产品应该怎么定价
+                  unmatched_terms: [定价]
+                  alternatives:
+                    - {score: 5, id: gap-product1-mvp-acceptance, name: 产品 1.0 MVP 的组件级验收与联调状态待记录}
+                    - {score: 5, id: capability-tokenhub-runtime-base, name: '产品模块 ｜ TokenHub / Agent 运行底座（持续运行）'}
+                  suggested_action: submit_context_gap
+        '409':
+          description: 多个候选在得分与名称证据上完全并列，按严格规则拒绝猜测（无 IRI 兜底）。`candidates` 为完整并列集，每项附本体类型 `type` 与匹配证据 `matched_evidence`（name/scope 的 CJK gram 明细）供 Agent 消歧。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmbiguousMatchResponse'
+              example:
+                detail:
+                  code: ontology_context_ambiguous
+                  query: 模型现在应该怎么选择
+                  candidates:
+                    - score: 2
+                      id: barrier-five-control-points
+                      name: 词元云集应掌握的五个关键控制点
+                      type: CompetitiveBarrier
+                      matched_evidence: {name: [], scope: [模型, 选择]}
+                  suggested_action: disambiguate_query
+        '422':
+          description: 字段校验失败，或时间缺少时区等业务输入错误。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HTTPValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+  /v1/context-packs:render:
+    post:
+      tags: [决策上下文渲染]
+      summary: 解析并渲染决策上下文
+      description: |
+        接受 `resolve_request` 或已有 `pack`，两者必须且只能提供一个。确定性编译器负责内容选择、分节、预算和来源锚点；可选 LLM 只润色已选事实单元，失败时可回退确定性结果。
+
+        `grounding_status=structurally_validated` 只表示结构与锚点校验通过。`semantic_preservation=not_proven` 明确表示系统未证明自然语言语义完全等价。
+      operationId: renderContextPack
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderRequest'
+            examples:
+              deterministicFromQuery:
+                summary: 查询后确定性编译
+                value:
+                  resolve_request:
+                    enterprise_id: tokenking
+                    organization_scope: []
+                    purpose: decision_preparation
+                    query: 是否在本季度同时完成产品 1.0 上线和灯塔项目交付
+                    as_of: '2026-08-13T23:59:59+08:00'
+                  render_options:
+                    mode: deterministic
+                    format: markdown
+                    include_structured: true
+                    max_chars: 6000
+                    language: zh-CN
+              llmWithFallback:
+                summary: 查询后由 LLM 润色，失败时确定性回退
+                value:
+                  resolve_request:
+                    enterprise_id: tokenking
+                    organization_scope: []
+                    purpose: decision_preparation
+                    query: 是否在本季度同时完成产品 1.0 上线和灯塔项目交付
+                    as_of: '2026-08-13T23:59:59+08:00'
+                  render_options:
+                    mode: llm_with_fallback
+                    format: markdown
+                    include_structured: false
+                    max_chars: 6000
+                    language: zh-CN
+      responses:
+        '200':
+          description: 返回自然语言内容、结构化决策上下文、版本元数据，以及按需返回的原始 Context Pack。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: resolve_request 未匹配到允许图中的本体对象。`alternatives` 为门禁后候选建议（每项含 score/id/name，最多 5 项）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGapResponse'
+        '409':
+          description: resolve_request 在多个并列候选中无法消歧，按严格规则拒绝猜测（无 IRI 兜底）。`candidates` 为完整并列集，每项附 `type` 与 `matched_evidence`。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmbiguousMatchResponse'
+        '422':
+          description: 请求结构错误、输入二选一约束失败、时间缺少时区，或 max_chars 低于强制内容预算。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HTTPValidationError'
+                  - $ref: '#/components/schemas/BudgetErrorResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 从私密环境变量 TKOS_API_KEY 读取。不要写入接口示例、公共环境或测试报告。
+  responses:
+    Unauthorized:
+      description: 缺少 Bearer Token 或 Token 无效。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: Unauthorized
+    Forbidden:
+      description: 当前 Principal 无权使用请求中的 purpose。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: 请求字段或时间格式不符合契约。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HTTPValidationError'
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    ReadyResponse:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          const: ready
+        checks:
+          $ref: '#/components/schemas/ReadinessChecks'
+    NotReadyResponse:
+      type: object
+      required: [status, reason]
+      properties:
+        status:
+          type: string
+          const: not_ready
+        reason:
+          type: string
+        checks:
+          $ref: '#/components/schemas/ReadinessChecks'
+    ReadinessChecks:
+      type: object
+      properties:
+        store_loaded:
+          type: boolean
+        startup_shacl:
+          type: string
+          enum: [pass, skipped, fail]
+      additionalProperties: true
+    VersionResponse:
+      type: object
+      required: [ontology_release_id, dataset_revision, code_sha, policy_version, query_plan_version, renderer_version, app_version]
+      properties:
+        ontology_release_id: {type: string}
+        dataset_revision: {type: string}
+        code_sha: {type: string}
+        policy_version: {type: string}
+        query_plan_version: {type: string}
+        renderer_version: {type: string}
+        app_version: {type: string}
+    ResolveRequest:
+      type: object
+      additionalProperties: false
+      required: [enterprise_id, purpose, query, as_of]
+      properties:
+        enterprise_id:
+          type: string
+          minLength: 1
+          description: 企业知识空间标识。
+        organization_scope:
+          type: array
+          items: {type: string}
+          default: []
+          description: 请求期望的组织范围。当前版本仅透传并回显。
+        purpose:
+          type: string
+          minLength: 1
+          example: decision_preparation
+          description: 决定可读取数据图和准入策略的业务用途，同时受 Token 的 allowed_purposes 约束。
+        query:
+          type: string
+          minLength: 1
+          description: 自然语言议题或查询关键词。
+        as_of:
+          type: string
+          format: date-time
+          description: 带时区的 ISO 8601 时间。无时区输入返回 422。
+        actor_id:
+          type: [string, 'null']
+          description: 调用主体业务标识，供审计和后续范围控制扩展。
+    RenderOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        format:
+          type: string
+          const: markdown
+          default: markdown
+        mode:
+          type: string
+          enum: [deterministic, llm_with_fallback, llm_required]
+          default: deterministic
+        include_structured:
+          type: boolean
+          default: false
+        max_chars:
+          type: integer
+          minimum: 100
+          maximum: 100000
+          default: 12000
+          description: Markdown 最大字符数。低于根议题、全部 Gap 和至少一个 Outcome 的强制预算时返回 422。
+        language:
+          type: string
+          default: zh-CN
+    RenderRequest:
+      type: object
+      additionalProperties: false
+      required: [render_options]
+      properties:
+        pack:
+          oneOf:
+            - $ref: '#/components/schemas/ContextPack'
+            - type: 'null'
+        resolve_request:
+          oneOf:
+            - $ref: '#/components/schemas/ResolveRequest'
+            - type: 'null'
+        render_options:
+          $ref: '#/components/schemas/RenderOptions'
+      oneOf:
+        - required: [pack]
+          properties:
+            resolve_request: {type: 'null'}
+        - required: [resolve_request]
+          properties:
+            pack: {type: 'null'}
+    ContextPack:
+      type: object
+      required: [pack_id, schema_version, as_of, query, purpose, matched_root, scope_resolution, current_facts, candidate_context, provenance_context, proof, derived_claims, reasoning_status, context_gaps, conflicts, omissions, contributing_graphs, admission_policy, ontology_release_id, dataset_revision, policy_version, query_plan_version]
+      properties:
+        pack_id: {type: string}
+        schema_version: {type: string, example: context-pack/1.0-draft}
+        as_of: {type: string, format: date-time}
+        query: {type: string}
+        purpose: {type: string}
+        matched_root: {type: string, format: uri}
+        alternative_matches:
+          type: array
+          items: {$ref: '#/components/schemas/AlternativeMatch'}
+        scope_resolution: {$ref: '#/components/schemas/ScopeResolution'}
+        current_facts:
+          type: array
+          description: 通过 Confirmed 图、确认状态和时间门禁的当前事实视图。
+          items: {$ref: '#/components/schemas/ContextPackMember'}
+        candidate_context:
+          type: array
+          description: 候选或初步确认视图，不得当作已确认事实使用。
+          items: {$ref: '#/components/schemas/ContextPackMember'}
+        provenance_context:
+          type: array
+          description: 决策、确认和来源关系形成的溯源视图。
+          items: {$ref: '#/components/schemas/ContextPackMember'}
+        proof:
+          type: array
+          items: {$ref: '#/components/schemas/ProofEdge'}
+        derived_claims:
+          type: array
+          items: {$ref: '#/components/schemas/ContextPackMember'}
+        reasoning_status:
+          type: string
+          example: not_available
+          description: 当前 P0 运行时读取已有 Derived 图，不在线执行 OWL/SWRL 推理。
+        context_gaps:
+          type: array
+          description: 已识别的信息缺口，是 candidate_context 的语义子集。
+          items: {$ref: '#/components/schemas/ContextPackMember'}
+        conflicts:
+          type: array
+          items: {}
+        omissions:
+          type: array
+          items: {$ref: '#/components/schemas/Omission'}
+        contributing_graphs:
+          type: array
+          items: {type: string}
+        admission_policy: {type: string}
+        ontology_release_id: {type: string}
+        dataset_revision: {type: string}
+        policy_version: {type: string}
+        query_plan_version: {type: string}
+        intent_facets:
+          oneOf:
+            - $ref: '#/components/schemas/IntentFacets'
+            - type: 'null'
+          description: P1 意图切面（实体串、请求角色、操作类型）。无切面时为 null。
+    IntentFacets:
+      type: object
+      required: [entity, requested_role, operation]
+      properties:
+        entity:
+          type: [string, 'null']
+          description: 归一化实体串（空格连接）；无实体时为 null。
+        requested_role:
+          type: [string, 'null']
+          enum: [risk, progress, issue, 'null']
+          description: 查询请求的角色语义（风险/进展/议题）；未触发角色词时为 null。
+        operation:
+          type: [string, 'null']
+          enum: [list, status, 'null']
+          description: 列表型（"有哪些"）或状态型（进度查询）操作；其他为 null。
+    ContextPackMember:
+      type: object
+      required: [id, partition, statements, source_graphs, sources, admission]
+      properties:
+        id: {type: string}
+        display_name: {type: [string, 'null']}
+        scope: {type: [string, 'null']}
+        partition:
+          type: string
+          enum: [graph-confirmed-enterprise, graph-candidate-and-dispute, graph-decision-provenance, graph-derived-context]
+        statements:
+          type: array
+          items: {$ref: '#/components/schemas/GraphStatement'}
+        source_graphs:
+          type: array
+          minItems: 1
+          items: {type: string}
+        confirmation_status: {type: [string, 'null']}
+        lifecycle: {type: [string, 'null']}
+        valid_from: {type: [string, 'null'], format: date-time}
+        valid_until: {type: [string, 'null'], format: date-time}
+        sources:
+          type: array
+          items: {type: string}
+        admission: {$ref: '#/components/schemas/AdmissionDecision'}
+        rdf_types:
+          type: array
+          items: {type: string, format: uri}
+    GraphStatement:
+      type: object
+      required: [subject, predicate, object, source_graph]
+      properties:
+        subject: {type: string}
+        predicate: {type: string}
+        object: {type: string}
+        source_graph: {type: string}
+    AdmissionDecision:
+      type: object
+      required: [accept, partition]
+      properties:
+        accept: {type: boolean}
+        partition: {type: string}
+        stage: {type: [string, 'null']}
+        reason: {type: [string, 'null']}
+    AlternativeMatch:
+      type: object
+      required: [score, id, name]
+      properties:
+        score: {type: number}
+        id: {type: string}
+        name: {type: string}
+    ScopeResolution:
+      type: object
+      required: [requested_scope, resolved_scope, enforcement, reason]
+      properties:
+        requested_scope:
+          type: array
+          items: {type: string}
+        resolved_scope:
+          type: array
+          items: {type: string}
+        enforcement:
+          type: string
+          const: not_enforced
+        reason: {type: string}
+    ProofEdge:
+      type: object
+      required: [from, predicate, to, source_graph]
+      properties:
+        from: {type: string}
+        predicate: {type: string}
+        to: {type: string}
+        source_graph: {type: string}
+    Omission:
+      type: object
+      required: [subject, partition, stage, reason]
+      properties:
+        subject: {type: string}
+        partition: {type: string}
+        stage: {type: string}
+        reason: {type: string}
+    RenderResponse:
+      type: object
+      required: [render_schema_version, rendered, decision_context, metadata]
+      properties:
+        render_schema_version:
+          type: string
+          const: context-render/2.0
+        rendered: {$ref: '#/components/schemas/RenderedContext'}
+        decision_context: {$ref: '#/components/schemas/DecisionContext'}
+        metadata: {$ref: '#/components/schemas/RenderMetadata'}
+        structured:
+          oneOf:
+            - $ref: '#/components/schemas/ContextPack'
+            - type: 'null'
+          description: 仅在 include_structured=true 时返回完整 Pack。
+    RenderedContext:
+      type: object
+      required: [format, content, grounding_status, semantic_preservation, rendering_status, mode_requested, mode_used, warnings]
+      properties:
+        format: {type: string, const: markdown}
+        content: {type: string}
+        grounding_status: {type: string, const: structurally_validated}
+        semantic_preservation: {type: string, const: not_proven}
+        rendering_status: {type: string, example: completed}
+        mode_requested:
+          type: string
+          enum: [deterministic, llm_with_fallback, llm_required]
+        mode_used:
+          type: string
+          enum: [deterministic, llm_with_fallback, deterministic_fallback]
+        warnings:
+          type: array
+          items: {type: string}
+    DecisionContext:
+      type: object
+      required: [compiler_version, issue, outcomes, progress, dependencies, risks, evidence, gaps, decisions, secondary, derived, render_omissions, epistemic_summary, warnings]
+      properties:
+        compiler_version: {type: string}
+        issue: {$ref: '#/components/schemas/DecisionIssue'}
+        outcomes: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        progress: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        dependencies: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        risks: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        evidence: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        gaps: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        decisions: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        secondary: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        derived: {$ref: '#/components/schemas/DecisionContextEntryList'}
+        render_omissions:
+          type: array
+          items: {$ref: '#/components/schemas/RenderOmission'}
+        epistemic_summary: {type: string}
+        warnings:
+          type: array
+          items: {type: string}
+    DecisionIssue:
+      allOf:
+        - $ref: '#/components/schemas/DecisionContextEntry'
+        - type: object
+          required: [query, matched_root, epistemic_summary]
+          properties:
+            query: {type: string}
+            matched_root: {type: string, format: uri}
+            epistemic_summary: {type: string}
+    DecisionContextEntryList:
+      type: array
+      items: {$ref: '#/components/schemas/DecisionContextEntry'}
+    DecisionContextEntry:
+      type: object
+      required: [view_key, member_id, name, claim, partition, source_graphs]
+      properties:
+        view_key:
+          type: array
+          prefixItems:
+            - {type: string}
+            - {type: string}
+          minItems: 2
+          maxItems: 2
+        member_id: {type: string}
+        name: {type: string}
+        claim: {type: string}
+        partition: {type: string}
+        source_graphs:
+          type: array
+          minItems: 1
+          items: {type: string}
+        epistemic_status: {type: [string, 'null']}
+    RenderOmission:
+      type: object
+      required: [member_id, partition, role, tier, incident_edges, reason]
+      properties:
+        member_id: {type: string}
+        partition: {type: string}
+        role: {type: string}
+        tier: {type: string}
+        incident_edges: {type: integer}
+        reason: {type: string, example: max_chars_exceeded}
+    RenderMetadata:
+      type: object
+      required: [context_pack_id, dataset_revision, ontology_release_id, renderer_version, pack_origin]
+      properties:
+        context_pack_id: {type: string}
+        dataset_revision: {type: string}
+        ontology_release_id: {type: string}
+        renderer_version: {type: string}
+        pack_origin:
+          type: string
+          enum: [server_resolved, client_supplied]
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail: {type: string}
+    KnowledgeGapResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: object
+          required: [code, query, unmatched_terms, alternatives, suggested_action]
+          properties:
+            code: {type: string, const: ontology_context_not_found}
+            query: {type: string}
+            unmatched_terms:
+              type: array
+              items: {type: string}
+            alternatives:
+              type: array
+              maxItems: 5
+              items: {$ref: '#/components/schemas/AlternativeMatch'}
+              description: 门禁后候选建议，非空；每项含 score/id/name。
+            suggested_action: {type: string, const: submit_context_gap}
+    AmbiguousMatchResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: object
+          required: [code, query, candidates, suggested_action]
+          properties:
+            code: {type: string, const: ontology_context_ambiguous}
+            query: {type: string}
+            candidates:
+              type: array
+              minItems: 2
+              items: {$ref: '#/components/schemas/AmbiguousCandidate'}
+              description: 完整并列候选集（不受 top-5 截断），按 (exact_match, name_evidence, effective_score) 并列。
+            suggested_action: {type: string, const: disambiguate_query}
+    AmbiguousCandidate:
+      type: object
+      required: [score, id, name, type, matched_evidence]
+      properties:
+        score: {type: number}
+        id: {type: string}
+        name: {type: string}
+        type:
+          type: [string, 'null']
+          description: 本体主类型短名（如 OutcomeProgressSnapshot / CompetitiveBarrier）。
+        matched_evidence:
+          $ref: '#/components/schemas/MatchedEvidence'
+    MatchedEvidence:
+      type: object
+      required: [name, scope]
+      properties:
+        name:
+          type: array
+          items: {type: string}
+          description: 命中候选名称文本的 CJK gram。
+        scope:
+          type: array
+          items: {type: string}
+          description: 命中候选 scope 文本（且不在 name 中）的 CJK gram。
+    BudgetErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: object
+          required: [code, requested_max_chars, minimum_required_chars]
+          properties:
+            code: {type: string, const: render_budget_too_small}
+            requested_max_chars: {type: integer}
+            minimum_required_chars: {type: integer}
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          oneOf:
+            - type: array
+              items: {$ref: '#/components/schemas/ValidationError'}
+            - type: string
+    ValidationError:
+      type: object
+      required: [loc, msg, type]
+      properties:
+        loc:
+          type: array
+          items:
+            oneOf:
+              - {type: string}
+              - {type: integer}
+        msg: {type: string}
+        type: {type: string}
+        input: {}
+        ctx: {type: object}

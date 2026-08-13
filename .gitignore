@@ -21,7 +21,12 @@ dist/
 # External tool checkout and local business-source material
 /openllet/
 /业务文档/
-/enterprise-ontology-demo.md
+# Local-only external methodology reference (book transcription)
+/docs/reference/enterprise-ontology-demo.md
+
+# Apifox CLI local state (project↔branch sync metadata + throwaway payloads)
+.apifox/
+.apifox-tmp/
 
 # Local logs and environment files
 *.log

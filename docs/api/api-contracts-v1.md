@@ -1,5 +1,12 @@
 # TKOS Runtime API 契约草案 V1
 
+> ⚠️ **已过时（historical draft）。** 本文件是早期的四业务 API 草案（含 Distillation Job 独立端点、`enterprise_id`/`purpose` 入参）。
+> 权威契约已迁移到：
+> - `docs/mvp/03-api-minimal-design.md` —— 三业务端点模型（resolve / lineage / submissions），作用域由 Key 推导
+> - `docs/api/tkos-runtime-openapi.yaml` —— 当前可执行的 OpenAPI 契约（含 P1.1 的 409/404/intent_facets）
+>
+> 本文件保留作历史参考，不再代表当前或目标契约。2.0 基座迭代后将被物理移除。
+
 ## 1. 生成 Context Pack
 
 `POST /v1/context-packs:resolve`

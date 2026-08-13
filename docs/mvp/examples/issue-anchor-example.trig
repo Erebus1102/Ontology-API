@@ -1,0 +1,93 @@
+# 指导示例：Issue 主锚实例存储形态（非真实业务数据，不得混入 data/instances/）
+# 场景：5 信号 → 3 议题（2/3 确认）→ 议题 2/3 各产 2 研究成果 → 判断链 → 决议 → 任务
+# 对应文档：docs/mvp/01（闭环）、02（类与关系）、03（提交类型）
+
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix inst: <https://ontology.tokenking.ai/instances/tokenking#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------- 候选图：一切写入先进候选 ----------
+<urn:tkos:graph:tokenking:org:tokenking:candidate-and-dispute:current> {
+
+  ## ① 信号（事件数据，只增不改；A/B/C/D/E 同构，此处示 A 与 D）
+  inst:signal-A a tkos:StrategicSignal ;
+      tkos:signalSourceType "external" ;
+      tkos:sourcedFrom inst:source-brief-0801 ;
+      tkos:assertedBy inst:person-ceo ;
+      tkos:recordedAt "2026-08-01"^^xsd:date .
+  inst:signal-D a tkos:StrategicSignal ;
+      tkos:signalSourceType "internal" ;
+      tkos:sourcedFrom inst:source-weekly-0803 ;
+      tkos:assertedBy inst:person-ceo .
+
+  ## ② 议题（主数据锚：稳定 IRI，全链聚合根）
+  # issue-1 由 A/B/C 收敛，未确认 = potential（停在候选）
+  inst:issue-1 a tkos:StrategicIssue ;
+      tkos:informedBy inst:signal-A , inst:signal-B , inst:signal-C ;
+      tkos:assertedBy inst:person-ceo .
+  # issue-2 / issue-3 经确认事件 = confirmed（物化进 confirmed 图，见下）
+  inst:issue-2 a tkos:StrategicIssue ;
+      tkos:informedBy inst:signal-D ;
+      tkos:hasConfirmationStatus tkos:Confirmed .
+  inst:issue-3 a tkos:StrategicIssue ;
+      tkos:informedBy inst:signal-E ;
+      tkos:hasConfirmationStatus tkos:Confirmed .
+
+  ## ③ 研究与成果（issue-2 双路径：CEO 与 DRI 各一，各用自己的个人本体）
+  inst:research-2-ceo a tkos:StrategicResearch ;
+      tkos:addressesIssue inst:issue-2 ;
+      tkos:producesArtifact inst:artifact-2a ;
+      tkos:assertedBy inst:person-ceo .
+  inst:artifact-2a a tkos:Artifact ;
+      prov:wasGeneratedBy inst:activity-research-2-ceo .
+  inst:activity-research-2-ceo a prov:Activity ;
+      prov:used inst:persona-pack-ceo-0805 .        # "用了谁的个人本体" = 生成活动引用 persona Pack
+  inst:research-2-dri a tkos:StrategicResearch ;
+      tkos:addressesIssue inst:issue-2 ;
+      tkos:producesArtifact inst:artifact-2b ;
+      tkos:assertedBy inst:person-dri-01 .          # DRI 指派本身用 RoleAssignment 表达
+  # issue-3 的 artifact-3a / artifact-3b 同构，略
+
+  ## ④ 判断链（版本不可变，战略会议轮次驱动）
+  inst:judgement-2-v0 a tkos:Judgement ;
+      tkos:addressesIssue inst:issue-2 ;
+      tkos:version "0" ;
+      tkos:sourcedFrom inst:meeting-0812 ;          # DecisionRecord：形成于哪轮会议
+      tkos:supportedByEvidence inst:artifact-2a , inst:artifact-2b ;
+      tkos:assertedBy inst:person-ceo ;
+      tkos:validFrom "2026-08-12"^^xsd:date ;
+      tkos:validUntil "2026-08-19"^^xsd:date .      # 被 supersede 后封口
+  inst:judgement-2-v1 a tkos:Judgement ;
+      tkos:addressesIssue inst:issue-2 ;
+      tkos:version "1" ;
+      tkos:supersedes inst:judgement-2-v0 ;
+      tkos:sourcedFrom inst:meeting-0819 ;
+      tkos:validFrom "2026-08-19"^^xsd:date .
+
+  ## ⑤ 决议与任务（close 与 go_on 都是正式落盘）
+  inst:agreement-2 a tkos:Agreement ;
+      tkos:addressesIssue inst:issue-2 ;
+      tkos:adoptsJudgement inst:judgement-2-v1 ;
+      tkos:agreementStatus "go_on" ;
+      tkos:confirmedBy inst:person-ceo .
+  inst:agreement-3 a tkos:Agreement ;
+      tkos:addressesIssue inst:issue-3 ;
+      tkos:adoptsJudgement inst:judgement-3-v2 ;
+      tkos:agreementStatus "close" .
+  inst:mission-q3 a tkos:Mission ;
+      tkos:mandatedBy inst:agreement-2 ;
+      tkos:belongsTo inst:domain-fe .
+}
+
+# ---------- 溯源图：确认事件（不可变） ----------
+<urn:tkos:graph:tokenking:org:tokenking:decision-provenance:current> {
+  inst:confirm-issue-2 a tkos:ConfirmationEvent ;
+      tkos:confirmedBy inst:person-ceo ;
+      tkos:recordedAt "2026-08-05"^^xsd:date .
+  inst:meeting-0812 a tkos:DecisionRecord .
+  inst:meeting-0819 a tkos:DecisionRecord .
+}
+
+# ---------- 确认后：当前有效断言物化进 confirmed 图（由确认事件驱动生成，非手工维护） ----------
+# <urn:tkos:graph:tokenking:org:tokenking:confirmed-enterprise:current> { ... }

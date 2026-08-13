@@ -1,5 +1,9 @@
 # Context Pack 查询与渲染 API
 
+> ⚠️ **已过时（historical）。** resolve + render 的权威契约以 `docs/api/tkos-runtime-openapi.yaml` 为准（含 P1.1 的 409 歧义 / 404 候选建议 / `intent_facets`）。
+> 目标形态见 `docs/mvp/03-api-minimal-design.md` §3.1：render 将并入 resolve 的 `render: true` 选项（2.0 基座迭代交付）。
+> 本文件保留作历史参考，2.0 后移除。
+
 ## 1. 接口用途
 
 该接口接收一个企业议题或自然语言查询，完成本体对象匹配、Context Pack 查询、决策上下文编译和 Markdown 渲染。

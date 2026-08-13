@@ -1,203 +1,123 @@
 # TKOS Ontology Runtime
 
-TKOS Ontology Runtime 面向企业 Agent、董办和项目团队，提供经营本体查询、业务文档蒸馏、判断溯源和受控知识更新。
+`tkos-ontology-runtime` —— 面向企业一号位 Agent 的经营本体 Runtime。提供受用途、时间、确认状态与图分区准入的决策上下文（Context Pack），支撑战略闭环 `Signal → Issue → Research → Judgement 版本链 → Agreement → Mission`。
 
-当前版本包含 V2.4 OWL 本体、SHACL 约束、SWRL 推理测试、真实业务候选实例、API 1 进程内 Runtime Library（保留命名图身份+敏感隔离+分区切片准入）以及本地 FastAPI HTTP 服务。API 3（Assertion Lineage）、RDF Store、异步 Worker、生产身份权限、事务写入与独立部署制品仍待实现。
+> 当前版本：**Runtime 1.0（P1.1）**，已部署火山引擎 ECS（`115.190.213.44:8000`，cn-beijing）。
+> 完整协作规则见 [CLAUDE.md](CLAUDE.md)；MVP 设计权威见 [`docs/mvp/`](docs/mvp/)。
 
-## 目标能力
+## 当前能力
 
-1. 根据议题或意图生成版本化 Context Pack。
-2. 从业务文档生成可追溯的候选实例批次。
-3. 查询候选判断的来源、案例、推理规则、确认记录与替代版本。
-4. 受理 Evidence、DecisionCase、DecisionLearning 和 ContextGap，经校验与确认后更新当前有效视图。
+| 能力 | 端点 | 状态 |
+|---|---|---|
+| 议题 → 结构化 Context Pack | `POST /v1/context-packs:resolve` | ✅ |
+| Context Pack + Markdown 渲染 | `POST /v1/context-packs:render` | ✅（2.0 并入 resolve） |
+| 运维与健康 | `GET /health` `/ready` `/version` | ✅ |
+| 认证授权 | Bearer + purpose 门禁 | ✅ |
+| 断言溯源 | `GET /v1/assertions/{id}/lineage` | ⏳ 迭代 1 |
+| 候选写入与确认 | `POST /v1/submissions` | ⏳ 迭代 2 |
 
-完整协作与实现规则见 [AGENTS.md](AGENTS.md)。
+**P1.1 契约亮点**：解析器不再对并列候选兜底——得分与名称证据并列时返回 **409 歧义**（候选含本体 `type` + `matched_evidence`）；知识库未覆盖时返回 **404** 并附 `alternatives` 候选建议；命中根议题的 Pack 附 `intent_facets`（entity / requested_role / operation）。
 
 ## 五层架构
 
 ```text
-Layer 5  Agent & Application
-                    ↓
-Layer 4  Context & Reasoning Runtime
-                    ↓
-Layer 3  Ontology & Policy Model
-                    ↓
-Layer 2  Governed Knowledge Graph
-                    ↓
-Layer 1  Enterprise Source
+Layer 5  Agent & Application        企业 Agent、董办应用、项目团队工具
+Layer 4  Context & Reasoning Runtime 意图解析、查询规划、推理、冲突检测、Context 编译与渲染
+Layer 3  Ontology & Policy Model     OWL、SHACL、SWRL、场景 Profile、策略与查询模板
+Layer 2  Governed Knowledge Graph    Current、Candidate、Provenance、Sensitive、Derived 命名图
+Layer 1  Enterprise Source           飞书、文档、会议、业务系统、人工提交与 Agent 运行记录
 ```
 
-- Agent & Application 通过业务 API 使用 Context Pack、溯源结果和 Submission Action。
-- Context & Reasoning Runtime 执行意图解析、查询规划、推理、冲突检测、Context 编译和可选渲染。
-- Ontology & Policy Model 发布 OWL、SHACL、SWRL、场景 Profile 和策略定义。
-- Governed Knowledge Graph 保存 Current、Candidate、Provenance、Sensitive 和 Derived 命名图。
-- Enterprise Source 包括飞书、文档、会议、业务系统、人工提交和 Agent 运行记录。
-
-身份、安全与组织作用域，以及来源、版本、审计与可观测性贯穿五层。首期采用一个 API 服务、一个异步 Worker 和一个 RDF Store，各模块通过稳定领域契约协作；未来可以按容量、故障域和团队边界拆分部署。
-
-## 稳定制品与组合方式
-
-运行时围绕四类版本化制品组合：
-
-| 制品 | 用途 |
-|---|---|
-| `OntologyReleasePackage` | 向 Runtime 发布本体模块、Shapes、规则、Profiles、图清单和兼容信息 |
-| `AssertionEnvelope` | 统一表达事实或判断及其作用域、来源、时间、确认与修订链 |
-| `CandidateAssertionBatch` | 承接文档蒸馏和人工/Agent 提交的候选知识与校验结果 |
-| `ContextPack` | 向 Agent 提供当前事实、候选材料、派生结论、案例、冲突、缺口和 Proof |
-
-四个 API 保持业务语义稳定，内部推理器、图数据库、向量检索、文档解析器和 LLM 通过 Adapter 替换：
-
-```text
-API 1  Query / Intent       → ContextPack
-API 2  SourceSnapshot       → CandidateAssertionBatch
-API 3  Assertion ID         → Lineage / Proof Graph
-API 4  Submission / Action  → Candidate / Confirmation / Release Receipt
-```
-
-结构化 Context Pack 是 API 1 的权威输出。自然语言 Rendering 可以降级或缺失，并逐项引用 Pack member ID。LLM 不可用时仍返回结构化结果。
+模块化单体，通过四类版本化制品组合：`OntologyReleasePackage`、`AssertionEnvelope`、`CandidateAssertionBatch`、`ContextPack`。内部推理器、图库、向量检索、文档解析器、LLM 均经 Adapter 替换，不直接暴露为业务接口。
 
 ## 项目结构
 
 ```text
-Ontology-API/
-├── AGENTS.md
-├── pyproject.toml
-├── ontology/
-│   ├── schema/       OWL / JSON-LD
-│   ├── shapes/       SHACL
-│   ├── datasets/     命名图与运行契约
-│   ├── views/        Protégé 人读制品
-│   └── catalog/      本体目录
-├── data/
-│   └── instances/    真实业务候选实例与确认事件
-├── src/tkos_runtime/
-│   ├── api/
-│   ├── application/
-│   ├── domain/
-│   └── adapters/
-├── scripts/          本地原型与维护脚本
-├── tests/            SHACL、Context Pack 与 Openllet 测试
-└── docs/
-    ├── architecture/
-    ├── api/
-    ├── decisions/
-    ├── audits/
-    └── examples/
+.
+├── docs/
+│   ├── mvp/                  MVP 权威设计（01 统一语言 / 02 本体 V3.0 / 03 API v1 / 04 2.0 基座迭代）
+│   ├── api/                  OpenAPI 契约（权威）+ 历史草案
+│   ├── architecture/         架构与部署设计
+│   ├── decisions/  audits/  examples/
+├── ontology/                 规范本体：schema(OWL/JSON-LD) · shapes(SHACL) · datasets(trig) · views(Protégé)
+├── data/instances/           真实业务候选实例与确认事件
+├── src/tkos_runtime/         可部署服务（api · application · domain · adapters）
+├── tests/                    183 pytest + 4 门禁脚本 + Openllet SWRL
+├── scripts/                  原型与维护脚本
+├── deploy/ecs/               ECS 单节点部署（systemd + docker-run）
+└── Makefile                  test / generate / install 聚合入口
 ```
 
-## 架构文档
+本体命名空间：`https://ontology.tokenking.ai/tkos#`。
 
-- [Runtime 架构基线](docs/architecture/runtime-architecture.md)
-- [文档蒸馏与冷启动](docs/architecture/distillation-and-cold-start.md)
-- [四个 API 契约草案](docs/api/api-contracts-v1.md)
-- [组织作用域 ADR](docs/decisions/ADR-0001-organization-scope.md)
-- [当前经营本体视图](docs/examples/TKOS-current-operating-view-2026-08-11.md)
-
-## 规范制品
-
-- `ontology/schema/tkos-ontology.jsonld` —— 人工编辑源（紧凑 @context、多语言 label）
-- `ontology/schema/tkos-ontology.ttl` —— 推理器规范 Turtle，由 `scripts/export_schema_ttl.py` 从 JSON-LD 生成（保留 imports）
-- `ontology/shapes/tkos-validation-shapes.jsonld`
-- `ontology/datasets/tkos-runtime-dataset.trig`
-- `ontology/views/tkos-ontology-protege-view.ttl` —— 去 imports 的 Protégé 浏览副本，由 `scripts/export_protege_view.py` 生成
-
-本体命名空间为 `https://ontology.tokenking.ai/tkos#`。
-
-`tests/run_schema_isomorphism.py` 守卫 JSON-LD ⇔ Turtle ⇔ Protégé 视图三者的同构（按结构匹配空白节点），编辑任一后用 `make generate` 重生成派生制品，否则同构测试会失败。
-
-当前共享核心、经营、决策溯源和治理模块主要保存在同一本体发布文件中。后续将为模块建立独立 Ontology IRI、Version IRI、imports、Shape/Profile 和兼容测试，并继续生成合并制品供 Protégé 与推理器使用。
-
-## 真实实例状态
-
-现有实例来自 FE Mission Card、Week 1 复盘、产品 1.0 更新、CEO Agent 场景及房懂懂材料。当前实例位于候选事实图与决策溯源图；当前有效企业图和派生 Context Pack 图尚未物化。
-
-决策准备用途允许读取候选材料，输出必须逐项保留确认状态。正式执行与 Mission 验收使用已确认且当前有效的内容。
-
-## 当前工程边界
-
-已经具备：
-
-- V2.4 OWL/JSON-LD 本体和 Protégé 视图
-- SHACL 正向与负向约束测试
-- Openllet SWRL 验收推导测试
-- RDF Dataset 命名图契约
-- API 1 Runtime Library：进程内 Context Pack Resolver（保留图身份、敏感节点隔离、分区切片准入、确定性 BFS、cwd 无关 revision、Agent API 契约验证客户端）
-- API 1 本地 FastAPI HTTP 服务（`POST /v1/context-packs:resolve` + `POST /v1/context-packs:render`）
-- NL Rendering：确定性 Decision Context Compiler（角色分类→分节组装→预算分配），可选 LLM 润色（post-LLM section-aware 校验），**Render Schema v2**（`render_schema_version: "context-render/2.0"`，`grounding_status: structurally_validated`，`semantic_preservation: not_proven`，`decision_context.compiler_version: decision-context/v1`）
-
-仍待实现：
-
-- API 3 Assertion Lineage（计划中，本轮降级）
-- Ontology Release Package Manifest 与四类制品的 JSON Schema
-- 生产 RDF Store、异步蒸馏 Worker、事务写入与发布指针
-- 服务身份、组织策略和 Token 预算
-- Reasoning Runtime 能力接口及 Adapter
-- 独立部署制品（当前仅支持仓库内本地运行）
-- 真实 Agent 集成（当前通过模拟客户端验证 API 契约）
-- API 兼容、故障降级、权限和真实业务端到端测试
-
-实现顺序：
-
-1. 固定 Release Package、Assertion、Candidate Batch 和 Context Pack Schema。
-2. 为 IntentResolver、GraphRetriever、SemanticReasoner、ContextCompiler、ProofBuilder 和 Renderer 建立接口。
-3. 实现 API 1 的结构化 Context Pack 闭环，保留图身份和全部版本信息。
-4. 实现 API 2 与 API 4 共用的候选、校验、确认和发布事件链。
-5. 实现 API 3 的来源、规则、确认和修订 Proof 图。
-6. 通过首个真实议题完成跨组织、候选材料、降级与溯源验收。
-
-## 本地验证
-
-安装全部开发和 API 依赖：
+## 快速开始
 
 ```bash
+# 1. 安装（开发 + API 依赖）
 python3 -m pip install -e '.[dev]'
-```
 
-聚合运行（推荐）。`make test-fast` 跑全部纯 Python 套件（4 个旧门禁 + 38 项 Runtime/API/Harness pytest 测试），`make test` 在此基础上追加 Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）：
+# 2. 测试（聚合，推荐）
+make test-fast   # SHACL + Context Pack + 实例一致 + 模式同构 + Runtime/API/Harness（183 pytest）
+make test        # 上述 + Openllet SWRL 验收（首次需 Maven 构建 Openllet CLI）
 
-```bash
-make test-fast    # SHACL + Context Pack + 实例一致性 + 模式同构 + Runtime/API/Harness (38 tests)
-make test         # 上述 + Openllet SWRL 验收
-make generate     # 从 JSON-LD 重生成 Turtle 与 Protégé 视图派生制品
+# 3. 重生成派生本体制品（编辑 JSON-LD 后必须）
+make generate    # JSON-LD → Turtle → Protégé 视图
+
+# 4. 启动本地 API
+python3 -m uvicorn tkos_runtime.api.server:app --reload --port 8000
 ```
 
 单独运行各套件：
 
 ```bash
-python3 tests/run_v2_3_shacl.py              # SHACL 正负向用例
+python3 tests/run_v2_3_shacl.py              # SHACL 正负向
 python3 tests/run_v2_3_context_pack.py       # Context Pack 读侧过滤
-python3 tests/run_instance_conformance.py    # 真实实例硬门禁 + 夹具可见性
-python3 tests/run_schema_isomorphism.py      # JSON-LD ⇔ Turtle ⇔ Protégé 视图同构守卫
-python3 tests/run_v2_3_swrl_openllet.py      # Openllet SWRL 验收推导
-python3 -m pytest tests/test_runtime_*.py tests/test_agent_harness.py -v   # Runtime/API/Harness (38 tests)
+python3 tests/run_instance_conformance.py    # 真实实例硬门禁
+python3 tests/run_schema_isomorphism.py      # JSON-LD ⇔ Turtle ⇔ Protégé 同构
+python3 tests/run_v2_3_swrl_openllet.py      # Openllet SWRL 验收
+python3 -m pytest tests/ -v                  # Runtime/API/Harness
 ```
 
-`run_instance_conformance.py` 把 `data/instances/*.trig` 合并为生产式装载图并硬断言 SHACL 合规；测试夹具的违例按 `by-design / read-side / legacy` 分类输出，仅作可见性提示。
+GitHub Actions（`.github/workflows/ci.yml`）在 push/PR 时跑全部纯 Python 套件（必过），SWRL 为信息性 job。
 
-GitHub Actions（`.github/workflows/ci.yml`）在推送与 PR 时自动运行上述全部纯 Python 套件（必过门禁），SWRL 套件作为信息性 job。
+## 契约与验证
 
-### 启动本地 API 服务
-
-```bash
-python3 -m uvicorn tkos_runtime.api.server:app --reload --port 8000
-```
-
-### Agent API 契约验证
-
-`scripts/agent_harness.py` 作为独立 HTTP 客户端，模拟 Agent 消费 Context Pack API 的行为——它不导入 tkos_runtime 内部模块，通过 HTTP 与 API 服务通信，验证返回的 Pack 包含图溯源、认知诚实标记、版本元数据和 proof 边。
+- **OpenAPI**：[`docs/api/tkos-runtime-openapi.yaml`](docs/api/tkos-runtime-openapi.yaml)（含 P1.1 的 409/404/`intent_facets` 与 `/version` 指纹）。
+- **Apifox**：项目 `8708985`「Tokenking」，AI 分支 `ai/20260813-from-main-tkos-runtime-api`（5 端点 + 指南文档 + 13 测试用例）。
+- **Agent 契约验证**：`scripts/agent_harness.py` 作为独立 HTTP 客户端模拟 Agent 消费 Context Pack（不导入内部模块，纯 HTTP）。
 
 ```bash
 python3 scripts/agent_harness.py
-```
-
-> **注意**：当前仅验证了 API 契约对独立 HTTP 客户端可用，尚未接入真实 CEO-Agent 代码。真实 Agent 端到端联调（Agent 消费 Pack、注入 User Prompt、输出引用 Pack member ID）仍在后续阶段。
-
-运行真实议题查询原型：
-
-```bash
 python3 scripts/resolve_issue_context.py \
   --query '是否在本季度同时完成产品 1.0 上线和灯塔项目交付'
 ```
 
-该脚本复用了当前 Runtime 的 TRAVERSAL 谓词集（`domain/query_plan.py` 为单一来源）；生产实现必须保留命名图身份、组织范围、策略结果、Release 和省略记录。
+> 真实 CEO-Agent 端到端联调（Agent 消费 Pack、注入 User Prompt、输出引用 Pack member ID）仍在后续阶段。
+
+## 部署
+
+ECS 单节点试点（cn-beijing，公网 `115.190.213.44:8000`，HTTP 受控联调；正式使用前切 HTTPS）。部署制品与流程见 [`deploy/ecs/`](deploy/ecs/)：
+
+- 镜像 `tkos-runtime:<code_sha>-<dataset_revision>`（当前 `961ff13-25a3dc2dafed30`）
+- `tkos-runtime.service`（systemd）+ `docker-run.sh`
+- `env.production.example`（`TKOS_API_KEY` 等只入 `.env`，不入仓库）
+
+## 路线图
+
+| 阶段 | 内容 | 文档 |
+|---|---|---|
+| 1.0（已交付） | resolve + render 读路径、authN/authZ、ECS 部署、P1.1 歧义/缺口契约 | — |
+| **2.0 基座** | V3.0 本体手术 + v1 契约对齐 + Key 模型（lineage / submissions 的共同前置） | [`docs/mvp/04`](docs/mvp/04-iteration-2.0-foundation.md) |
+| 迭代 1 | `lineage` 端点 + 角色时序投影（验收 5/7） | `docs/mvp/03` §3.3 |
+| 迭代 2 | `submissions` 写入闭环 + 9 类提交 + 确认/物化（验收 1-4/6） | `docs/mvp/03` §3.4 |
+| 后续 | 在线推理、异步蒸馏 Job、Persona 本体包、真实 Agent 联调 | `docs/mvp/01` §6 |
+
+## 规范制品
+
+- `ontology/schema/tkos-ontology.jsonld` —— 人工编辑源（紧凑 @context、多语言 label）
+- `ontology/schema/tkos-ontology.ttl` —— 推理器规范 Turtle（`scripts/export_schema_ttl.py` 生成，保留 imports）
+- `ontology/shapes/tkos-validation-shapes.jsonld` —— SHACL 约束
+- `ontology/datasets/tkos-runtime-dataset.trig` —— 命名图运行契约
+- `ontology/views/tkos-ontology-protege-view.ttl` —— 去 imports 的 Protégé 副本（`scripts/export_protege_view.py` 生成）
+
+编辑任一本体源后用 `make generate` 重生成派生制品，否则 `run_schema_isomorphism.py` 同构守卫会失败。
