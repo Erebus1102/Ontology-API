@@ -80,6 +80,25 @@
       {"sh:path":{"@id":"tkos:revisionKind"},"sh:minCount":1,"sh:maxCount":1,"sh:datatype":{"@id":"xsd:string"}}, {"sh:path":{"@id":"tkos:recordedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}, {"sh:path":{"@id":"tkos:sourcedFrom"},"sh:minCount":1}
     ]},
     {"@id":"tkos:DecisionProfileViewShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:DecisionProfileView"},"sh:property":[{"sh:path":{"@id":"tkos:viewGeneratedAt"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}},{"sh:path":{"@id":"tkos:viewAsOf"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:dateTime"}}],"sh:sparql":[{"sh:message":"决策画像视图至少应可追溯到一项归属断言、决策学习或决策记录。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { FILTER NOT EXISTS { { $this tkos:derivedFromAssertion ?x } UNION { $this tkos:derivedFromLearning ?x } UNION { $this tkos:derivedFromDecisionRecord ?x } } }"}]},
-    {"@id":"tkos:MissionResponsibleAssignmentTemporalCoverageShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Mission"},"sh:sparql":[{"sh:message":"责任承担必须覆盖 Mission 全周期。Mission 有结束时间时，承担结束时间不得早于该时间；Mission 为开放周期时，责任承担也须为开放周期。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { $this tkos:hasResponsibleAssignment ?a . { $this tkos:validUntil ?missionEnd . FILTER NOT EXISTS { ?a tkos:validUntil ?assignmentEnd . FILTER(?assignmentEnd >= ?missionEnd) } } UNION { FILTER NOT EXISTS { $this tkos:validUntil ?missionEnd } . ?a tkos:validUntil ?assignmentEnd } }"}]}
+    {"@id":"tkos:MissionResponsibleAssignmentTemporalCoverageShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Mission"},"sh:sparql":[{"sh:message":"责任承担必须覆盖 Mission 全周期。Mission 有结束时间时，承担结束时间不得早于该时间；Mission 为开放周期时，责任承担也须为开放周期。","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { $this tkos:hasResponsibleAssignment ?a . { $this tkos:validUntil ?missionEnd . FILTER NOT EXISTS { ?a tkos:validUntil ?assignmentEnd . FILTER(?assignmentEnd >= ?missionEnd) } } UNION { FILTER NOT EXISTS { $this tkos:validUntil ?missionEnd } . ?a tkos:validUntil ?assignmentEnd } }"}]},
+    {"@id":"tkos:AgreementShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Agreement"},"sh:property":[
+      {"sh:path":{"@id":"tkos:agreementStatus"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:string"},"sh:in":{"@list":[{"@value":"close"},{"@value":"go_on"}]}},
+      {"sh:path":{"@id":"tkos:adoptsJudgement"},"sh:minCount":0,"sh:class":{"@id":"tkos:Judgement"}},
+      {"sh:path":{"@id":"tkos:addressesIssue"},"sh:minCount":0,"sh:class":{"@id":"tkos:StrategicIssue"}}
+    ],"sh:sparql":[
+      {"sh:message":"同一战略议题同时最多一个有效(go_on) Agreement","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this ?issue WHERE { $this a tkos:Agreement ; tkos:addressesIssue ?issue ; tkos:agreementStatus \"go_on\" . ?other a tkos:Agreement ; tkos:addressesIssue ?issue ; tkos:agreementStatus \"go_on\" . FILTER(?other != $this) }"}
+    ]},
+    {"@id":"tkos:FeedbackRecordShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:FeedbackRecord"},"sh:property":[
+      {"sh:path":{"@id":"tkos:evaluatesTarget"},"sh:minCount":1},
+      {"sh:path":{"@id":"tkos:qualityScore"},"sh:minCount":0,"sh:datatype":{"@id":"xsd:integer"},"sh:minInclusive":{"@type":"xsd:integer","@value":1},"sh:maxInclusive":{"@type":"xsd:integer","@value":5}},
+      {"sh:path":{"@id":"tkos:experienceScore"},"sh:minCount":0,"sh:datatype":{"@id":"xsd:integer"},"sh:minInclusive":{"@type":"xsd:integer","@value":1},"sh:maxInclusive":{"@type":"xsd:integer","@value":5}}
+    ],"sh:sparql":[
+      {"sh:message":"FeedbackRecord 至少需一个评分(qualityScore 或 experienceScore)","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this WHERE { $this a tkos:FeedbackRecord . FILTER NOT EXISTS { $this (tkos:qualityScore|tkos:experienceScore) ?any } }"}
+    ]},
+    {"@id":"tkos:ProductShape","@type":"sh:NodeShape","sh:targetClass":{"@id":"tkos:Product"},"sh:property":[
+      {"sh:path":{"@id":"tkos:objectId"},"sh:minCount":1,"sh:datatype":{"@id":"xsd:string"},"sh:maxCount":1}
+    ],"sh:sparql":[
+      {"sh:message":"Product objectId 必须唯一","sh:select":"PREFIX tkos: <https://ontology.tokenking.ai/tkos#> SELECT $this ?other WHERE { $this a tkos:Product ; tkos:objectId ?id . ?other a tkos:Product ; tkos:objectId ?id . FILTER(?other < $this) }"}
+    ]}
   ]
 }
