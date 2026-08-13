@@ -21,9 +21,9 @@ sequenceDiagram
     DCC-->>Render: CompiledDecisionContext（超预算单元进入 render_omissions；RenderBudgetTooSmall → 422）
     Render-->>API: {render_schema_version, rendered{format, content, grounding_status, semantic_preservation, rendering_status, mode_used, warnings}, decision_context, metadata{pack_origin: server_resolved}}
     API->>Ser: result["structured"] = pack_to_dict(pack)；attach_version_block(result, request.state.request_id, pack)
-    Ser-->>Client: 200 {rendered, structured, 六键版本块}（渲染失败经共享映射转 422/500，结构化 Pack 照常随附）
+    Ser-->>Client: 200 {rendered, structured, 六键版本块}（render 失败经共享映射抛 422/500 错误 detail：无渲染输出、无结构化 Pack；客户端可去掉 render:true 重试，resolve 主路径照常返回结构化 Pack）
 
-    Note over Client, Ser: deprecated 旁路（过渡期仍接受、log warning、迭代 1 删除）：client-supplied pack
+    Note over Client, Ser: deprecated 旁路（过渡期仍接受、log warning、迭代 1 删除）：虚线仅示意 client-supplied pack 变体；resolve_request 变体（server_resolved）同 deprecated 保留
 
     Client-.->>API: POST /v1/context-packs:render，body {"pack": {…}}（deprecated）
     API-.->>API: log warning：deprecated render field: pack — use resolve render:true
@@ -41,4 +41,4 @@ sequenceDiagram
 - **L5（API 传输面）**：resolve handler 判定 `render:true` 分支并把 `rendered` + `structured` + 版本块装配为单一响应；deprecated 的 client-supplied `pack` 路径同样在 L5 被接受、记 warning 并保持可用（迭代 1 删除），且仍需通过 `assert_purpose` 门禁。
 - **L4（Context & Reasoning Runtime）**：`render()` → `DecisionContextCompiler.compile` 把结构化 Pack 编译为 sectioned 事实单元，按字符预算两遍分配后组装 Markdown，超预算单元进入 `render_omissions`；渲染只引用 Pack 成员 ID，不产生新事实。
 - **L2（Governed Knowledge Graph）**：渲染不触碰图存储——全部事实在 resolve 阶段已物化为 `ContextPack`；`structured` 随附 `rendered` 正是"结构化 Pack 是权威结果、Rendering 不产生新事实"的契约体现。
-- **边界**：渲染失败（`RenderBudgetTooSmall` / `ContextRootMissingError` 等）经共享映射 `_render_exception_to_http` 转 422/500，不阻断结构化 Pack；LLM 模式只做润色且失败回退 deterministic，语义保留始终 `not_proven`。
+- **边界**：render 失败经共享映射 `_render_exception_to_http` 转 422/500（`render_budget_too_small` / 其他映射错误 detail），无 rendered 也无 structured 附随；resolve 主路径本身不受影响；LLM 模式只做润色且失败回退 deterministic，语义保留始终 `not_proven`。
