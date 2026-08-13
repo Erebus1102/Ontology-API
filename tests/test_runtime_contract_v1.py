@@ -11,6 +11,8 @@ B2: render 并入 resolve（render:true 返回 Markdown + structured pack）；
     :render 端点的 client-supplied pack 路径仍接受（deprecated，未删除）。
 B3: 统一版本固定块（api_version/request_id/ontology_release/
     dataset_revision/policy_version/query_plan_version）+ request_id 中间件。
+C3: 跨租户 404——Principal.allowed_scopes 窄化可见图，第二租户图不可见
+    → 404（ontology_context_not_found，不泄漏存在性）。
 """
 from __future__ import annotations
 
@@ -217,3 +219,56 @@ def test_request_id_respects_client_header(client_with_auth):
     j = r.json()
     assert j["request_id"] == "my-trace-1"
     assert r.headers["X-Request-ID"] == "my-trace-1"
+
+
+# ---------------------------------------------------------------------------
+# C3: 跨租户 404 —— Principal.allowed_scopes 窄化可见图（不泄漏存在性）
+# ---------------------------------------------------------------------------
+
+def test_cross_tenant_resolve_returns_404(monkeypatch):
+    """C3: Principal.allowed_scopes 窄化可见图 → 跨租户 404。
+
+    两个 Key 都允许派生出的 purpose（scenario=task_followup →
+    mission_review），purpose 门禁（先执行）对两者都通过——隔离出
+    scope 机制本身。第一租户 `scopes: None`（cxo 默认全可见）→ 200；
+    第二租户 `scopes: []`（空集）→ 与 purpose 允许图的交集为空 →
+    intent 无命中 → 404 `ontology_context_not_found`（知识不可见即
+    不存在，不泄漏存在性）。
+
+    参照 tests/test_runtime_key_model.py::test_cross_tenant_resolve_returns_404
+    的双租户模式；复用本模块的 `_TEST_KEY`/`_auth_headers`。credentials
+    在 create_app() 时加载，`client_with_auth` fixture 在测试体执行前
+    已建 app，故本测试沿本模块
+    test_resolve_key_default_scenario_derives_purpose 的模式自建 client。
+    """
+    monkeypatch.delenv("TKOS_API_KEY", raising=False)
+    monkeypatch.setenv("TKOS_API_KEYS_JSON", json.dumps({
+        _TEST_KEY: {
+            "name": "tk-cxo", "tenant": "tokenking", "role": "cxo",
+            "purposes": ["*"], "scopes": None,
+        },
+        "other-key": {
+            "name": "other", "tenant": "other", "role": "executor",
+            "purposes": ["mission_review"], "scopes": [],
+        },
+    }))
+    client = TestClient(create_app())
+    body = {"query": "灯塔项目进展如何",
+            "as_of": "2026-08-11T00:00:00+08:00",
+            "scenario": "task_followup"}
+    # 第一租户：scopes=None → 全可见 → 200（scenario→purpose 推导贯穿）
+    r1 = client.post(
+        "/v1/context-packs:resolve",
+        headers=_auth_headers(),
+        json=body,
+    )
+    assert r1.status_code == 200, r1.text
+    assert r1.json()["purpose"] == "mission_review"
+    # 第二租户：scopes=[] → 图不可见 → 无命中 → 404（不泄漏存在性）
+    r2 = client.post(
+        "/v1/context-packs:resolve",
+        headers={"Authorization": "Bearer other-key"},
+        json=body,
+    )
+    assert r2.status_code == 404, r2.text
+    assert r2.json()["detail"]["code"] == "ontology_context_not_found"
