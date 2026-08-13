@@ -287,6 +287,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 purpose=req.purpose,
                 as_of=as_of,
                 organization_scope=list(req.organization_scope),
+                principal_scopes=principal.allowed_scopes,
             )
         except ValueError as exc:
             # AdmissionPolicy.allowed_graphs raises ValueError for unknown purpose.
@@ -329,6 +330,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                     purpose=rr.get("purpose", "decision_preparation"),
                     as_of=as_of,
                     organization_scope=list(rr.get("organization_scope", [])),
+                    principal_scopes=principal.allowed_scopes,
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc

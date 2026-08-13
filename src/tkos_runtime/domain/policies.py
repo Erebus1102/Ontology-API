@@ -14,10 +14,16 @@ class AdmissionPolicy:
     def __init__(self, purpose_allowed: dict[str, list[str]] | None = None):
         self.purpose_allowed = purpose_allowed or _DEFAULT_PURPOSE_ALLOWED
 
-    def allowed_graphs(self, purpose: str, registered: set[str], restricted: set[str]) -> list[str]:
+    def allowed_graphs(self, purpose: str, registered: set[str], restricted: set[str],
+                       principal_scopes: set[str] | None = None) -> list[str]:
         if purpose not in self.purpose_allowed:
             raise ValueError(f"unknown purpose: {purpose!r}")
         base = [g for g in self.purpose_allowed[purpose] if g in registered and g not in restricted]
+        # C3: Principal.allowed_scopes narrows visible graphs. None = unlimited
+        # (cxo / single-key backward-compat); an empty set = fully blocked
+        # (cross-tenant → intent finds nothing → 404, no existence leak).
+        if principal_scopes is not None:
+            base = [g for g in base if g in principal_scopes]
         return sorted(base)
 
     def decide(self, partition: str, subject_statements: list[GraphStatement], as_of: datetime) -> AdmissionDecision:

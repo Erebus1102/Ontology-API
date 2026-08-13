@@ -5,7 +5,7 @@ from tkos_runtime.domain.models import GraphStatement, RetrievedMember, IntentAs
 
 
 class GraphPolicy(Protocol):
-    def allowed_graphs(self, purpose: str) -> list[str]: ...   # 单参（Store 实现）
+    def allowed_graphs(self, purpose: str, principal_scopes: set[str] | None = None) -> list[str]: ...   # 单参（Store 实现）；principal_scopes=None 不收敛（cxo/单 Key 向后兼容）
 
 
 class DatasetStore(GraphPolicy, Protocol):
