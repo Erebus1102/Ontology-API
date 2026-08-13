@@ -1,6 +1,6 @@
 # TKOS Ontology Runtime — 火山引擎部署设计
 
-> 状态：设计稿 → **部分执行中，已切换为 Mac 本机反代方案**（2026-08-12）：健康端点 + authN/authZ + 启动 SHACL + 客户端 pack purpose 门禁已落地（`server.py`）；容器镜像（Dockerfile + .dockerignore + `PIP_INDEX_URL` build-arg）构建与容器冒烟通过。**当前部署路径 = `deploy/mac-local/`**（docker compose：TKOS 容器 + Caddy 反代 + 自动 HTTPS，域名+公网 IP）。本文档的火山引擎设计保留为**备用路径**（`deploy/ecs/` 产物就绪，需要时启用）。
+> 状态：设计稿 → **ECS 单机试点已上线**（2026-08-13，cn-beijing `115.190.213.44`）：健康端点 + authN/authZ + 启动 SHACL + pack purpose 门禁落地（`server.py`）；镜像 `tkos-runtime:961ff13-25a3dc2dafed30`（amd64，数据集全量打进镜像，`dataset_revision=25a3dc2dafed3042`）；`/opt/tkos/deploy/ecs/` + systemd `tkos-runtime`（IMAGE 在 unit 内钉死）；部署后 9 项验收全部通过（health/ready、版本指纹、401、FE render、409 快照、409 barrier、404 alternatives、灯塔锚点、LLM 降级 fallback）。Mac 本机反代路径已删除（`deploy/mac-local/` 移除），镜像分发当前为 `docker save/scp/load`，CR 推送（`cr.cn-beijing.volces.com/tkos`）留作后续。
 > 范围：本体服务（FastAPI Runtime）+ 推理（SHACL/SWRL）+ API 运行 + LLM 端点 + 数据/制品分发 + CI/CD + 配置/密钥 + 扩展路径 + 安全前置
 > 日期：2026-08-12
 > 配套文档：[runtime-architecture.md](./runtime-architecture.md)、[api-contracts-v1.md](../api/api-contracts-v1.md)、[distillation-and-cold-start.md](./distillation-and-cold-start.md)
@@ -26,7 +26,7 @@
 | 运行单元 | 单体 FastAPI + uvicorn，模块级 `app = create_app()` | `src/tkos_runtime/api/server.py:171` |
 | Store | `RdfDatasetStore`：启动时从磁盘装载 schema/dataset/instances，构建内存 `rdflib.Dataset`，**只读** | `src/tkos_runtime/adapters/rdflib_dataset_store.py:21-34` |
 | 数据装载 | `ontology/schema/*.jsonld` + `ontology/datasets/*.trig` + `data/instances/*.trig`，cwd-无关 | `server.py:47-54` |
-| 当前数据量 | schema 56K + ttl 44K + dataset 4K + shapes 12K + 6 实例 trig ~88K ≈ **148K**，冷启动亚秒级 | 仓库实测 |
+| 当前数据量 | schema 100K + dataset 4K + shapes 12K + 9 实例 trig 172K ≈ **288K**，冷启动亚秒级 | 仓库实测 |
 | 版本指纹 | 已计算 `dataset_revision`（数据文件 sha256）+ `ontology_release_id`（OWL versionInfo） | `rdflib_dataset_store.py:51-66` |
 | SHACL | pyshacl 同步校验，**仅在测试里跑**（`run_instance_conformance.py`），未进运行时请求路径 | `Makefile`, `tests/` |
 | SWRL | Openllet（Java CLI，251MB + JVM），**仅测试**，未进运行时 | `tests/run_v2_3_swrl_openllet.py`, `ci.yml` |
