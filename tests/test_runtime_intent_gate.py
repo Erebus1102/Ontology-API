@@ -16,11 +16,17 @@
     需要/可以/如何/当前/情况/要不要/产品/公司/...）；与停用词相邻的
     碎片 gram（"司现/在应/该怎"）不构成强命中；强命中只限 name 字段
     （displayName/objectId），scopeDescription 只作底分。
-  * 中文剩余主题否决（三审）：移除停用词/功能字（是 的 了 吗 呢）/
-    已匹配实体后，剩余主题片段在知识库全文（name+scope）零出现 =
-    未知主题 → 立即拒绝并计入 unmatched_terms
-    （"TokenHub 应该如何定价"：定价全文 0 处 → 404；
-     "TokenHub 模块当前进度如何"：进度存在于 scope → 继续命中）。
+  * 中文主题跨度准入（三审 + 四审修订）：移除疑问模板（有哪些/进展
+    如何/有没有/是不是）与停用词后，剩余连续中文片段（span）用**覆盖
+    率**判定——span 内 2-gram 在全库（name+scope）出现比例 < 0.5 =
+    未知主题 → 拒绝并计入 unmatched_terms（"TokenHub 应该如何定价"：
+    span[定价] 覆盖率 0 → 404）。跨界碎片（线进/有哪/些风）只存在于
+    span 内部，由覆盖率容忍——四审误拒回归：
+    产品 1.0 上线进展如何 / 产品 1.0 当前进度如何 /
+    灯塔项目有哪些风险 / FE 当前有哪些风险 → 200。
+    "模型现在应该怎么选择"：span[选择] 全库覆盖（barrier 的 scope 含
+    "模型选择与路由权"）→ 200（二轮的 404 是 name-only 强命中门产物，
+    四审起中文准入不再要求 top1 name 字段命中）。
 
 保持型回归：FE 真实议题、英文实体词（TokenHub）、非 Issue 实体查询
 必须继续命中。
@@ -192,10 +198,48 @@ def test_review_R3_tokenhub_progress_still_matches():
     assert ia.root == TKOS + "capability-tokenhub-runtime-base"
 
 
-def test_review_B4_vague_model_query_404(client_with_auth):
-    """"模型现在应该怎么选择"：剩余主题"选择"未被知识库覆盖 → 精确 404
-    知识缺口（绝不 500、绝不 200）。修复前 root=barrier-five-control-points
-    编译失败 500。三审：精确断言，不得放行任意状态。"""
+def test_review_R4_launch_progress_matches():
+    """四审误拒回归：产品 1.0 上线进展如何 → 200（旧规则把跨界碎片
+    线进=上线|进展 当未知主题否决；span[上线] 覆盖率 1/1 通过）。"""
+    s = _full_store()
+    ia = GramIntentResolver(s).resolve(
+        "产品 1.0 上线进展如何", s.allowed_graphs("decision_preparation"))
+    assert ia.root
+
+
+def test_review_R4_current_progress_matches():
+    """四审误拒回归：产品 1.0 当前进度如何 → 200（进度 只在 scope 有
+    覆盖、name 零覆盖——旧强命中门要求 top1 name 命中而误拒；四审起
+    中文准入 = span 覆盖率，不再要求 name 字段）。"""
+    s = _full_store()
+    ia = GramIntentResolver(s).resolve(
+        "产品 1.0 当前进度如何", s.allowed_graphs("decision_preparation"))
+    assert ia.root
+
+
+def test_review_R4_lighthouse_risks_matches():
+    """四审误拒回归：灯塔项目有哪些风险 → 200（有哪/些风 为"有哪些"
+    模板与边界碎片——模板整段移除、碎片由覆盖率容忍）。"""
+    s = _full_store()
+    ia = GramIntentResolver(s).resolve(
+        "灯塔项目有哪些风险", s.allowed_graphs("decision_preparation"))
+    assert ia.root
+
+
+def test_review_R4_fe_risks_matches():
+    """四审误拒回归：FE 当前有哪些风险 → 200。"""
+    s = _full_store()
+    ia = GramIntentResolver(s).resolve(
+        "FE 当前有哪些风险", s.allowed_graphs("decision_preparation"))
+    assert ia.root
+
+
+def test_review_R4_model_selection_render_200(client_with_auth):
+    """"模型现在应该怎么选择"（原 B4 反例）：span[选择] 在全库 13 处有
+    覆盖（barrier-five-control-points 的 scope 含"模型选择与路由权"）
+    → 200，root=barrier。二轮曾因 name-only 强命中门 404；四审中文准入
+    改为 span 覆盖率后此查询合法命中，且 barrier root 可编译渲染
+    （B4 编译器修复的成果：修复前该 root 编译 500）。"""
     req = dict(BASE_REQ, query="模型现在应该怎么选择")
     resp = client_with_auth.post(
         "/v1/context-packs:render", json={
@@ -204,8 +248,9 @@ def test_review_B4_vague_model_query_404(client_with_auth):
                                "include_structured": True, "max_chars": 6000,
                                "language": "zh-CN"},
         }, headers=_auth_headers())
-    assert resp.status_code == 404, resp.text
-    assert resp.json()["detail"]["code"] == "ontology_context_not_found"
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["decision_context"]["anchor"]["member_id"] == (
+        "barrier-five-control-points")
 
 
 # ── API 端到端 ──────────────────────────────────────────────────────────

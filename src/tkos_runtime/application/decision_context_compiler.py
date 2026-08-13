@@ -185,14 +185,22 @@ def _epistemic_summary(pack: ContextPack) -> str:
 def mandatory_view_keys(
     pack: ContextPack,
     units_by_section: dict[str, list[RenderedFactUnit]],
+    type_index: dict[str, set[str]] | None = None,
 ) -> set[tuple[str, str]]:
     """View keys that must never be omitted: the root (matched_root), every
-    gap, and — when the pack has outcome units — at least one outcome.
+    gap, every proven related-issue view, and — when the pack has outcome
+    units — at least one outcome.
 
     P0-1: root 按 member_id 在**全部 section** 中查找（不再假设 root 是
     StrategicIssue 归 issue section）。Research/Outcome/Mission 等实体
     查询合法，其 root 同样受保护。
+
+    R4: proven related-issue 视图为 mandatory——决策上下文的 structured
+    related_issue 与 Markdown"关联经营议题"必须同生同灭（评审四审：
+    不得出现 related_issue 有值但正文被预算裁剪的不一致）。
     """
+    if type_index is None:
+        type_index = build_type_index(pack)
     keys: set[tuple[str, str]] = set()
     if pack.matched_root:
         root_frag = _frag(pack.matched_root)
@@ -205,6 +213,8 @@ def mandatory_view_keys(
                     break
             if found:
                 break
+    for pv in proven_related_issue_views(pack, type_index):
+        keys.add((pv["member_id"], pv["partition"]))
     for u in units_by_section.get("gaps", []):
         keys.add(u.view_key)
     outcomes = units_by_section.get("outcomes", [])
@@ -495,6 +505,69 @@ def _compile_claim(member, name_index: dict[str, str]) -> str:
     return humanize_relation_text(claim, name_index)
 
 
+def proven_related_issue_views(
+    pack: ContextPack,
+    type_index: dict[str, set[str]],
+) -> list[dict[str, Any]]:
+    """Proven related-issue views（评审四审契约，单一事实来源）。
+
+    StrategicIssue 成员（≠ root）中，存在显式 DECISION_INCIDENT_
+    PREDICATES 业务边连接 matched_root（双向）的成员——其全部视图
+    （member_id, partition）均为"已证明的关联经营议题视图"。稳定排序
+    （member_id, partition）取序。同一视图集合同时驱动：
+
+      * decision_context.related_issue（取序首）
+      * Markdown "关联经营议题" 章节（issue section 单元来源）
+      * 预算选择与 omission（proven 视图为 mandatory，永不裁剪）
+      * section-aware LLM 校验（期望视图集 = compiled issue section）
+
+    视图粒度不按 member_id 合并跨分区视图（评审四审：保留
+    view_key=(member_id, partition)）。
+    """
+    root = pack.matched_root
+    root_frag = _frag(root) if root else None
+    if not root_frag:
+        return []
+    cand_ids: set[str] = set()
+    cand_views: set[tuple[str, str]] = set()
+    for m in _all_members(pack):
+        if m.id == root_frag or classify_role(m.id, type_index) != "issue":
+            continue
+        cand_ids.add(m.id)
+        cand_views.add((m.id, m.partition))
+    proven_ids: set[str] = set()
+    edge_by_member: dict[str, list[tuple[str, str]]] = {}
+    for m in _all_members(pack):
+        for s in m.statements:
+            if s.predicate not in DECISION_INCIDENT_PREDICATES:
+                continue
+            if str(s.subject).startswith(TKOS) and s.subject == root:
+                oid = _frag(s.object)
+                if oid in cand_ids:
+                    proven_ids.add(oid)
+                    edge_by_member.setdefault(oid, []).append(
+                        (s.predicate, s.source_graph))
+            elif (str(s.object).startswith(TKOS) and s.object == root):
+                sid = _frag(s.subject)
+                if sid in cand_ids:
+                    proven_ids.add(sid)
+                    edge_by_member.setdefault(sid, []).append(
+                        (s.predicate, s.source_graph))
+    result: list[dict[str, Any]] = []
+    for mid, part in sorted(cand_views):
+        if mid not in proven_ids:
+            continue
+        predicate, edge_sg = sorted(edge_by_member[mid])[0]
+        result.append({
+            "view_key": [mid, part],
+            "member_id": mid,
+            "partition": part,
+            "predicate": _frag(predicate),
+            "edge_source_graph": edge_sg,
+        })
+    return result
+
+
 def _build_units_by_section(
     pack: ContextPack,
     type_index: dict[str, set[str]],
@@ -505,9 +578,15 @@ def _build_units_by_section(
     trace_only roles (source_record, confirmation) never occupy body lines
     (v1, no exceptions). matched_root 统一进 anchor（任何类型——用户审定的
     选项 2：非 ROLE_TABLE 类型 root 也生成通用 anchor 单元，保证可编译）。
+    issue 章节只承载 proven_related_issue_views（评审四审：无显式业务边
+    的 StrategicIssue 不进"关联经营议题"，与 related_issue=null 一致）。
     """
     units_by_section: dict[str, list[RenderedFactUnit]] = {}
     root_frag = _frag(pack.matched_root) if pack.matched_root else None
+    proven_issue_keys = {
+        (pv["member_id"], pv["partition"])
+        for pv in proven_related_issue_views(pack, type_index)
+    }
     for m in _all_members(pack):
         role = classify_role(m.id, type_index)
         section = ROLE_TO_SECTION.get(role)
@@ -521,10 +600,13 @@ def _build_units_by_section(
             if m.id != root_frag:
                 continue
             section = "anchor"
-        # root 统一进 anchor：用户本次问题所问实体就是查询锚点；
-        # 其他 StrategicIssue 只作"关联经营议题"（issue 章节）。
+        # root 统一进 anchor：用户本次问题所问实体就是查询锚点。
+        # 其他 StrategicIssue 只作"关联经营议题"（issue 章节）——且
+        # 仅限已证明（显式业务边）的视图（评审四审契约）。
         if m.id == root_frag:
             section = "anchor"
+        elif section == "issue" and (m.id, m.partition) not in proven_issue_keys:
+            continue
         claim = _compile_claim(m, name_index)
         unit = RenderedFactUnit(
             member_id=m.id,
@@ -635,7 +717,8 @@ class DecisionContextCompiler:
         # Mandatory views (root issue + all gaps + one outcome) are computed
         # up front, pre-selected in the first pass, and never reclaimed in
         # the second pass. max_chars < mandatory_floor → RenderBudgetTooSmall.
-        mandatory_keys = mandatory_view_keys(pack, units_by_section)
+        mandatory_keys = mandatory_view_keys(
+            pack, units_by_section, type_index)
         selected, omissions = allocate_budget(
             units_by_section, pack, max_chars, type_index,
             mandatory_keys=mandatory_keys,
@@ -729,46 +812,29 @@ class DecisionContextCompiler:
             "type": " | ".join(root_types) or "Unclassified",
         }
 
-        # P0-4（评审三审契约）：related_issue 必须有显式业务边证据。
-        # 只接受 root 与 StrategicIssue 之间存在 DECISION_INCIDENT_
-        # PREDICATES 业务边（双向）的对象；输出关联谓词与边的
-        # source_graph（如 issue researchedBy research）；无边 → null；
-        # 多个直接关联对象按 member_id 稳定排序取首（后续升级
+        # P0-4（评审三审契约 + 四审统一）：related_issue 必须有显式业务
+        # 边证据，且与 Markdown"关联经营议题"共用同一份 proven 视图集
+        # （评审四审：结构化与正文不得不一致——related_issue=null 时
+        # 正文不得出现无边 Issue；proven 视图为 mandatory 永不裁剪）。
+        # 视图级粒度（member_id, partition），稳定排序取首（后续升级
         # related_issues[]）。
-        candidate_issues: dict[str, ContextPackMember] = {}
-        for m in _all_members(pack):
-            if m.id == root_frag or classify_role(m.id, type_index) != "issue":
-                continue
-            candidate_issues.setdefault(m.id, m)
-        rels_by_member: dict[str, list[tuple[str, str]]] = {}
-        for m in _all_members(pack):
-            for s in m.statements:
-                if s.predicate not in DECISION_INCIDENT_PREDICATES:
-                    continue
-                if s.subject == pack.matched_root:
-                    oid = _frag(s.object)
-                    if oid in candidate_issues:
-                        rels_by_member.setdefault(oid, []).append(
-                            (s.predicate, s.source_graph))
-                elif s.object == pack.matched_root:
-                    sid = _frag(s.subject)
-                    if sid in candidate_issues:
-                        rels_by_member.setdefault(sid, []).append(
-                            (s.predicate, s.source_graph))
-        if rels_by_member:
-            mid = sorted(rels_by_member)[0]
-            rel_m = candidate_issues[mid]
-            predicate, edge_sg = sorted(rels_by_member[mid])[0]
+        proven_views = proven_related_issue_views(pack, type_index)
+        if proven_views:
+            pv = proven_views[0]
+            mid, part = pv["member_id"], pv["partition"]
+            rel_m = next(
+                m for m in _all_members(pack)
+                if (m.id, m.partition) == (mid, part))
             dc["related_issue"] = {
-                "view_key": [mid, rel_m.partition],
+                "view_key": [mid, part],
                 "member_id": mid,
                 "name": name_index.get(mid, rel_m.display_name or mid),
                 "claim": _compile_claim(rel_m, name_index),
-                "partition": rel_m.partition,
+                "partition": part,
                 "source_graphs": list(rel_m.source_graphs)
                 if rel_m.source_graphs else [],
-                "predicate": _frag(predicate),
-                "edge_source_graph": edge_sg,
+                "predicate": pv["predicate"],
+                "edge_source_graph": pv["edge_source_graph"],
             }
         else:
             dc["related_issue"] = None

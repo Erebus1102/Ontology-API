@@ -31,18 +31,63 @@ STOPWORDS = frozenset({
 # 全文命中仍是压倒性优先（100+len）。
 ENGLISH_TOKEN_WEIGHT = 30
 
-# 中文功能字：纯语法粒子，永远不可能是业务主题词。含这些字的 gram
-# （"论是"来自"结论是"、"价的"来自"定价的"）是已知主题词的跨界碎片，
-# 若进入剩余主题集会造成假"未知主题"误拒（评审三审：
-# "研究结论是什么"的"论是"全文零出现，但结论/灯塔/交付均为已知知识）。
-# 判定放在 gram 级而不是把整字加入 STOPWORDS：避免"是/的"作独立词时的
-# 相邻碎片副作用，且只影响含该字的二元组。
-FUNCTION_CHARS = frozenset("是的了吗呢")
+# 中文疑问模板：整段移除（模板是语法不是主题）。"进展如何/有哪些/
+# 有没有/是不是"整体不属于业务内容——其中"进展/哪些"等词若逐字保留
+# 会产出"有哪/些风/线进"式跨界碎片（评审四审误拒案例：产品 1.0
+# 上线进展如何 / 灯塔项目有哪些风险 / FE 当前有哪些风险）。
+STOP_PHRASES = ("有哪些", "进展如何", "有没有", "是不是")
+
+# 中文功能字/语助字：纯语法粒子，永远不可能是业务主题词。它们按单字
+# **切断**连续主题片段（span）——"论是"（"结论是"跨界碎片）、"价的"
+# （"定价的"）因此不会形成 span，不会造成假"未知主题"误拒；"要/不"
+# （要不要/不要 拆解）、"在/和/与/及/或/等"（介词/连词/语助）同样只
+# 作 span 边界，不可能是业务内容。
+SPAN_BREAK_CHARS = frozenset("是的了吗呢要不和在与及或等")
 
 _ENGLISH_TOKEN = re.compile(r"[a-z][a-z0-9-]*")
 
 
 def _frag(u): return str(u).rsplit("#", 1)[-1]
+
+
+def _cn_spans(query: str) -> list[str]:
+    """Extract continuous Chinese topic spans (R4 admission).
+
+    Per maximal CJK run: strip question templates (STOP_PHRASES) wholesale,
+    cut 2-char stopwords, skip single break chars — the leftover fragments
+    are continuous business-topic spans (length >= 2). Cross-boundary
+    artifacts like 线进/有哪 can only exist *inside* a span, where the
+    coverage rule (see resolve) tolerates them.
+    """
+    runs: list[str] = []
+    cur: list[str] = []
+    for c in query:
+        if "一" <= c <= "鿿":
+            cur.append(c)
+        else:
+            if cur:
+                runs.append("".join(cur))
+                cur = []
+    if cur:
+        runs.append("".join(cur))
+    spans: list[str] = []
+    for run in runs:
+        for p in STOP_PHRASES:
+            run = run.replace(p, "")
+        i, start = 0, 0
+        buf: list[str] = []
+        while i < len(run):
+            if run[i:i + 2] in STOPWORDS or run[i] in SPAN_BREAK_CHARS:
+                if i > start:
+                    buf.append(run[start:i])
+                i += 2 if run[i:i + 2] in STOPWORDS else 1
+                start = i
+            else:
+                i += 1
+        if start < len(run):
+            buf.append(run[start:])
+        spans.extend(s for s in buf if len(s) >= 2)
+    return spans
 
 
 class GramIntentResolver:
@@ -90,27 +135,13 @@ class GramIntentResolver:
                 match_reasons=[f"未知关键实体参与否决：{unmatched_terms}"],
             )
 
-        # ── 中文主题词准入（评审 B1 反例 + 三审反例）──────────────────
-        # 只认"业务主题词"：功能词/泛词不构成命中；与停用词相邻的碎片
-        # gram（"公司现在"→ 司现、"怎么定价"→ 么定）只是字符巧合，不是
-        # 主题词。只收纯 CJK 二元组（"品1/0与"这类 ASCII 边界 gram 是
-        # 排版噪声）；中文强命中只限 name 字段（displayName/objectId），
-        # scopeDescription 只作底分——scope 中单个二元组不能独立放行。
-        raw_grams = [q[i:i+2] for i in range(max(0, len(q)-1))]
-        cn_grams = [
-            g for g in raw_grams
-            if all("一" <= c <= "鿿" for c in g)
-            and g not in STOPWORDS
-            and not any(c in FUNCTION_CHARS for c in g)
-        ]
-        stopped_positions = {i for i, g in enumerate(raw_grams) if g in STOPWORDS}
-        fragment_neighbors: set[str] = set()
-        for i in stopped_positions:
-            if i > 0:
-                fragment_neighbors.add(raw_grams[i - 1])
-            if i + 1 < len(raw_grams):
-                fragment_neighbors.add(raw_grams[i + 1])
-        strong_cn = [g for g in cn_grams if g not in fragment_neighbors]
+        # ── 中文主题跨度准入（评审四审）────────────────────────────────
+        # 只认"业务主题片段"（span）：疑问模板整段移除、停用词按 2-字
+        # 词切断、功能字按单字跳过，剩余为连续中文片段。旧的"任一剩余
+        # 2-gram 未在全库出现即否决"把自然语言边界碎片（"上线|进展"→
+        # 线进、"哪些|风险"→些风）误判为未知主题，误拒 4 条合法查询。
+        # 跨界碎片现在只可能出现在 span 内部，由下方覆盖率规则容忍。
+        cn_spans = _cn_spans(q)
 
         scored = []
         for node, hay in text.items():
@@ -128,28 +159,37 @@ class GramIntentResolver:
             raise NoMatchError(
                 f"未匹配到对象：{query!r}", unmatched_terms=unmatched_terms)
 
-        # ── P0 门禁（评审三审）：剩余中文主题必须在知识库全文获得覆盖 ──
-        # 移除停用词与已匹配实体后，剩余中文主题片段（strong_cn）若在
-        # 知识库全文（name + scope）零出现 = 未知主题 → 否决（"TokenHub
-        # 应该如何定价"：tokenhub 已知强命中，但"定价"全文 0 处——知识
-        # 库不存在任何定价内容）。未覆盖主题计入 unmatched_terms（此前
-        # 中文主题从不进入 unmatched_terms，无法否决错误结果）。
-        # 注：覆盖判定用全文而非仅 name 字段——"TokenHub 模块当前进度
-        # 如何"的"进度"在 displayName/objectId 零覆盖、但作为已知知识
-        # 存在于 scopeDescription（保持型回归必须继续命中）；而"定价/
-        # 收费/新的"全文 0 处，才是真正的未知主题。
+        # ── P0 门禁（评审三审 + 四审修订）：剩余中文主题必须覆盖 ──────
+        # 每个 span 用**覆盖率**判定：span 内 2-gram 在全库（name +
+        # scope）出现比例 < 0.5 = 未知主题 → 否决，未覆盖的 2-gram 计入
+        # unmatched_terms（"TokenHub 应该如何定价"：tokenhub 已知强命中，
+        # 但 span[定价] 覆盖率 0——知识库不存在任何定价内容 → 404；
+        # "TokenHub 要不要采用新的收费方案"：span[收费方案] 仅 方案
+        # 有覆盖，收费/费方 零出现 → 1/3 < 0.5 → 404，保持三审回归）。
+        # 覆盖率 >= 0.5 = 已知主题（容忍 span 内部跨界碎片："交付进展"
+        # 的"付进"、"上线进展"的"线进"都是边界巧合，不得否决）。
+        # 注：覆盖判定用全文而非仅 name 字段——"产品 1.0 当前进度如何"
+        # 的"进度"在 displayName/objectId 零覆盖、但作为已知知识存在于
+        # scopeDescription（四审误拒案例必须 200）；而"定价/收费"全文
+        # 0 处，才是真正的未知主题。
         all_grams: set[str] = set()
         for hay in text.values():
             all_grams.update(hay[i:i+2] for i in range(max(0, len(hay)-1)))
-        unknown_cn = [g for g in strong_cn if g not in all_grams]
-        if unknown_cn:
+        unknown_grams: list[str] = []
+        for span in cn_spans:
+            sgrams = [span[i:i+2] for i in range(len(span) - 1)]
+            uncovered = [g for g in sgrams if g not in all_grams]
+            if len(uncovered) * 2 > len(sgrams):
+                unknown_grams.extend(uncovered)
+        if unknown_grams:
+            unknown_grams = sorted(set(unknown_grams))
             raise NoMatchError(
                 f"知识库未覆盖查询主题：{query!r}（剩余中文主题 "
-                f"{sorted(set(unknown_cn))} 在知识库全文零出现）",
-                unmatched_terms=sorted(set(unknown_cn)),
+                f"{unknown_grams} 未在知识库全文获得覆盖）",
+                unmatched_terms=unknown_grams,
                 match_reasons=[(
                     f"剩余中文主题未在知识库全文获得覆盖："
-                    f"{sorted(set(unknown_cn))}"),
+                    f"{unknown_grams}"),
                     f"未知关键实体: {unmatched_terms or '（无）'}"],
             )
 
@@ -158,13 +198,14 @@ class GramIntentResolver:
         # 知识不足必须显式拒绝（→ 404 knowledge gap），不得强制选最接近。
         # 英文强命中只认 name 字段 token（scope 提及不构成命中——评审
         # 三审：assertion-* 靠 scope 里的 "TokenHub" 拿 +30 穿透门禁）。
+        # 中文准入已由上方 span 覆盖率完成：span 通过 = 主题在知识库有
+        # 覆盖，不再要求 top1 name 字段命中（"进度"只在 scope 出现、
+        # name 零覆盖——四审误拒案例）。查询既无英文强命中、也无任何
+        # 中文主题 span（如"模型现在应该怎么选择"）→ 碎片巧合 → 拒绝。
         top_node = ranked[0][1]
-        top_hay = text[top_node]
-        top_name = name_text.get(top_node, "")
         strong_hits = [t for t in high_info_eng
                        if t in node_name_tokens.get(top_node, ())]
-        strong_hits += [g for g in strong_cn if g in top_name]
-        if not strong_hits:
+        if not strong_hits and not cn_spans:
             reasons = [
                 f"top1={_frag(top_node)} 无主题词强命中",
                 f"未知关键实体: {unmatched_terms or '（无）'}",

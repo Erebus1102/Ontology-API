@@ -247,11 +247,58 @@ def test_any_type_root_compiles_generic_anchor():
     # （无语句连接 root）→ related_issue = null
     assert dc["issue"] is None
     assert dc["related_issue"] is None
-    # 正文含 root 完整三段锚点 + 关联经营议题章节
+    # 正文含 root 完整三段锚点 + 关联经营议题章节。评审四审契约：无显式
+    # 业务边的 StrategicIssue 不进"关联经营议题"（与 related_issue=null
+    # 同生同灭）——修复前正文仍输出 issue-other，与结构化结果矛盾。
     content = render(pack, mode="deterministic", max_chars=8000)["rendered"]["content"]
     assert "[member:barrier-five-control-points]" in content
     assert "## 关联经营议题" in content
-    assert "[member:issue-other]" in content
+    related_block = content.split("## 关联经营议题")[1].split("## 决策目标")[0]
+    assert "[member:issue-other]" not in related_block
+    assert "（无）" in related_block
+
+
+def test_related_issue_view_granularity_two_partitions():
+    """评审四审契约：proven 视图按 view_key=(member_id, partition) 粒度，
+    不按 member_id 合并跨分区视图。同 member 双分区、边只声明在其中一个
+    分区 → 两个 proven 视图都进"关联经营议题"章节；related_issue 取稳定
+    排序序首的视图（候选分区在前）。"""
+    pack = _pack(
+        candidate_context=[
+            _m("research-root", "graph-candidate-and-dispute",
+               ["StrategicResearch"]),
+            # 无边的分区视图：issue-other 自身不声明任何连接 root 的语句
+            _m("issue-other", "graph-candidate-and-dispute", ["StrategicIssue"]),
+            # 声明边的分区视图：researchedBy 边只在此视图的语句中
+            _m("issue-other", "graph-edge-view", ["StrategicIssue"],
+               statements=[_edge("issue-other", "researchedBy", "research-root",
+                                 graph="graph-edge-view")]),
+            _m("outcome-1", "graph-candidate-and-dispute", ["Outcome"]),
+            _m("risk-1", "graph-candidate-and-dispute", ["Risk"]),
+        ],
+        matched_root=TKOS + "research-root",
+    )
+    compiled = DecisionContextCompiler().compile(pack, max_chars=8000)
+    dc = compiled.decision_context
+    # related_issue 视图粒度：view_key 保留 (member_id, partition)
+    assert dc["related_issue"]["view_key"] == [
+        "issue-other", "graph-candidate-and-dispute"]
+    assert dc["related_issue"]["member_id"] == "issue-other"
+    assert dc["related_issue"]["predicate"] == "researchedBy"
+    assert dc["related_issue"]["edge_source_graph"] == "graph-edge-view"
+    # 两个分区视图都进 issue 章节（proven 成员的全部视图，不合并）
+    issue_units = compiled.units_by_section["issue"]
+    assert sorted((u.member_id, u.partition) for u in issue_units) == [
+        ("issue-other", "graph-candidate-and-dispute"),
+        ("issue-other", "graph-edge-view"),
+    ]
+    # proven 视图为 mandatory —— 预算收紧时仍不可裁剪（结构/正文强一致）
+    with pytest.raises(RenderBudgetTooSmall):
+        DecisionContextCompiler().compile(pack, max_chars=300)
+    # Markdown 双视图行 + 相关结构化一致
+    content = render(pack, mode="deterministic", max_chars=8000)["rendered"]["content"]
+    assert "[member:issue-other][partition:graph-candidate-and-dispute]" in content
+    assert "[member:issue-other][partition:graph-edge-view]" in content
 
 
 def test_research_root_markdown_anchor_consistency():
