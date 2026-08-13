@@ -52,7 +52,7 @@ def test_revision_invariant_under_cwd(tmp_path, monkeypatch):
 
 def test_version_metadata():
     s = store(sorted((ROOT/"data/instances").glob("*.trig")))
-    assert s.ontology_release_id == "2.4.0"
+    assert s.ontology_release_id == "2.4.1"
 
 def test_default_release_root_supports_repository_instances():
     # 不传 release_root，验证默认推导（parents[2]）能处理 data/instances 下的文件

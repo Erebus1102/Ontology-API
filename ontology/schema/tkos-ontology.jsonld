@@ -18,7 +18,7 @@
       "@id": "https://ontology.tokenking.ai/tkos#",
       "@type": "owl:Ontology",
       "rdfs:label": [{"@value": "词元云集 TKOS 经营本体", "@language": "zh"}, {"@value": "TokenKing TKOS Operating Ontology", "@language": "en"}],
-      "owl:versionInfo": "2.4.0",
+      "owl:versionInfo": "2.4.1",
       "rdfs:comment": {"@value": "面向一号位 Agent 的共享核心本体。Operating、Decision Provenance 与 Governance 三个模块共享语义，通过命名图治理企业事实、候选判断、敏感个人记录、推导结果与 Context Pack。覆盖 Method Layer 1、Layer 2。", "@language": "zh"},
       "prov:wasDerivedFrom": {"@id": "https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c"},
       "owl:imports": [{"@id": "http://www.w3.org/ns/prov-o#"}, {"@id": "http://www.w3.org/2004/02/skos/core#"}, {"@id":"http://www.w3.org/2006/time#"}, {"@id":"http://www.w3.org/ns/org#"}, {"@id":"http://www.w3.org/ns/odrl/2/"}]
@@ -93,6 +93,7 @@
     {"@id":"tkos:CompanyProfile","@type":"owl:Class","rdfs:subClassOf":{"@id":"tkos:CompanyReality"},"rdfs:label":{"@value":"公司概况","@language":"zh"}},
     {"@id":"tkos:PerformanceFact","@type":"owl:Class","rdfs:subClassOf":{"@id":"tkos:CompanyReality"},"rdfs:label":{"@value":"经营事实","@language":"zh"}},
     {"@id":"tkos:CompanyCapability","@type":"owl:Class","rdfs:subClassOf":{"@id":"tkos:CompanyReality"},"rdfs:label":{"@value":"公司能力","@language":"zh"}},
+    {"@id":"tkos:ProductModule","@type":"owl:Class","rdfs:subClassOf":[{"@id":"tkos:CompanyCapability"},{"@id":"tkos:ContextAsset"}],"rdfs:comment":{"@value":"构成公司产品平台的基础设施模块（Method、Engine、Ontology、Foundry、TokenHub 等），是公司产品能力的具体承载，可被业务域运营、被 Mission 交付、被 Context Pack 引用。","@language":"zh"},"rdfs:label":{"@value":"产品模块","@language":"zh"}},
     {"@id":"tkos:OrganizationalUnit","@type":"owl:Class","rdfs:subClassOf":{"@id":"tkos:GovernanceEntity"},"rdfs:label":{"@value":"组织单元","@language":"zh"}},
     {"@id":"tkos:CultureObservation","@type":"owl:Class","rdfs:subClassOf":{"@id":"tkos:CompanyReality"},"rdfs:label":{"@value":"文化观察","@language":"zh"}},
 
@@ -140,6 +141,7 @@
     {"@id":"tkos:contains","@type":"owl:ObjectProperty","rdfs:domain":{"@id":"tkos:MissionPortfolio"},"rdfs:range":{"@id":"tkos:Mission"},"owl:inverseOf":{"@id":"tkos:inPortfolio"},"rdfs:label":{"@value":"包含","@language":"zh"}},
     {"@id":"tkos:inPortfolio","@type":"owl:ObjectProperty","rdfs:domain":{"@id":"tkos:Mission"},"rdfs:range":{"@id":"tkos:MissionPortfolio"},"rdfs:label":{"@value":"属于任务组合","@language":"zh"}},
     {"@id":"tkos:belongsTo","@type":"owl:ObjectProperty","rdfs:domain":{"@id":"tkos:Mission"},"rdfs:range":{"@id":"tkos:Domain"},"rdfs:label":{"@value":"归属业务域","@language":"zh"}},
+    {"@id":"tkos:hasProductModule","@type":"owl:ObjectProperty","rdfs:domain":{"@id":"tkos:Domain"},"rdfs:range":{"@id":"tkos:ProductModule"},"rdfs:label":{"@value":"运营产品模块","@language":"zh"}},
     {"@id":"tkos:ownedBy","@type":"owl:ObjectProperty","owl:deprecated":true,"rdfs:domain":{"@id":"tkos:Mission"},"rdfs:range":{"@id":"tkos:DirectlyResponsibleIndividual"},"rdfs:comment":{"@value":"V1 兼容属性。V2 使用 hasResponsibleAssignment 关联带范围和有效期的 RoleAssignment。","@language":"zh"},"rdfs:label":{"@value":"由 DRI 负责（兼容）","@language":"zh"}},
     {"@id":"tkos:hasResponsibleAssignment","@type":"owl:ObjectProperty","rdfs:domain":{"@id":"tkos:Mission"},"rdfs:range":{"@id":"tkos:RoleAssignment"},"rdfs:label":{"@value":"具有责任承担","@language":"zh"}},
     {"@id":"tkos:assignmentHolder","@type":"owl:ObjectProperty","rdfs:domain":{"@id":"tkos:RoleAssignment"},"rdfs:range":{"@id":"tkos:Person"},"rdfs:label":{"@value":"承担人","@language":"zh"}},

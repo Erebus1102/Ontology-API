@@ -10,4 +10,5 @@ TRAVERSAL = [TKOS + p for p in (
     "hasProgressSnapshot","hasCriterion","hasRationale","hasScope","hasKeyPath",
     "supportedByEvidence","sourcedFrom","confirmedBy","challengingEvidence","challengesClaim",
     "isReviewedBy","delivers","supports","isDeliveredBy","hasSuccessCriterion","contains","confirmsEntity",
+    "hasProductModule",
 )]

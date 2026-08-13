@@ -11,17 +11,13 @@ tkos: a owl:Ontology ;
     rdfs:label "TokenKing TKOS Operating Ontology"@en,
         "词元云集 TKOS 经营本体"@zh ;
     rdfs:comment "面向一号位 Agent 的共享核心本体。Operating、Decision Provenance 与 Governance 三个模块共享语义，通过命名图治理企业事实、候选判断、敏感个人记录、推导结果与 Context Pack。覆盖 Method Layer 1、Layer 2。"@zh ;
-    owl:versionInfo "2.4.0" ;
+    owl:versionInfo "2.4.1" ;
     prov:wasDerivedFrom <https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c> .
 
 tkos:BusinessModel a owl:Class ;
     rdfs:label "商业模式"@zh ;
     rdfs:subClassOf tkos:ContextAsset,
         tkos:StrategicEntity .
-
-tkos:CompanyCapability a owl:Class ;
-    rdfs:label "公司能力"@zh ;
-    rdfs:subClassOf tkos:CompanyReality .
 
 tkos:CompanyPolicy a owl:Class ;
     rdfs:label "公司政策"@zh ;
@@ -426,6 +422,11 @@ tkos:hasPortfolio a owl:ObjectProperty ;
     rdfs:domain tkos:Domain ;
     rdfs:range tkos:MissionPortfolio .
 
+tkos:hasProductModule a owl:ObjectProperty ;
+    rdfs:label "运营产品模块"@zh ;
+    rdfs:domain tkos:Domain ;
+    rdfs:range tkos:ProductModule .
+
 tkos:hasProgressSnapshot a owl:ObjectProperty ;
     rdfs:label "具有进展快照"@zh ;
     rdfs:domain tkos:Outcome ;
@@ -643,6 +644,10 @@ tkos:Close a owl:NamedIndividual,
         tkos:ReviewConclusion ;
     rdfs:label "关闭"@zh .
 
+tkos:CompanyCapability a owl:Class ;
+    rdfs:label "公司能力"@zh ;
+    rdfs:subClassOf tkos:CompanyReality .
+
 tkos:Confirmed a owl:NamedIndividual,
         tkos:ConfirmationStatus ;
     rdfs:label "已确认"@zh .
@@ -816,6 +821,12 @@ tkos:Pause a owl:NamedIndividual,
 tkos:PreliminarilyConfirmed a owl:NamedIndividual,
         tkos:ConfirmationStatus ;
     rdfs:label "初步确认"@zh .
+
+tkos:ProductModule a owl:Class ;
+    rdfs:label "产品模块"@zh ;
+    rdfs:comment "构成公司产品平台的基础设施模块（Method、Engine、Ontology、Foundry、TokenHub 等），是公司产品能力的具体承载，可被业务域运营、被 Mission 交付、被 Context Pack 引用。"@zh ;
+    rdfs:subClassOf tkos:CompanyCapability,
+        tkos:ContextAsset .
 
 tkos:StrategicDecision a owl:Class ;
     rdfs:label "战略决策"@zh ;
@@ -1102,11 +1113,6 @@ tkos:DecisionProvenanceEntity a owl:Class ;
     rdfs:comment "承载决策、判断、学习、证据关系与可重算画像的经营对象。"@zh ;
     rdfs:subClassOf tkos:BusinessEntity .
 
-tkos:Domain a owl:Class ;
-    rdfs:label "业务域"@zh ;
-    rdfs:comment "持续承担一类经营结果的责任空间。"@zh ;
-    rdfs:subClassOf tkos:OperatingEntity .
-
 tkos:RoleAssignment a owl:Class ;
     rdfs:label "角色承担"@zh ;
     rdfs:comment "人员在组织、Mission 或 Decision 范围内，于明确有效期承担的角色关系。"@zh ;
@@ -1117,6 +1123,11 @@ tkos:DecisionStatus a owl:Class ;
     rdfs:subClassOf tkos:LifecycleStatus ;
     owl:equivalentClass [ a owl:Class ;
             owl:oneOf ( tkos:DecisionCandidate tkos:DecisionPendingConfirmation tkos:DecisionEffective tkos:DecisionUnderReview tkos:DecisionSuperseded tkos:DecisionExpired ) ] .
+
+tkos:Domain a owl:Class ;
+    rdfs:label "业务域"@zh ;
+    rdfs:comment "持续承担一类经营结果的责任空间。"@zh ;
+    rdfs:subClassOf tkos:OperatingEntity .
 
 tkos:Evidence a owl:Class ;
     rdfs:label "证据"@zh ;
@@ -1160,11 +1171,11 @@ tkos:varCondition a swrl:Variable .
 tkos:DomainOutcome a owl:Class ;
     rdfs:label "业务域目标"@zh ;
     rdfs:subClassOf [ a owl:Restriction ;
-            owl:onProperty tkos:isDeliveredBy ;
-            owl:someValuesFrom tkos:MissionOutcome ],
-        [ a owl:Restriction ;
             owl:onProperty tkos:supports ;
             owl:someValuesFrom tkos:CompanyOutcome ],
+        [ a owl:Restriction ;
+            owl:onProperty tkos:isDeliveredBy ;
+            owl:someValuesFrom tkos:MissionOutcome ],
         tkos:Outcome ;
     owl:disjointWith tkos:MissionOutcome .
 
@@ -1194,23 +1205,23 @@ tkos:Mission a owl:Class ;
     rdfs:label "Mission"@en,
         "经营任务"@zh ;
     rdfs:subClassOf [ a owl:Restriction ;
+            owl:onClass tkos:Domain ;
+            owl:onProperty tkos:belongsTo ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom tkos:MissionStatus ;
+            owl:onProperty tkos:hasStatus ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:DomainOutcome ;
+            owl:onProperty tkos:contributesTo ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        [ a owl:Restriction ;
             owl:onClass tkos:RoleAssignment ;
             owl:onProperty tkos:hasResponsibleAssignment ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
             owl:onClass tkos:MissionOutcome ;
             owl:onProperty tkos:expects ;
-            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
-        [ a owl:Restriction ;
-            owl:onClass tkos:DomainOutcome ;
-            owl:onProperty tkos:contributesTo ;
-            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom tkos:MissionStatus ;
-            owl:onProperty tkos:hasStatus ],
-        [ a owl:Restriction ;
-            owl:onClass tkos:Domain ;
-            owl:onProperty tkos:belongsTo ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         tkos:OperatingEntity .
 

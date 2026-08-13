@@ -34,7 +34,7 @@ test-isomorphism:
 	$(PYTHON) tests/run_schema_isomorphism.py
 
 test-runtime:
-	$(PYTHON) -m pytest tests/test_runtime_*.py tests/test_agent_harness.py -v
+	$(PYTHON) -m pytest tests/test_runtime_*.py tests/test_agent_harness.py tests/test_decision_context_compiler.py tests/test_render_units.py tests/test_openai_text_polisher.py -v
 
 # Pure-Python gate for the fast local feedback loop.
 test-fast: test-shacl test-context test-conformance test-isomorphism test-runtime

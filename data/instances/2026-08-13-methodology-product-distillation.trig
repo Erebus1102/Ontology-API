@@ -1,0 +1,203 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# 2026-08-13 — Re-distillation of three Feishu snapshots against the deployed V2.4.1 ontology.
+# Sources (fetched 2026-08-13):
+#   1. TKOS Glossary 与战略议题时序图 (wiki UjVpwuxX…, rev 25)
+#   2. TKOS 企业事项与个人决策本体方案 (docx QRSLdn85…, rev 517)  — supersedes earlier r508 sourcing
+#   3. 1号位 Agent 产品说明 (wiki K0mMwTRQ…, rev 778)
+#
+# Re-distillation principle (cognitive honesty, no duplication):
+#   * Content already distilled in earlier batches is NOT re-created. The existing
+#     capability-* instances (CEO Agent / Manager Agent / Ontology / TokenHub / Digital
+#     Workforce) and the M1/M2/M3 method capabilities already cover the product modules
+#     and Method Layer 1/2/3. They are RECLASSIFIED into the new ProductModule subclass
+#     (asserted here as additional types, not duplicated).
+#   * Only genuinely new modules (Method / Engine / Foundry), new principles (ACT,
+#     inference boundary, content discipline), new Work Patterns (专家团讨论 / 任务跟进 /
+#     更新与学习), and honest V3.0-only gaps are added as fresh Candidate instances.
+#   * V3.0-only concepts (Agreement, Persona Ontology, persona_context, write/provenance
+#     APIs, DigitalLabor) are recorded as ContextGap, never fabricated into classes that
+#     do not exist in V2.4.1.
+# Every assertion is a Candidate in graph-candidate-and-dispute. Nothing is marked Confirmed.
+
+tkos:graph-candidate-and-dispute {
+
+  # ---------------------------------------------------------------------------
+  # Source records
+  # ---------------------------------------------------------------------------
+
+  tkos:source-tkos-glossary-2026-08-13 a tkos:SourceRecord ;
+    tkos:objectId "source-tkos-glossary-2026-08-13" ;
+    tkos:displayName "TKOS Glossary 与战略议题时序图（飞书快照 2026-08-13, rev25）" ;
+    tkos:externalSourceIdentifier "https://tokenking.feishu.cn/wiki/UjVpwuxXYikoDkkAJ2Tcj8eCnBf#revision-25" ;
+    tkos:version "revision-25" ;
+    tkos:recordedAt "2026-08-13T15:57:09+08:00"^^xsd:dateTime .
+
+  tkos:source-tkos-enterprise-persona-scheme-r517 a tkos:SourceRecord ;
+    tkos:objectId "source-tkos-enterprise-persona-scheme-r517" ;
+    tkos:displayName "TKOS 企业事项与个人决策本体方案（飞书快照 2026-08-13, rev517）" ;
+    tkos:externalSourceIdentifier "https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c#revision-517" ;
+    tkos:version "revision-517" ;
+    tkos:recordedAt "2026-08-13T15:57:09+08:00"^^xsd:dateTime .
+
+  tkos:source-no1-agent-product-spec-2026-08-13 a tkos:SourceRecord ;
+    tkos:objectId "source-no1-agent-product-spec-2026-08-13" ;
+    tkos:displayName "1号位 Agent 产品说明（飞书快照 2026-08-13, rev778）" ;
+    tkos:externalSourceIdentifier "https://tokenking.feishu.cn/wiki/K0mMwTRQdiOGQAkeYo2cTS8Hnob#revision-778" ;
+    tkos:version "revision-778" ;
+    tkos:recordedAt "2026-08-13T15:57:09+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # ProductModule reclassification — the existing "产品模块 ｜ ..." CompanyCapability
+  # instances ARE the product infrastructure modules; the new ProductModule subclass
+  # (⊆ CompanyCapability) classifies them. Additional type asserted here; originals
+  # (in 2026-08-12-business-model-fde-distillation.trig) are unchanged.
+  # ---------------------------------------------------------------------------
+
+  tkos:capability-ceo-agent a tkos:ProductModule .
+  tkos:capability-manager-agent-matrix a tkos:ProductModule .
+  tkos:capability-agent-ontology-permission a tkos:ProductModule .
+  tkos:capability-digital-workforce a tkos:ProductModule .
+  tkos:capability-tokenhub-runtime-base a tkos:ProductModule .
+
+  # ---------------------------------------------------------------------------
+  # New ProductModule instances — glossary infrastructure modules not previously
+  # represented (Method / Engine / Foundry). TokenHub and Ontology are already
+  # represented by the reclassified instances above.
+  # ---------------------------------------------------------------------------
+
+  tkos:product-module-method a tkos:ProductModule ;
+    tkos:objectId "product-module-method" ;
+    tkos:displayName "产品模块：Method（工作方法）" ;
+    tkos:scopeDescription "TKOS 的规则层和组织宪法。定义 Outcome、Mission、DRI、人机分工、决策、升级、Review、Evidence 与复盘等基本经营方法。它不是独立于产品之外的管理手册，必须进入系统规则和真实经营动作。与既有 M1/M2/M3 方法能力（capability-sico/omd/moer-method）的区别：那些是具体方法路径，本对象是承载它们的规则层产品模块。" ;
+    tkos:sourcedFrom tkos:source-tkos-glossary-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:product-module-engine a tkos:ProductModule ;
+    tkos:objectId "product-module-engine" ;
+    tkos:displayName "产品模块：Engine（运行引擎）" ;
+    tkos:scopeDescription "TKOS 的运行、编排和控制中枢。负责 Mission 状态流转、Agent 调用与编排、权限校验、上下文生成、事件触发、Action 执行、结果回写、运行监控、版本审计与回滚；使 Method 与 Ontology 转化为持续发生的经营行为。" ;
+    tkos:sourcedFrom tkos:source-tkos-glossary-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:product-module-foundry a tkos:ProductModule ;
+    tkos:objectId "product-module-foundry" ;
+    tkos:displayName "产品模块：Foundry（工厂）" ;
+    tkos:scopeDescription "本体的生产工具。负责将原始素材和过程产物加工为当前有效上下文，持续沉淀 Decision、Evidence、Artifact、Risk 与 Lesson 等本体资产，使 Ontology 可被持续构建、维护和演化。是核心业务与 TokenOps 辅助业务的共同底座。" ;
+    tkos:sourcedFrom tkos:source-tkos-glossary-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  # Domain → ProductModule 运营关系（按各 Domain 已有职责推断）。
+  tkos:domain-03-method-2026-08 tkos:hasProductModule tkos:product-module-method, tkos:product-module-foundry .
+  tkos:domain-06-tokenhub-2026-08 tkos:hasProductModule tkos:capability-tokenhub-runtime-base .
+  tkos:domain-04-agents-2026-08 tkos:hasProductModule tkos:capability-ceo-agent, tkos:capability-manager-agent-matrix .
+  tkos:domain-fe-2026-08 tkos:hasProductModule tkos:product-module-engine, tkos:capability-agent-ontology-permission .
+
+  # ---------------------------------------------------------------------------
+  # Genuinely new OperatingPrinciple / CompanyPolicy (not in earlier batches)
+  # ---------------------------------------------------------------------------
+
+  tkos:principle-act-loop-framework a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-act-loop-framework" ;
+    tkos:displayName "ACT 经营闭环框架" ;
+    tkos:scopeDescription "词元云集定义企业持续竞争力的核心公式：经营闭环效率正比于 Accuracy（判断准确度）乘 Consistency（战略一致性）除以 Time（闭环周期）。ACT 不是精确财务公式，而是解释新旧经营范式差异的管理框架：旧范式长 T、低 A×C、低频循环；新范式短 T、高 A×C、高频闭环。" ;
+    tkos:sourcedFrom tkos:source-tkos-glossary-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:principle-inference-does-not-replace-judgement a tkos:OperatingPrinciple ;
+    tkos:objectId "principle-inference-does-not-replace-judgement" ;
+    tkos:displayName "经营原则：推理不替代经营判断" ;
+    tkos:scopeDescription "推理机只能从已记录的关系中推出结论，无法替公司判断一项投入是否值得，无法衡量新证据在商业上的分量，也无法补出一号位的真实判断。推理结果应被视为事实关系与规则条件的展开，而非最终经营结论；当前事项的判断仍由 Skill 与 Agent 完成，一号位负责确认取舍和正式结论。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:policy-ontology-content-discipline a tkos:CompanyPolicy ;
+    tkos:objectId "policy-ontology-content-discipline" ;
+    tkos:displayName "公司政策：本体内容纪律（防三种误用）" ;
+    tkos:scopeDescription "本体只应保存有稳定业务含义、来源、时间与确认方式的内容；零散材料、尚未澄清的观点与一次性对话应先作为候选 Assertion 或研究材料存在。需持续批评三种误用：把本体当成万能记忆、把历史案例当成自动答案、把意图识别当作事实确认。意图只是工作假设，不能改变企业事实、确认状态与决策边界。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Genuinely new WorkPattern from the 1号位 Agent 产品说明.
+  # (会议督导/战略研究 已由既有 workpattern-ceo-operating-meeting /
+  #  workpattern-strategy-research 承载，不重复创建。)
+  # ---------------------------------------------------------------------------
+
+  tkos:workpattern-no1agent-expert-panel-discussion a tkos:WorkPattern ;
+    tkos:objectId "workpattern-no1agent-expert-panel-discussion" ;
+    tkos:displayName "Work Pattern 候选 ｜ 一号位 Agent 专家团讨论" ;
+    tkos:scopeDescription "候选 Work Pattern：在一个选择没有唯一答案、团队观点过于一致或需主动听取不同立场时发起 → 从 CTO、COO、CEO 等不同视角展开，每视角说清支持哪个选择、最担心什么、依据、什么新事实会改变判断 → 整理一致判断、仍有分歧的关键问题、每个选择的收益与代价、还缺的证据、建议先验证什么 → 一号位只确认需拍板的问题，确认结论进入后续执行，暂不能决定的转为研究或验证任务。" ;
+    tkos:sourcedFrom tkos:source-no1-agent-product-spec-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:workpattern-no1agent-task-followup a tkos:WorkPattern ;
+    tkos:objectId "workpattern-no1agent-task-followup" ;
+    tkos:displayName "Work Pattern 候选 ｜ 一号位 Agent 任务跟进" ;
+    tkos:scopeDescription "候选 Work Pattern：接在会议督导之后，从已确认结论中拆出下一步、责任人与需回看问题 → 日常汇总进展、识别卡点与新变化、提示偏离原有结论的事项 → 下次回看说明完成、卡住、需重新判断的事项并把新事实带回下一次会议。不替代项目管理工具，只把一号位已确认的关键结论、任务与卡点带回回看。" ;
+    tkos:sourcedFrom tkos:source-no1-agent-product-spec-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:workpattern-context-update-and-learning a tkos:WorkPattern ;
+    tkos:objectId "workpattern-context-update-and-learning" ;
+    tkos:displayName "Work Pattern 候选 ｜ 上下文更新与学习" ;
+    tkos:scopeDescription "候选 Work Pattern：区分三类更新动作——补充事实（数据、纪要、Review 结论）、修订判断（新证据改变旧 Decision 适用范围）、沉淀学习（历史案例盲区经复盘成为下次必查条件）。所有修订保留前一版本并用 supersedes 连接；候选内容供研究与人工查看，当前有效 Context 只使用已确认且有效期内的版本。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  # ---------------------------------------------------------------------------
+  # Context gaps — V3.0-only concepts the deployed V2.4.1 ontology cannot yet express.
+  # Recorded honestly as gaps, not fabricated into non-existent classes.
+  # ---------------------------------------------------------------------------
+
+  tkos:gap-agreement-class-missing a tkos:ContextGap ;
+    tkos:objectId "gap-agreement-class-missing" ;
+    tkos:displayName "战略闭环缺少 Agreement 落盘类" ;
+    tkos:scopeDescription "Glossary 战略议题时序图要求“确认成熟 Judgement，形成 Agreement”，并以 Agreement（status: close / go_on）作为战略结论的唯一落盘对象、Mission 创建的前提。当前部署的 V2.4.1 本体无 Agreement 类（仍以 StrategicChoice/StrategicDecision 表达），无法按设计表达战略结论的确认与状态流转。属 V3.0 本体手术范围。" ;
+    tkos:sourcedFrom tkos:source-tkos-glossary-2026-08-13, tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-persona-ontology-unmodeled a tkos:ContextGap ;
+    tkos:objectId "gap-persona-ontology-unmodeled" ;
+    tkos:displayName "个人决策本体（Persona Ontology）整体未建模" ;
+    tkos:scopeDescription "本体方案设计了一套独立的个人决策本体：DecisionMaker、DecisionProfile、DecisionMethod、DecisionPrinciple、TradeoffRule、DecisionBoundary、DecisionCase、ObservedAdvantage、OverlookedRisk、DisconfirmingCondition 等。当前部署的 V2.4.1 仅保留 DecisionLearning，其余对象均无对应类，无法承载一号位的判断原则、取舍规则、历史案例与改判条件。属 Persona 本体包工作。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-persona-context-compilation-unimplemented a tkos:ContextGap ;
+    tkos:objectId "gap-persona-context-compilation-unimplemented" ;
+    tkos:displayName "persona_context 编译与 Prompt 槽位未实现" ;
+    tkos:scopeDescription "方案要求运行时把结构化 Context Pack 编译为一段短而完整的自然语言 persona_context，按固定顺序写入当前事项、当前有效事实、相关原则、相似案例、已验证优势、历史盲区、支持与反证、未知与缺口、决策边界与输出要求，并实际插入 Agent User Prompt。当前 Runtime 仅有 Context Pack 结构化输出与 Markdown 渲染，无 persona_context 编译与 Prompt 槽位装配。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-write-submissions-lineage-unimplemented a tkos:ContextGap ;
+    tkos:objectId "gap-write-submissions-lineage-unimplemented" ;
+    tkos:displayName "候选写入与可追溯链路接口未实现" ;
+    tkos:scopeDescription "方案定义了接口二（写入候选事实或候选学习，先候选后确认再物化）与接口三（按对象查询来源、关联案例、推理规则、确认记录与替代版本的可追溯链路）。当前 Runtime 仅实现读路径 resolve/render，submissions 写入闭环与 lineage 端点均未实现，候选知识无法经系统确认进入当前有效图。" ;
+    tkos:sourcedFrom tkos:source-tkos-enterprise-persona-scheme-r517 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+  tkos:gap-digital-labor-class-missing a tkos:ContextGap ;
+    tkos:objectId "gap-digital-labor-class-missing" ;
+    tkos:displayName "数字劳动力（Digital Labor）缺少独立类" ;
+    tkos:scopeDescription "Glossary 定义“数字劳动力”为可承担标准化、可观测执行任务的 Agent，承担检索、分析、生成、跟踪、记录等工作但不承担 DRI 责任。当前 V2.4.1 仅有 Agent / No1Agent / ManagerAgent，无 DigitalLabor 类；现有 capability-digital-workforce 以产品能力近似表达，无法在类层级区分管理者 Agent 与数字劳动力。" ;
+    tkos:sourcedFrom tkos:source-tkos-glossary-2026-08-13 ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-13T00:00:00+08:00"^^xsd:dateTime .
+
+}
