@@ -23,10 +23,12 @@
     span[定价] 覆盖率 0 → 404）。跨界碎片（线进/有哪/些风）只存在于
     span 内部，由覆盖率容忍——四审误拒回归：
     产品 1.0 上线进展如何 / 产品 1.0 当前进度如何 /
-    灯塔项目有哪些风险 / FE 当前有哪些风险 → 200。
+    灯塔项目有哪些风险 / FE 当前有哪些风险 → 200（P1 起部分改 409
+    歧义：上线进展/FE 风险为 409，当前进度/灯塔风险为 200 精确 root）。
     "模型现在应该怎么选择"：span[选择] 全库覆盖（barrier 的 scope 含
-    "模型选择与路由权"）→ 200（二轮的 404 是 name-only 强命中门产物，
-    四审起中文准入不再要求 top1 name 字段命中）。
+    "模型选择与路由权"）→ 门禁通过（二轮的 404 是 name-only 强命中
+    门产物，四审起中文准入不再要求 top1 name 字段命中）；P1.1 起
+    409 并列集恰 == 三路 scope 双 gram 覆盖节点（含 barrier）。
 
 保持型回归：FE 真实议题、英文实体词（TokenHub）、非 Issue 实体查询
 必须继续命中。
@@ -199,18 +201,17 @@ def test_review_R3_tokenhub_progress_still_matches():
 
 
 def test_review_R4_launch_progress_matches():
-    """四审误拒回归 + P1 歧义：产品 1.0 上线进展如何 → span 通过
-    （线进 跨界碎片由覆盖率容忍），但 P1 严格规则下 409——issue/risk
-    displayName 各含 8 个查询 2-gram（8/8 并列居顶；进展 prefer 把快照
-    升至 eff 11，但 name 证据 6 < 8 仍居其下——收紧排序键 name_ev 先于
-    eff 的直接数据结果）。候选 = 完整并列集。"""
+    """四审误拒回归 + P1.1 歧义：产品 1.0 上线进展如何 → span 通过
+    （线进 跨界碎片由覆盖率容忍），但 409——P1.1 用户验收项：候选
+    恰 == 两个 ProgressSnapshot（role_comp 维把快照升至居顶，二者
+    六维全并列；非角色的 issue/risk 因 role_comp=0 不在并列键上）。"""
     s = _full_store()
     with pytest.raises(AmbiguousMatchError) as ei:
         GramIntentResolver(s).resolve(
             "产品 1.0 上线进展如何", s.allowed_graphs("decision_preparation"))
     assert {c[1] for c in ei.value.candidates} == {
-        "issue-product1-lighthouse-synchronous-delivery",
-        "risk-product1-lighthouse-resource-conflict",
+        "progress-product1-component-availability-2026-08-11",
+        "progress-product1-mvp-week-2026-08-11",
     }
 
 
@@ -237,8 +238,11 @@ def test_review_R4_lighthouse_risks_matches():
 
 
 def test_review_R4_fe_risks_matches():
-    """四审误拒回归 + P1 歧义：FE 当前有哪些风险 → 409（严格规则），
-    候选集合恰 == 两个 Risk 实体（2/1 并列）。"""
+    """四审误拒回归 + P1.1 歧义：FE 当前有哪些风险 → 409（严格规则），
+    候选集合恰 == 两个 fe-m1 Risk 实体。P1.1 实体证据：2 字符全大写
+    实体代号 fe 锚定 fe-m1 家族（entity_ev 1，eff 2+30=32 并列居顶；
+    three-week-window 无实体证据、只有 scope 风险 覆盖，entity 0 居其
+    下——scope 噪声被实体证据维压制）。"""
     s = _full_store()
     with pytest.raises(AmbiguousMatchError) as ei:
         GramIntentResolver(s).resolve(
@@ -251,10 +255,13 @@ def test_review_R4_fe_risks_matches():
 
 def test_review_R4_model_selection_render_409(client_with_auth):
     """"模型现在应该怎么选择"（原 B4 反例）：span[选择] 覆盖率通过，
-    但 P1 严格规则下 409——8 个节点名称证据 tier（displayName 含
-    "模型"或"选择"之一，1/1）完全并列居顶（barrier 的模型+选择都在
-    scope、name 零证据，0/2 排其下——收紧排序键 name_ev 先于 eff）。
-    候选 = 完整并列集（不受 top5 截断）；无正文产物。"""
+    P1.1 下 409——证据 gram 保留泛业务名词（模型）后，barrier /
+    august-mission-portfolio-baseline / dual-business-feedback-loop 的
+    scope 各覆盖 模型+选择（ev 2）完全并列居顶（名称含"选择"的节点只
+    覆盖 选择，ev 1 居其下——用户规则："候选证据同时计算 name 与
+    scope"，409 至少包含 barrier-five-control-points）。候选 = 完整
+    并列集（不受 top5 截断）；每项附 type 与 matched_evidence；无正文
+    产物。"""
     req = dict(BASE_REQ, query="模型现在应该怎么选择")
     resp = client_with_auth.post(
         "/v1/context-packs:render", json={
@@ -267,15 +274,14 @@ def test_review_R4_model_selection_render_409(client_with_auth):
     detail = resp.json()["detail"]
     assert detail["code"] == "ontology_context_ambiguous"
     assert {c["id"] for c in detail["candidates"]} == {
-        "criterion-domain-outcome-01-2026-08",
-        "domain-01-direction-choice-2026-08",
-        "issue-fangdongdong-business-ontology-design-choice",
-        "research-fangdongdong-decision-system-value-model",
-        "risk-fe-m3-model-conflict",
-        "source-fde-business-model-2026-07",
-        "strategy-content-act-model",
-        "strategy-content-tq-model",
+        "barrier-five-control-points",
+        "strategy-content-august-mission-portfolio-baseline",
+        "strategy-content-dual-business-feedback-loop",
     }
+    barrier = next(c for c in detail["candidates"]
+                   if c["id"] == "barrier-five-control-points")
+    assert barrier["type"] == "CompetitiveBarrier"
+    assert barrier["matched_evidence"] == {"name": [], "scope": ["模型", "选择"]}
     assert "rendered" not in resp.json()
 
 

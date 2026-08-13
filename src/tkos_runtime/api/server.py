@@ -76,7 +76,7 @@ def _knowledge_gap_404(exc: NoMatchError, query: str) -> HTTPException:
         "unmatched_terms": list(exc.unmatched_terms),
         "alternatives": [
             {"score": s, "id": i, "name": n}
-            for s, i, n in exc.candidates
+            for s, i, n, _t, _me in exc.candidates
         ],
         "suggested_action": "submit_context_gap",
     })
@@ -84,11 +84,17 @@ def _knowledge_gap_404(exc: NoMatchError, query: str) -> HTTPException:
 
 def _ambiguous_409(exc: AmbiguousMatchError, query: str) -> HTTPException:
     """P1: 歧义响应（用户审定的严格规则）——top1/top2 有效维度完全并列
-    → 拒绝猜测（无 IRI 兜底）；candidates = 完整并列集（不受 top5 截断）。"""
+    → 拒绝猜测（无 IRI 兜底）；candidates = 完整并列集（不受 top5 截断）。
+
+    P1.1: 每项候选附 type（本体主类型短名）与 matched_evidence
+    （name/scope 的 CJK gram 匹配明细）——同分候选靠类型与证据位置
+    支撑 Agent 消歧（"模型选择"：barrier 证据全在 scope）。"""
     return HTTPException(status_code=409, detail={
         "code": "ontology_context_ambiguous", "query": query,
         "candidates": [
-            {"score": s, "id": i, "name": n} for s, i, n in exc.candidates
+            {"score": s, "id": i, "name": n,
+             "type": t, "matched_evidence": me}
+            for s, i, n, t, me in exc.candidates
         ],
         "suggested_action": "disambiguate_query"})
 

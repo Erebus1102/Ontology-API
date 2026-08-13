@@ -1,16 +1,24 @@
 # tests/test_runtime_intent_p1.py
-"""P1 IntentAssessment —— 角色语义 / 409 歧义 / 404 候选建议 / 意图切面。
+"""P1/P1.1 IntentAssessment —— 角色语义 / 409 歧义 / 404 候选 / 意图切面。
 
 五审核心问题："200 但锚点错误"——跨度门禁能判断"知识库可能覆盖"但
 不能判断用户要查的对象类型与关系角色。P1 一次性加入：
   * intent_facets（entity / requested_role / operation）
   * "风险" constrain Risk 类实体、"进展/进度" prefer ProgressSnapshot
-  * top1/top2 有效维度（exact_match, name_evidence, effective_score）
-    完全并列 → 409 ontology_context_ambiguous（严格规则，无 IRI 兜底）
+  * top1/top2 有效维度完全并列 → 409 ontology_context_ambiguous
+    （严格规则，无 IRI 兜底）
   * 404 alternatives 返回门禁后候选建议（英文/中文知识否决 →
     baseline[:5]；constrain 池空 → baseline[:5]）
-  * 精确断言：root 精确 ==（禁止裸 assert ia.root）；409 候选集合恰 ==
-    （完整并列集，不受 top5 截断）；候选全部来自 allowed_graph_ids。
+
+P1.1 排序维度（用户审定，六维）：
+  exact_match ＞ entity_evidence（英文 token 在 name 字段命中，含
+  2 字符全大写实体代号如 FE）＞ requested-role compatibility（目标
+  角色候选池内消歧）＞ evidence（name∪scope 的业务主题 gram 覆盖，
+  泛业务名词如 模型 保留、纯功能词如 当前 切断）＞ name_evidence
+  （名称命中压 scope 命中）＞ effective_score（base + prefer boost）。
+  409 候选为 5 元组 (score, id, name, primary_type, matched_evidence)。
+  精确断言：root 精确 ==（禁止裸 assert ia.root）；409 候选集合恰 ==
+  （完整并列集，不受 top5 截断）；候选全部来自 allowed_graph_ids。
 """
 from __future__ import annotations
 
@@ -58,10 +66,13 @@ def test_p1_bedrock_veto_carries_candidates():
             "TKOS deepresearch模块要不要上bedrock的模型",
             s.allowed_graphs("decision_preparation"))
     assert ei.value.candidates
-    assert ei.value.candidates[0][0] == 13
-    assert ei.value.candidates[0][1] == (
-        "research-product1-lighthouse-schedule-and-delivery")
+    # P1.1 六维排序下 bedrock 404 建议 top1（验证数据）：
+    # capability-tokenhub-runtime-base（scope 覆盖 模块/模型 证据 2）
+    assert ei.value.candidates[0][0] == 8
+    assert ei.value.candidates[0][1] == "capability-tokenhub-runtime-base"
     assert ei.value.candidates[0][2]  # display_name 非空
+    assert ei.value.candidates[0][3] == "CompanyCapability"  # type
+    assert set(ei.value.candidates[0][4]) == {"name", "scope"}  # evidence
 
 
 def test_p1_pricing_veto_carries_candidates():
@@ -71,7 +82,7 @@ def test_p1_pricing_veto_carries_candidates():
             "TokenKing产品应该怎么定价",
             s.allowed_graphs("decision_preparation"))
     assert ei.value.candidates
-    assert all(len(c) == 3 for c in ei.value.candidates)
+    assert all(len(c) == 5 for c in ei.value.candidates)
 
 
 # ── 角色语义：精确 root 断言（禁止裸 assert ia.root）──────────────────
@@ -104,23 +115,24 @@ def _ambiguous_ids(err):
 
 
 def test_p1_progress_preference_launch_progress_ambiguous():
-    """产品 1.0 上线进展如何 → 409（严格规则，候选 = 完整并列集）。
+    """产品 1.0 上线进展如何 → 409，候选恰 == 两个 ProgressSnapshot
+    （用户 P1.1 验收项："candidates 全部为 ProgressSnapshot"）。
 
-    数据事实：issue/risk 的 displayName 各含 8 个查询 2-gram（"产品
-    1.0 上线…"），两个 ProgressSnapshot 各 6 个。收紧后的 rank_key
-    (-exact, -name_ev, -eff, node) 使 name 证据 tier（8/8）严格居顶——
-    进展 prefer 把快照升至 eff 11，但 6 < 8 仍居其下。top1/top2
-    (issue/risk) 三维度全并列 → 拒绝猜测：查询既可指 issue 也可指
-    risk，系统不选边。（计划原预期"两快照"是收紧前旧数据快照——
-    只比较了快照彼此、未按全局排序核验。）"""
+    P1.1 数据事实：证据 gram 集 = {产品, 上线}（模板"进展如何"移除）。
+    两个快照 name 覆盖 产品（ev 1/name_ev 1/eff 11 = base 6 + prefer
+    5）；issue/risk 同样 ev 1 但 role_comp=0——用户规则"缺少明确实体
+    强锚点时，只要存在带实体覆盖的目标角色候选，409/root 选择就在
+    目标角色候选池内完成"：role_comp 维把两个快照升至居顶，二者六维
+    全并列 → 409，候选恰 == 两个 ProgressSnapshot。"""
     s = _full_store()
     with pytest.raises(AmbiguousMatchError) as ei:
         GramIntentResolver(s).resolve(
             "产品 1.0 上线进展如何", s.allowed_graphs("decision_preparation"))
     assert _ambiguous_ids(ei.value) == {
-        "issue-product1-lighthouse-synchronous-delivery",
-        "risk-product1-lighthouse-resource-conflict",
+        "progress-product1-component-availability-2026-08-11",
+        "progress-product1-mvp-week-2026-08-11",
     }
+    assert all(c[3] == "OutcomeProgressSnapshot" for c in ei.value.candidates)
 
 
 def test_p1_risk_constraint_fe_ambiguous():
@@ -136,27 +148,28 @@ def test_p1_risk_constraint_fe_ambiguous():
 
 
 def test_p1_model_selection_ambiguous():
-    """模型现在应该怎么选择（B4）→ 409，候选 = 完整并列集（不截断）。
+    """模型现在应该怎么选择（B4）→ 409，候选包含 barrier-five-control-
+    points（用户 P1.1 验收项），恰 == 三路并列（完整并列集不截断）。
 
-    数据事实：8 个节点名称证据 tier（displayName 含"模型"或"选择"
-    之一，name_ev=1/eff=1）完全并列居顶。计划原预期的三路（barrier
-    等，模型+选择都在 scope、name 零证据，0/2）在收紧排序键
-    (-exact, -name_ev, -eff, node) 下低于 1/1 tier——name 证据压 scope
-    得分正是用户收紧 #1 的明示语义（收紧前旧数据快照未按该键核验）。"""
+    P1.1 数据事实：证据 gram 保留泛业务名词后 = {模型, 选择}。barrier /
+    august-mission-portfolio-baseline / dual-business-feedback-loop 的
+    scope 各覆盖 模型+选择（ev 2、name_ev 0）；名称含"选择"的节点只
+    覆盖 选择（ev 1）→ 三路 ev=2 并列居顶 → 409（用户规则："候选证据
+    同时计算 name 与 scope"——barrier 的证据全在 scope）。"""
     s = _full_store()
     with pytest.raises(AmbiguousMatchError) as ei:
         GramIntentResolver(s).resolve(
             "模型现在应该怎么选择", s.allowed_graphs("decision_preparation"))
     assert _ambiguous_ids(ei.value) == {
-        "criterion-domain-outcome-01-2026-08",
-        "domain-01-direction-choice-2026-08",
-        "issue-fangdongdong-business-ontology-design-choice",
-        "research-fangdongdong-decision-system-value-model",
-        "risk-fe-m3-model-conflict",
-        "source-fde-business-model-2026-07",
-        "strategy-content-act-model",
-        "strategy-content-tq-model",
+        "barrier-five-control-points",
+        "strategy-content-august-mission-portfolio-baseline",
+        "strategy-content-dual-business-feedback-loop",
     }
+    # barrier 的证据全在 scope（name 零证据）——matched_evidence 供 Agent 消歧
+    barrier = next(c for c in ei.value.candidates
+                   if c[1] == "barrier-five-control-points")
+    assert barrier[3] == "CompetitiveBarrier"
+    assert barrier[4]["name"] == [] and barrier[4]["scope"] == ["模型", "选择"]
 
 
 # ── 候选安全：全部来自 allowed_graph_ids、不含敏感图节点 ──────────────
@@ -168,12 +181,12 @@ def test_p1_candidates_from_allowed_graphs_only():
     with pytest.raises(NoMatchError) as ei:
         GramIntentResolver(s).resolve(
             "TKOS deepresearch模块要不要上bedrock的模型", allowed)
-    for _, frag, _ in ei.value.candidates:
+    for _, frag, _n, _t, _me in ei.value.candidates:
         assert frag in allowed_frags
         assert frag != "assertion-sensitive"
     with pytest.raises(AmbiguousMatchError) as ei2:
         GramIntentResolver(s).resolve("FE 当前有哪些风险", allowed)
-    for _, frag, _ in ei2.value.candidates:
+    for _, frag, _n, _t, _me in ei2.value.candidates:
         assert frag in allowed_frags
         assert frag != "assertion-sensitive"
 
@@ -234,6 +247,20 @@ def test_p1_facets_history_v23():
     assert f.operation is None
 
 
+def test_p1_facets_model_selection_operation_select():
+    """P1.1："选择" → operation="select"。含"选择"的查询（模型现在应该
+    怎么选择）是 409 路径，无 200 root 可取，故直接单元调用
+    _build_facets 锚定 operation 与 entity 提取。"""
+    from tkos_runtime.adapters.gram_intent_resolver import _build_facets
+    f = _build_facets(
+        "TokenHub 模型怎么选择", "capability-tokenhub-runtime-base", None,
+        {"capability-tokenhub-runtime-base":
+         "产品模块 tokenhub agent 运行底座（持续运行）"})
+    assert f.operation == "select"
+    assert f.entity == "tokenhub"
+    assert f.requested_role is None
+
+
 # ── API 契约：409 歧义 / 404 alternatives ──────────────────────────────
 
 _TEST_KEY = "tkos-test-key-2026"
@@ -261,7 +288,8 @@ def client_with_auth(monkeypatch):
 
 
 def test_p1_ambiguous_409_resolve(client_with_auth):
-    """产品 1.0 上线进展如何 → 409 + code + 完整并列候选（精确 id）。"""
+    """产品 1.0 上线进展如何 → 409 + code + 完整并列候选（精确 id），
+    P1.1 每项附 type 与 matched_evidence。"""
     req = dict(BASE_REQ, query="产品 1.0 上线进展如何")
     resp = client_with_auth.post(
         "/v1/context-packs:resolve", json=req, headers=_auth_headers())
@@ -271,10 +299,14 @@ def test_p1_ambiguous_409_resolve(client_with_auth):
     assert detail["query"] == "产品 1.0 上线进展如何"
     assert detail["suggested_action"] == "disambiguate_query"
     assert {c["id"] for c in detail["candidates"]} == {
-        "issue-product1-lighthouse-synchronous-delivery",
-        "risk-product1-lighthouse-resource-conflict",
+        "progress-product1-component-availability-2026-08-11",
+        "progress-product1-mvp-week-2026-08-11",
     }
-    assert all({"score", "id", "name"} <= set(c) for c in detail["candidates"])
+    assert all({"score", "id", "name", "type", "matched_evidence"}
+               <= set(c) for c in detail["candidates"])
+    for c in detail["candidates"]:
+        assert c["type"] == "OutcomeProgressSnapshot"
+        assert c["matched_evidence"] == {"name": ["产品"], "scope": []}
 
 
 def test_p1_ambiguous_409_render(client_with_auth):
@@ -295,11 +327,15 @@ def test_p1_ambiguous_409_render(client_with_auth):
         "risk-fe-m1-context-conflict",
         "risk-fe-m1-no-product-consumption",
     }
+    for c in detail["candidates"]:
+        assert c["type"] == "Risk"
+        assert set(c["matched_evidence"]) == {"name", "scope"}
     assert "rendered" not in resp.json()
 
 
 def test_p1_404_alternatives_resolve(client_with_auth):
-    """bedrock 未知实体 → 404 + alternatives 非空（门禁后候选建议）。"""
+    """bedrock 未知实体 → 404 + alternatives 非空（门禁后候选建议，
+    只暴露 score/id/name 三项）。"""
     req = dict(BASE_REQ, query="TKOS deepresearch模块要不要上bedrock的模型")
     resp = client_with_auth.post(
         "/v1/context-packs:resolve", json=req, headers=_auth_headers())
@@ -308,8 +344,9 @@ def test_p1_404_alternatives_resolve(client_with_auth):
     assert detail["code"] == "ontology_context_not_found"
     assert detail["alternatives"]
     assert all({"score", "id", "name"} <= set(a)
+               and "matched_evidence" not in a
                for a in detail["alternatives"])
-    assert any(a["id"] == "research-product1-lighthouse-schedule-and-delivery"
+    assert any(a["id"] == "capability-tokenhub-runtime-base"
                for a in detail["alternatives"])
 
 

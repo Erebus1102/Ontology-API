@@ -14,24 +14,28 @@ class NoMatchError(Exception):
 
     def __init__(self, message: str, unmatched_terms: list[str] | None = None,
                  match_reasons: list[str] | None = None,
-                 candidates: list[tuple[int, str, str]] | None = None):
+                 candidates: list[tuple[int, str, str, str | None, dict]] | None = None):
         super().__init__(message)
         self.unmatched_terms = list(unmatched_terms or [])
         self.match_reasons = list(match_reasons or [])
-        # (score, id_fragment, display_name)——P1：404 建议候选（门禁后）。
+        # (score, id_fragment, display_name, primary_type, matched_evidence)
+        # ——P1：404 建议候选（门禁后）；P1.1：候选富化 type/matched_evidence
+        #（API 404 只暴露前三项；409 全量暴露）。
         self.candidates = list(candidates or [])
 
 
 class AmbiguousMatchError(Exception):
-    """Intent 匹配歧义：top1/top2 有效维度（exact_match、name_evidence、
-    effective_score）完全并列 → API 层 409 ``ontology_context_ambiguous``。
+    """Intent 匹配歧义：top1/top2 五维有效键（exact_match、entity_evidence、
+    role_compatibility、evidence、effective_score）完全并列 → API 层
+    409 ``ontology_context_ambiguous``。
 
-    严格规则：得分与名称证据均无并列分离 → 拒绝猜测（无 IRI 兜底）。
-    ``candidates`` = 完整 role_ranked 上的**全部并列项**（不受 top5 截断）。
+    严格规则：五维均无并列分离 → 拒绝猜测（无 IRI 兜底）。
+    ``candidates`` = 完整 role_ranked 上的**全部并列项**（不受 top5 截断），
+    每项 (score, id_fragment, display_name, primary_type, matched_evidence)。
     """
 
     def __init__(self, message: str,
-                 candidates: list[tuple[int, str, str]]):
+                 candidates: list[tuple[int, str, str, str | None, dict]]):
         super().__init__(message)
         self.candidates = list(candidates)
 
