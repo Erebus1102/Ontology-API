@@ -5,7 +5,32 @@ from enum import Enum
 
 
 class NoMatchError(Exception):
-    """Intent 未匹配到任何对象。"""
+    """Intent 未匹配到任何对象（低置信度门禁拒绝或零命中）。
+
+    ``unmatched_terms`` 携带查询中完全不存在于知识库的关键词
+    （P0 门禁：英文完整 token 全索引缺失），供 API 层构造
+    ``ontology_context_not_found`` 响应。
+    """
+
+    def __init__(self, message: str, unmatched_terms: list[str] | None = None,
+                 match_reasons: list[str] | None = None):
+        super().__init__(message)
+        self.unmatched_terms = list(unmatched_terms or [])
+        self.match_reasons = list(match_reasons or [])
+
+
+class ContextRootMissingError(Exception):
+    """编译期完整性错误：matched_root 未进入最终视图或与输出不一致。
+
+    这是运行时完整性错误（API 映射 500），与匹配层"知识未命中"
+    （NoMatchError → 404）严格区分，绝不 fallback 到无关对象。
+    """
+
+    def __init__(self, message: str, matched_root: str | None = None,
+                 stage: str = "decision_context_compilation"):
+        super().__init__(message)
+        self.matched_root = matched_root
+        self.stage = stage
 
 
 class GraphPartition(str, Enum):

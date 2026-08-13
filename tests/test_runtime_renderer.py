@@ -36,6 +36,8 @@ from tkos_runtime.application.context_renderer import (
 )
 from tkos_runtime.api.serializer import pack_to_dict, dict_to_pack
 
+TKOS = "https://ontology.tokenking.ai/tkos#"
+
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -76,6 +78,19 @@ def _pack(**overrides):
     )
     defaults.update(overrides)
     return ContextPack(**defaults)
+
+
+def _typed_root_pack(mid="m1", display="测试", purpose="decision_preparation", **overrides):
+    """Pack whose matched_root is a real, typed member (P0 contract: ghost
+    roots are integrity errors — compile()/render() must name a member that
+    actually lands in a section)."""
+    overrides.setdefault("current_facts", [
+        _member(mid, display, "graph-confirmed-enterprise", []),
+    ])
+    pack = _pack(matched_root=TKOS + mid, purpose=purpose, **overrides)
+    root_member = pack.current_facts[0]
+    root_member.rdf_types = [TKOS + "Outcome"]
+    return pack
 
 
 # ---------------------------------------------------------------------------
@@ -197,9 +212,7 @@ def test_source_anchors_from_member_source_graphs():
 
 def test_deterministic_mode_no_external_deps():
     """deterministic mode must never call LLM or raise on missing creds."""
-    pack = _pack(current_facts=[
-        _member("m1", "测试", "graph-confirmed-enterprise", []),
-    ])
+    pack = _typed_root_pack()
     result = render(pack, mode="deterministic")
     assert result["rendered"]["mode_used"] == "deterministic"
     assert result["rendered"]["content"]
@@ -210,7 +223,7 @@ def test_deterministic_mode_no_external_deps():
 
 def test_llm_with_fallback_degrades_on_missing_polisher():
     """llm_with_fallback must degrade to deterministic when polisher is None."""
-    pack = _pack()
+    pack = _typed_root_pack()
     result = render(pack, mode="llm_with_fallback", polisher=None)
     assert result["rendered"]["mode_used"] == "deterministic_fallback"
     assert result["rendered"]["warnings"]
@@ -218,8 +231,11 @@ def test_llm_with_fallback_degrades_on_missing_polisher():
 
 
 def test_llm_required_raises_on_missing_polisher():
-    """llm_required must raise ValueError when no polisher provided."""
-    pack = _pack()
+    """llm_required must raise ValueError when no polisher provided.
+
+    P0: pack needs a real root member so compile() succeeds and the
+    polisher check is what raises (ghost roots raise before this point)."""
+    pack = _typed_root_pack()
     with pytest.raises(ValueError, match="TextPolisher"):
         render(pack, mode="llm_required", polisher=None)
 
@@ -293,11 +309,11 @@ def test_max_chars_fact_unit_budget():
                     status="Confirmed")
             for i in range(50)
         ],
+        matched_root=TKOS + "m0",
     )
     # set rdf_types on all members so DCC classifies them
-    TKOS_NS = "https://ontology.tokenking.ai/tkos#"
     for m in pack.current_facts:
-        m.rdf_types = [TKOS_NS + "Outcome"]
+        m.rdf_types = [TKOS + "Outcome"]
 
     result = render(pack, mode="deterministic", max_chars=600)
     content = result["rendered"]["content"]
@@ -425,7 +441,7 @@ def test_render_client_supplied_pack_permitted_purpose_is_200(monkeypatch):
     from tkos_runtime.api.server import create_app
 
     client = TestClient(create_app())
-    pack_dict = pack_to_dict(_pack(purpose="mission_review"))
+    pack_dict = pack_to_dict(_typed_root_pack(purpose="mission_review"))
     resp = client.post("/v1/context-packs:render", json={
         "pack": pack_dict,
         "render_options": {"mode": "deterministic"},
@@ -601,9 +617,7 @@ def test_valid_pack_with_governance_fields_is_accepted():
 
 def test_client_supplied_pack_records_pack_origin():
     """Client-supplied packs record pack_origin in metadata (v2: grounding always structurally_validated)."""
-    pack = _pack(current_facts=[
-        _member("m1", "事实", "graph-confirmed-enterprise", []),
-    ])
+    pack = _typed_root_pack(display="事实")
     result = render(pack, mode="deterministic", pack_origin="client_supplied")
     assert result["rendered"]["grounding_status"] == "structurally_validated"
     assert result["metadata"]["pack_origin"] == "client_supplied"
@@ -611,9 +625,7 @@ def test_client_supplied_pack_records_pack_origin():
 
 def test_server_resolved_pack_records_pack_origin():
     """Server-resolved packs record pack_origin in metadata (v2: grounding always structurally_validated)."""
-    pack = _pack(current_facts=[
-        _member("m1", "事实", "graph-confirmed-enterprise", []),
-    ])
+    pack = _typed_root_pack(display="事实")
     result = render(pack, mode="deterministic", pack_origin="server_resolved")
     assert result["rendered"]["grounding_status"] == "structurally_validated"
     assert result["metadata"]["pack_origin"] == "server_resolved"

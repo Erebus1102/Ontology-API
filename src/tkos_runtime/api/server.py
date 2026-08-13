@@ -12,7 +12,12 @@ Error mapping:
   * ``ValueError`` (raised by ``AdmissionPolicy.allowed_graphs`` on unknown
     purpose) -> HTTP 422.
   * Naive (timezone-less) ``as_of`` -> HTTP 422.
-  * ``NoMatchError`` (no intent match) -> HTTP 404.
+  * ``NoMatchError`` (knowledge gap / low-confidence gate) -> HTTP 404 with
+    structured detail ``{code: ontology_context_not_found, query,
+    unmatched_terms, alternatives: [], suggested_action: submit_context_gap}``.
+  * ``ContextRootMissingError`` (compile-time integrity failure) -> HTTP 500
+    ``{code: context_root_missing, matched_root, stage}`` — never falls back
+    to an unrelated issue.
 """
 from __future__ import annotations
 
@@ -38,7 +43,7 @@ from tkos_runtime.adapters.rdflib_dataset_store import RdfDatasetStore
 from tkos_runtime.adapters.rdflib_graph_retriever import RdfGraphRetriever
 from tkos_runtime.application.context_compiler import ContextCompiler
 from tkos_runtime.application.context_pack_resolver import ContextPackResolver
-from tkos_runtime.domain.models import NoMatchError
+from tkos_runtime.domain.models import ContextRootMissingError, NoMatchError
 from tkos_runtime.domain.policies import AdmissionPolicy
 from tkos_runtime.api.models import ResolveRequest
 from tkos_runtime.adapters.openai_text_polisher import OpenAITextPolisher
@@ -54,6 +59,19 @@ from tkos_runtime.api.auth import (
     assert_purpose,
     require_token,
 )
+
+
+def _knowledge_gap_404(exc: NoMatchError, query: str) -> HTTPException:
+    """P0: 知识不足响应（用户审定的 schema）——与编译期完整性错误严格
+    区分：NoMatchError 是匹配层的"知识未命中"（404），ContextRootMissingError
+    是编译期的完整性错误（500，绝不 fallback）。"""
+    return HTTPException(status_code=404, detail={
+        "code": "ontology_context_not_found",
+        "query": query,
+        "unmatched_terms": list(exc.unmatched_terms),
+        "alternatives": [],
+        "suggested_action": "submit_context_gap",
+    })
 
 # version constants for /version fingerprint aggregation
 from tkos_runtime.application.context_renderer import RENDERER_VERSION
@@ -249,7 +267,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
             # AdmissionPolicy.allowed_graphs raises ValueError for unknown purpose.
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except NoMatchError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+            raise _knowledge_gap_404(exc, req.query) from exc
         return pack_to_dict(pack)
 
     @app.post("/v1/context-packs:render")
@@ -288,7 +306,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             except NoMatchError as exc:
-                raise HTTPException(status_code=404, detail=str(exc)) from exc
+                raise _knowledge_gap_404(exc, rr.get("query", "")) from exc
             pack_origin = "server_resolved"
         else:
             try:
@@ -325,6 +343,13 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 "code": "render_budget_too_small",
                 "requested_max_chars": exc.requested_max_chars,
                 "minimum_required_chars": exc.minimum_required_chars,
+            }) from exc
+        except ContextRootMissingError as exc:
+            # P0-2: 编译期完整性错误 = 运行时 500，绝不 fallback 到无关对象。
+            raise HTTPException(status_code=500, detail={
+                "code": "context_root_missing",
+                "matched_root": exc.matched_root,
+                "stage": exc.stage,
             }) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

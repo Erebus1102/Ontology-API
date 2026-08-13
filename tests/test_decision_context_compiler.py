@@ -168,7 +168,10 @@ def test_allocate_budget_gaps_always_included():
 # ── Task 4: DecisionContextCompiler.compile ────────────────────────────────
 
 def _fe_like_pack():
-    """Minimal pack resembling a real FE-issue resolve output."""
+    """Minimal pack resembling a real FE-issue resolve output.
+
+    P0: matched_root 必须指向 pack 内的真实成员（幽灵 root 现在是
+    ContextRootMissingError，不再静默 fallback）。"""
     return _pack(
         current_facts=[
             _m("outcome-1", "graph-confirmed-enterprise", ["Outcome"]),
@@ -184,6 +187,7 @@ def _fe_like_pack():
             _m("gap-1", "graph-candidate-and-dispute", ["ContextGap"]),
             _m("gap-2", "graph-candidate-and-dispute", ["ContextGap"]),
         ],
+        matched_root=TKOS + "issue-fe",
     )
 
 

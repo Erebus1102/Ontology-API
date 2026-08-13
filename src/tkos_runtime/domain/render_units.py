@@ -33,12 +33,15 @@ NON_DECISION_INCIDENT_PREDICATES = frozenset({
 DECISION_INCIDENT_PREDICATES = frozenset(TRAVERSAL) - NON_DECISION_INCIDENT_PREDICATES
 
 # Fixed section order; program reassembles — LLM may not reorder.
+# anchor 首位：查询锚点（用户本次问题所问实体，任何类型 root 统一入此）；
+# issue 章节 = root 之外的 StrategicIssue（关联经营议题），仅当存在时呈现。
 SECTION_ORDER = (
-    "issue", "outcomes", "progress", "dependencies", "risks",
+    "anchor", "issue", "outcomes", "progress", "dependencies", "risks",
     "gaps", "decisions",
 )
 SECTION_TITLES = {
-    "issue": "# 决策议题",
+    "anchor": "# 查询上下文",
+    "issue": "## 关联经营议题",
     "outcomes": "## 决策目标",
     "progress": "## 当前进展与已有证据",
     "dependencies": "## 共同依赖与约束",
@@ -81,6 +84,21 @@ def assemble_sectioned_markdown(
     lines.append("")
 
     for section in SECTION_ORDER:
+        if section == "anchor":
+            # 查询上下文区块（评审 B3 契约）：用户问题 + 本体匹配锚点
+            # （root 完整三段锚点）+ 关联经营议题（issue 章节单元在此
+            # 呈现；独立标题以便 section 校验器切分）。Markdown 不得把
+            # 其他 StrategicIssue 表述为用户本次决策议题。
+            lines.append("# 查询上下文")
+            lines.append("")
+            lines.append(f"用户问题：{query_text}")
+            lines.append("")
+            lines.append("## 本体匹配锚点")
+            lines.append("")
+            for u in units_by_section.get("anchor", []):
+                lines.append(u.to_markdown_line())
+            lines.append("")
+            continue
         title = SECTION_TITLES.get(section, f"## {section}")
         lines.append(title)
         lines.append("")

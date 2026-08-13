@@ -12,7 +12,7 @@ import dataclasses
 import re
 from typing import Any
 
-from tkos_runtime.domain.models import ContextPack
+from tkos_runtime.domain.models import ContextPack, ContextRootMissingError
 from tkos_runtime.domain.render_units import (
     DECISION_INCIDENT_PREDICATES, RenderOmission, RenderBudgetTooSmall,
     SECTION_ORDER, SECTION_TITLES, ROLE_TO_SECTION, RenderedFactUnit,
@@ -186,14 +186,24 @@ def mandatory_view_keys(
     pack: ContextPack,
     units_by_section: dict[str, list[RenderedFactUnit]],
 ) -> set[tuple[str, str]]:
-    """View keys that must never be omitted: the root issue (matched_root),
-    every gap, and — when the pack has outcome units — at least one outcome."""
+    """View keys that must never be omitted: the root (matched_root), every
+    gap, and — when the pack has outcome units — at least one outcome.
+
+    P0-1: root 按 member_id 在**全部 section** 中查找（不再假设 root 是
+    StrategicIssue 归 issue section）。Research/Outcome/Mission 等实体
+    查询合法，其 root 同样受保护。
+    """
     keys: set[tuple[str, str]] = set()
     if pack.matched_root:
         root_frag = _frag(pack.matched_root)
-        for u in units_by_section.get("issue", []):
-            if u.member_id == root_frag:
-                keys.add(u.view_key)
+        for section in SECTION_ORDER:
+            found = False
+            for u in units_by_section.get(section, []):
+                if u.member_id == root_frag:
+                    keys.add(u.view_key)
+                    found = True
+                    break
+            if found:
                 break
     for u in units_by_section.get("gaps", []):
         keys.add(u.view_key)
@@ -493,16 +503,28 @@ def _build_units_by_section(
     """Compile all pack members into sectioned RenderedFactUnit lists.
 
     trace_only roles (source_record, confirmation) never occupy body lines
-    (v1, no exceptions).
+    (v1, no exceptions). matched_root 统一进 anchor（任何类型——用户审定的
+    选项 2：非 ROLE_TABLE 类型 root 也生成通用 anchor 单元，保证可编译）。
     """
     units_by_section: dict[str, list[RenderedFactUnit]] = {}
+    root_frag = _frag(pack.matched_root) if pack.matched_root else None
     for m in _all_members(pack):
         role = classify_role(m.id, type_index)
         section = ROLE_TO_SECTION.get(role)
         if role in ("source_record", "confirmation"):
             continue
         if section is None:
-            continue
+            # P0-4（评审 B4 反例）：非 ROLE_TABLE 类型（如
+            # CompetitiveBarrier/barrier-five-control-points）仍可作
+            # matched_root → 通用 anchor 单元。非 root 的 other 成员
+            # 保持跳过（v1 不加噪）。
+            if m.id != root_frag:
+                continue
+            section = "anchor"
+        # root 统一进 anchor：用户本次问题所问实体就是查询锚点；
+        # 其他 StrategicIssue 只作"关联经营议题"（issue 章节）。
+        if m.id == root_frag:
+            section = "anchor"
         claim = _compile_claim(m, name_index)
         unit = RenderedFactUnit(
             member_id=m.id,
@@ -536,6 +558,67 @@ class DecisionContextCompiler:
         # compiled.decision_context — structured dict for API consumers
         # compiled.units_by_section — sectioned RenderedFactUnit lists
     """
+
+    @staticmethod
+    def _verify_root_integrity(
+        pack: ContextPack,
+        dc: dict[str, Any],
+        selected: dict[str, list[RenderedFactUnit]],
+        omissions: list[RenderOmission],
+    ) -> None:
+        """P0-3: matched_root 必须与最终输出一致（全链路硬校验）。
+
+        检查五项，任一失败即 ContextRootMissingError（→ 500）：
+        1. root 存在于最终视图（防 ghost-root 静默丢失）
+        2. root 不在 render_omissions（防预算裁剪 root）
+        3. issue.member_id == fragment(matched_root)——仅当 issue 非空
+           （评审三审契约：非 Issue root 的 issue = null，此时只校验
+           anchor；issue 字段只允许承载 StrategicIssue）
+        4. issue.matched_root == pack.matched_root（同上条件，防替换）
+        5. anchor.member_id == fragment(matched_root)（评审 B3：查询锚点
+           必须指向 root；正文级校验在 render() 装配后另行检查）
+        """
+        root_frag = _frag(pack.matched_root)
+        present = any(
+            u.member_id == root_frag
+            for units in selected.values() for u in units
+        )
+        if not present:
+            raise ContextRootMissingError(
+                f"matched_root 不在最终视图中：{pack.matched_root}",
+                matched_root=pack.matched_root,
+                stage="decision_context_compilation",
+            )
+        if any(o.member_id == root_frag for o in omissions):
+            raise ContextRootMissingError(
+                f"matched_root 被裁剪进 render_omissions：{root_frag}",
+                matched_root=pack.matched_root,
+                stage="decision_context_compilation",
+            )
+        issue = dc.get("issue")
+        if issue is not None:
+            if issue.get("member_id") != root_frag:
+                raise ContextRootMissingError(
+                    f"issue.member_id 与 matched_root 不一致："
+                    f"{issue.get('member_id')!r} != {root_frag!r}",
+                    matched_root=pack.matched_root,
+                    stage="decision_context_compilation",
+                )
+            if issue.get("matched_root") != pack.matched_root:
+                raise ContextRootMissingError(
+                    f"issue.matched_root 与 pack.matched_root 不一致："
+                    f"{issue.get('matched_root')!r} != {pack.matched_root!r}",
+                    matched_root=pack.matched_root,
+                    stage="decision_context_compilation",
+                )
+        anchor = dc.get("anchor", {})
+        if anchor.get("member_id") != root_frag:
+            raise ContextRootMissingError(
+                f"anchor.member_id 与 matched_root 不一致："
+                f"{anchor.get('member_id')!r} != {root_frag!r}",
+                matched_root=pack.matched_root,
+                stage="decision_context_compilation",
+            )
 
     def compile(self, pack: ContextPack, max_chars: int = 12000) -> CompiledDecisionContext:
         type_index = build_type_index(pack)
@@ -590,8 +673,10 @@ class DecisionContextCompiler:
             "warnings": list(warnings),
         }
 
-        # Root issue: use pack.matched_root for precise lookup.
-        # The root issue is non-reclaimable — always included even under budget.
+        # Root: use pack.matched_root for precise lookup across ALL sections
+        # (P0-1: root 不限定 StrategicIssue；按 member_id 全局找，且 root 为
+        # mandatory view 永不进 omissions）。P0-2: root 视图缺失 = 完整性
+        # 错误 → ContextRootMissingError，绝不 fallback 到别的 issue。
         root_frag = _frag(pack.matched_root)
         root_unit = None
         for section in SECTION_ORDER:
@@ -601,18 +686,20 @@ class DecisionContextCompiler:
                     break
             if root_unit:
                 break
-        # Fallback: first issue-role member from budget-selected set
         if root_unit is None:
-            for section in SECTION_ORDER:
-                for u in selected.get(section, []):
-                    role = classify_role(u.member_id, type_index)
-                    if role == "issue":
-                        root_unit = u
-                        break
-                if root_unit:
-                    break
+            raise ContextRootMissingError(
+                f"matched_root 未进入最终视图：{pack.matched_root}",
+                matched_root=pack.matched_root,
+                stage="decision_context_compilation",
+            )
 
-        if root_unit is not None:
+        # P0-4（评审三审契约）：issue 只承载 StrategicIssue。root 的
+        # rdf_types 不含 StrategicIssue（Research/Outcome/CompetitiveBarrier
+        # 等）时 issue = null——Agent 不得把研究对象解释成经营议题；
+        # anchor 始终 = matched_root（任何类型）。
+        root_types_full = type_index.get(root_frag, set())
+        root_is_issue = TKOS + "StrategicIssue" in root_types_full
+        if root_is_issue:
             dc["issue"] = {
                 "view_key": list(root_unit.view_key),
                 "member_id": root_unit.member_id,
@@ -624,6 +711,67 @@ class DecisionContextCompiler:
                 "matched_root": pack.matched_root,
                 "epistemic_summary": epistemic_summary,
             }
+        else:
+            dc["issue"] = None
+
+        # P0-4（评审 B3/B4 契约）：查询上下文 schema —— query_context /
+        # anchor / related_issue。anchor = 用户本次问题所问实体（root，
+        # 任何类型）。
+        root_types = sorted({_frag(t) for t in root_types_full})
+        dc["query_context"] = {"query": pack.query}
+        dc["anchor"] = {
+            "view_key": list(root_unit.view_key),
+            "member_id": root_unit.member_id,
+            "name": name_index.get(root_unit.member_id, root_unit.member_id),
+            "claim": root_unit.canonical_claim,
+            "partition": root_unit.partition,
+            "source_graphs": list(root_unit.source_graphs),
+            "type": " | ".join(root_types) or "Unclassified",
+        }
+
+        # P0-4（评审三审契约）：related_issue 必须有显式业务边证据。
+        # 只接受 root 与 StrategicIssue 之间存在 DECISION_INCIDENT_
+        # PREDICATES 业务边（双向）的对象；输出关联谓词与边的
+        # source_graph（如 issue researchedBy research）；无边 → null；
+        # 多个直接关联对象按 member_id 稳定排序取首（后续升级
+        # related_issues[]）。
+        candidate_issues: dict[str, ContextPackMember] = {}
+        for m in _all_members(pack):
+            if m.id == root_frag or classify_role(m.id, type_index) != "issue":
+                continue
+            candidate_issues.setdefault(m.id, m)
+        rels_by_member: dict[str, list[tuple[str, str]]] = {}
+        for m in _all_members(pack):
+            for s in m.statements:
+                if s.predicate not in DECISION_INCIDENT_PREDICATES:
+                    continue
+                if s.subject == pack.matched_root:
+                    oid = _frag(s.object)
+                    if oid in candidate_issues:
+                        rels_by_member.setdefault(oid, []).append(
+                            (s.predicate, s.source_graph))
+                elif s.object == pack.matched_root:
+                    sid = _frag(s.subject)
+                    if sid in candidate_issues:
+                        rels_by_member.setdefault(sid, []).append(
+                            (s.predicate, s.source_graph))
+        if rels_by_member:
+            mid = sorted(rels_by_member)[0]
+            rel_m = candidate_issues[mid]
+            predicate, edge_sg = sorted(rels_by_member[mid])[0]
+            dc["related_issue"] = {
+                "view_key": [mid, rel_m.partition],
+                "member_id": mid,
+                "name": name_index.get(mid, rel_m.display_name or mid),
+                "claim": _compile_claim(rel_m, name_index),
+                "partition": rel_m.partition,
+                "source_graphs": list(rel_m.source_graphs)
+                if rel_m.source_graphs else [],
+                "predicate": _frag(predicate),
+                "edge_source_graph": edge_sg,
+            }
+        else:
+            dc["related_issue"] = None
 
         # Map sections to decision_context keys
         _SECTION_TO_DC = {
@@ -683,6 +831,10 @@ class DecisionContextCompiler:
                 "incident_edges": o.incident_edges,
                 "reason": o.reason,
             })
+
+        # P0-3: 一致性硬校验——matched_root 与最终输出必须一致。
+        # 任何不一致都是完整性错误（500），绝不静默降级。
+        self._verify_root_integrity(pack, dc, selected, omissions)
 
         return CompiledDecisionContext(
             decision_context=dc,

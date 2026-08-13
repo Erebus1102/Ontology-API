@@ -118,11 +118,22 @@ def test_fe_issue_r4_eighteen_assertions():
     assert dc["issue"]["view_key"] == [ROOT_FRAG, ROOT_PARTITION]
     # 7. epistemic_summary 在 issue 构建前计算并填充
     assert dc["issue"]["epistemic_summary"] and "候选视图" in dc["issue"]["epistemic_summary"]
-    # 8. 根议题锚点行出现在 决策议题 章节
-    issue_section = re.search(
-        r"# 决策议题(.*?)(?=## 决策目标|\Z)", content, re.DOTALL
+    # 8. 根锚点行出现在 查询上下文 的 本体匹配锚点 区块（P0-4 anchor 契约）
+    anchor_block = re.search(
+        r"# 查询上下文(.*?)(?=## 决策目标|\Z)", content, re.DOTALL
     ).group(1)
-    assert f"[member:{ROOT_FRAG}]" in issue_section
+    assert f"用户问题：{QUERY}" in anchor_block
+    assert f"[member:{ROOT_FRAG}]" in anchor_block
+    # 8b. query_context / anchor / related_issue 契约（评审 B3 + 三审：
+    # related_issue 必须携带谓词与边的 source_graph）
+    assert dc["query_context"] == {"query": QUERY}
+    assert dc["anchor"]["member_id"] == ROOT_FRAG
+    assert dc["anchor"]["view_key"] == [ROOT_FRAG, ROOT_PARTITION]
+    assert dc["anchor"]["type"] == "StrategicIssue"
+    assert dc["related_issue"] is None or (
+        dc["related_issue"]["member_id"] != ROOT_FRAG
+        and dc["related_issue"]["predicate"]
+        and dc["related_issue"]["edge_source_graph"])
 
     # ── P1-3: 信息缺口去重（每个 view_key 恰好一次）──
     # 9. 真实 FE 议题恰好 8 项缺口（回归断言：修复前为 16）
@@ -184,11 +195,16 @@ def test_fe_issue_r4_eighteen_assertions():
         compiled, "\n".join(evil), deterministic_text=content,
     )
     assert not valid and any("has swapped partition" in w for w in warns), warns
-    # 17. swapped-source：candidate 行与 provenance 行互换 source 锚点
+    # 17. swapped-source：同一成员（双视图）的两行互换 source 锚点
+    #（用同一成员保证攻击时两行都仍在正文——anchor 块与关联议题章节
+    #  会消耗预算，单视图成员的 provenance 副本可能被省略）
+    DUAL = "mission-fe-m2-lighthouse-context-loop"
     i_c = next(i for i, l in enumerate(lines)
-               if "[member:outcome-native-agent-1-0-launch-2026-08]" in l)
+               if f"[member:{DUAL}]"
+               "[partition:graph-candidate-and-dispute]" in l)
     i_p = next(i for i, l in enumerate(lines)
-               if "[member:mission-fe-m2-lighthouse-context-loop]" in l)
+               if f"[member:{DUAL}]"
+               "[partition:graph-decision-provenance]" in l)
     src_c = ANCHOR_RE.search(lines[i_c]).group(3)
     src_p = ANCHOR_RE.search(lines[i_p]).group(3)
     assert src_c != src_p  # attack must actually swap distinct sources

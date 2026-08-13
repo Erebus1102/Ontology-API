@@ -17,7 +17,7 @@ import os
 import re
 from typing import Any, Optional
 
-from tkos_runtime.domain.models import ContextPack, ContextPackMember
+from tkos_runtime.domain.models import ContextPack, ContextPackMember, ContextRootMissingError
 from tkos_runtime.domain.ports import TextPolisher
 from tkos_runtime.domain.render_units import (
     RenderedFactUnit, RenderBudgetTooSmall, DECISION_INCIDENT_PREDICATES,
@@ -728,6 +728,17 @@ def render(
                     f"LLM unavailable ({exc}); using deterministic renderer."
                 )
                 mode_used = "deterministic_fallback"
+
+    # P0-4（评审 B3）：最终正文必须包含 matched_root 的完整三段锚点 ——
+    # "结构化正确但正文表述另一个议题"（research root + FE issue 正文）
+    # 与 root 缺失是同一类完整性错误，绝不静默放行。
+    root_frag = _frag(pack.matched_root)
+    if f"[member:{root_frag}]" not in content:
+        raise ContextRootMissingError(
+            f"最终正文缺失 matched_root 锚点：[member:{root_frag}]",
+            matched_root=pack.matched_root,
+            stage="markdown_assembly",
+        )
 
     return {
         "render_schema_version": RENDER_SCHEMA_VERSION,
