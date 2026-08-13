@@ -44,7 +44,7 @@ Layer 1  Enterprise Source           飞书、文档、会议、业务系统、�
 ├── ontology/                 规范本体：schema(OWL/JSON-LD) · shapes(SHACL) · datasets(trig) · views(Protégé)
 ├── data/instances/           真实业务候选实例与确认事件
 ├── src/tkos_runtime/         可部署服务（api · application · domain · adapters）
-├── tests/                    197 pytest + 4 门禁脚本 + Openllet SWRL
+├── tests/                    197 pytest + 5 门禁脚本 + Openllet SWRL
 ├── scripts/                  原型与维护脚本
 ├── deploy/ecs/               ECS 单节点部署（systemd + docker-run）
 └── Makefile                  test / generate / install 聚合入口

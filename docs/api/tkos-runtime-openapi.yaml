@@ -106,20 +106,33 @@ paths:
               $ref: '#/components/schemas/ResolveRequest'
             examples:
               feQuarterlyDecision:
-                summary: FE 本季度双线交付议题
+                summary: FE 本季度双线交付议题（legacy 字段，deprecated 过渡期仍接受）
                 value:
                   enterprise_id: tokenking
                   organization_scope: []
                   purpose: decision_preparation
                   query: 是否在本季度同时完成产品 1.0 上线和灯塔项目交付
                   as_of: '2026-08-13T23:59:59+08:00'
+              feQuarterlyDecisionV1:
+                summary: v1 形态——scenario 推导 purpose，render:true 附渲染信封
+                value:
+                  query: 是否在本季度同时完成产品 1.0 上线和灯塔项目交付
+                  as_of: '2026-08-13T23:59:59+08:00'
+                  scenario: meeting_supervision
+                  render: true
+                  token_budget: 12000
       responses:
         '200':
-          description: Context Pack 已解析。认知状态由不同数组和每个成员的 partition 明确表达。
+          description: Context Pack 已解析。认知状态由不同数组和每个成员的 partition 明确表达。不带 `render:true` 时返回 Context Pack（顶层携带六键版本固定块）；`render:true` 时返回渲染信封（rendered + structured + 顶层版本固定块）。
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContextPack'
+                oneOf:
+                  - allOf:
+                      - $ref: '#/components/schemas/ContextPack'
+                      - type: object
+                        required: [api_version, request_id, ontology_release]
+                  - $ref: '#/components/schemas/ResolveRenderEnvelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -419,7 +432,7 @@ components:
             pack: {type: 'null'}
     ContextPack:
       type: object
-      required: [pack_id, schema_version, as_of, query, purpose, matched_root, scope_resolution, current_facts, candidate_context, provenance_context, proof, derived_claims, reasoning_status, context_gaps, conflicts, omissions, contributing_graphs, admission_policy, ontology_release_id, dataset_revision, policy_version, query_plan_version, api_version, request_id, ontology_release]
+      required: [pack_id, schema_version, as_of, query, purpose, matched_root, scope_resolution, current_facts, candidate_context, provenance_context, proof, derived_claims, reasoning_status, context_gaps, conflicts, omissions, contributing_graphs, admission_policy, ontology_release_id, dataset_revision, policy_version, query_plan_version]
       properties:
         pack_id: {type: string}
         schema_version: {type: string, example: context-pack/1.0-draft}
@@ -471,11 +484,17 @@ components:
         dataset_revision: {type: string}
         policy_version: {type: string}
         query_plan_version: {type: string}
-        api_version: {type: string, example: v1}
-        request_id: {type: string}
+        api_version:
+          type: string
+          example: v1
+          description: 版本固定块传输键。普通 resolve 响应由服务装配在本对象顶层；`render:true` 信封形态下位于信封顶层，不在 `structured` 内。
+        request_id:
+          type: string
+          description: 版本固定块传输键（与 `X-Request-ID` 响应头回显一致）。位置同 `api_version`。
         ontology_release:
           type: object
           required: [company, persona]
+          description: 版本固定块传输键。位置同 `api_version`。
           properties:
             company: {type: string}
             persona: {type: [string, 'null'], default: null}
@@ -484,6 +503,32 @@ components:
             - $ref: '#/components/schemas/IntentFacets'
             - type: 'null'
           description: P1 意图切面（实体串、请求角色、操作类型）。无切面时为 null。
+    ResolveRenderEnvelope:
+      type: object
+      description: |
+        `render:true` 时的 resolve 200 响应信封。`rendered`/`decision_context`/`metadata` 为渲染结果（Render Schema v2），`structured` 为完整结构化 Context Pack；六键版本固定块（api_version/request_id/ontology_release/dataset_revision/policy_version/query_plan_version）位于信封顶层，不在 `structured` 内。
+      required: [render_schema_version, rendered, decision_context, metadata, structured, api_version, request_id, ontology_release, dataset_revision, policy_version, query_plan_version]
+      properties:
+        render_schema_version:
+          type: string
+          const: context-render/2.0
+        rendered: {$ref: '#/components/schemas/RenderedContext'}
+        decision_context: {$ref: '#/components/schemas/DecisionContext'}
+        metadata: {$ref: '#/components/schemas/RenderMetadata'}
+        structured:
+          $ref: '#/components/schemas/ContextPack'
+          description: 完整结构化 Context Pack（结构化结果仍是权威结果）；传输键位于信封顶层。
+        api_version: {type: string, example: v1}
+        request_id: {type: string}
+        ontology_release:
+          type: object
+          required: [company, persona]
+          properties:
+            company: {type: string}
+            persona: {type: [string, 'null'], default: null}
+        dataset_revision: {type: string}
+        policy_version: {type: string}
+        query_plan_version: {type: string}
     IntentFacets:
       type: object
       required: [entity, requested_role, operation]

@@ -40,14 +40,14 @@ Key 注册表把每个 API Key（Bearer token）映射到一个 `Principal`，�
 
 ## 3. 环境变量加载顺序
 
-运行时通过 `_load_credentials()`（`auth.py`）在每次调用时读取环境快照，支持两种模式，**可组合**：
+运行时通过 `_load_credentials()`（`auth.py`）在 `create_app()` 时读取环境快照一次、存入 `app.state.principals`，支持两种模式，**可组合**：
 
 | 环境变量 | 形态 | 产出 Principal |
 |---|---|---|
 | `TKOS_API_KEY` | 单个 token 字符串 | `Principal(name="default", allowed_purposes={"*"}, allowed_scopes=None)`，2.0 字段取默认（`tenant="default"` / `role="cxo"` / `on_behalf_of=None` / `confirmer=False` / `default_scenario=None`）——即单 Key 调用方保持 cxo 全可见（C.4 向后兼容红线）。 |
 | `TKOS_API_KEYS_JSON` | JSON：`{"<token>": {字段...}}` | 按字段构造 `Principal`，支持多租户 / 多角色。 |
 
-**加载与冲突裁定**：`TKOS_API_KEY` 先加载，`TKOS_API_KEYS_JSON` 后加载；当同一 token 字符串在两边都出现时（碰撞），**`TKOS_API_KEY` 的单 Key 解释优先**——该 token 取 cxo / 全可见 / `tenant="default"` 形态，不被多 Key 条目降权。这是向后兼容的安全属性：单 Key 部署永远不会被意外的多 Key 碰撞 demote。
+**加载与冲突裁定**：`TKOS_API_KEYS_JSON` 先加载，`TKOS_API_KEY` 后加载（最后应用，碰撞时覆盖）；当同一 token 字符串在两边都出现时（碰撞），**`TKOS_API_KEY` 的单 Key 解释优先**——该 token 取 cxo / 全可见 / `tenant="default"` 形态，不被多 Key 条目降权。这是向后兼容的安全属性：单 Key 部署永远不会被意外的多 Key 碰撞 demote。
 
 > 设计意图：`TKOS_API_KEY` 是 1.0 推荐形态（单 cxo 全可见），`TKOS_API_KEYS_JSON` 是 2.0 多租户 / 多角色形态。两者共存期间，单 Key 的 cxo 语义不可被覆盖。
 
@@ -63,7 +63,7 @@ Key 注册表把每个 API Key（Bearer token）映射到一个 `Principal`，�
 
 ## 5. 变更记审计事件
 
-Key 注册表的非密钥部分（字段值）变更**经 git commit 提交**——commit 历史即为审计事件的可追溯载体（脱敏形态版本控管，对应 `docs/mvp/05-deployment-2.0.md` §3.2）。轮换流程（新旧 Key 并存 → 通知调用方切换 → 删旧 Key）不停机，因为 authN 逐请求读环境快照。
+Key 注册表的非密钥部分（字段值）变更**经 git commit 提交**——commit 历史即为审计事件的可追溯载体（脱敏形态版本控管，对应 `docs/mvp/05-deployment-2.0.md` §3.2）。轮换流程（新旧 Key 并存 → 通知调用方切换 → 删旧 Key）：凭据在 `create_app()` 时一次性快照到 `app.state.principals`，**轮换须重启应用 / 重新部署后生效**（后续迭代可改为逐请求加载，届时才支持不停机轮换）。
 
 **结构化审计事件机制（`CandidateCreated` / `ConfirmationRecorded` 等）本轮不建**——随 submissions 端点（迭代 2）落地。本轮只约定：注册表变更走 git、Key 明文不入库、日志按 key-name 回溯。
 

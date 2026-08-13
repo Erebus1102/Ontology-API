@@ -144,7 +144,7 @@ docs/examples/       人读经营视图与蒸馏示例
 ontology/            规范本体（schema/shapes/datasets/views/catalog）
 data/instances/      真实业务候选实例与确认事件
 src/tkos_runtime/    可部署服务代码（api/application/domain/adapters）
-tests/               语义、约束、API、端到端测试（197 pytest + 4 门禁脚本 + Openllet）
+tests/               语义、约束、API、端到端测试（197 pytest + 5 门禁脚本 + Openllet）
 scripts/             原型与维护脚本
 deploy/ecs/          ECS 单节点部署（systemd + docker-run）
 ```

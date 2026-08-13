@@ -38,6 +38,7 @@ ONTOLOGY = ROOT / "ontology" / "schema" / "tkos-ontology.jsonld"
 EXPECTED_VIOLATION_FIXTURES = {
     "v2.3-swrl-acceptance-cases.trig": ("by-design", "SWRL atoms only, no Mission completeness"),
     "v2.3-role-assignment-cases.trig": ("by-design", "baseline + 5 engineered negative cases"),
+    "v2.x-agreement-cases.trig": ("by-design", "6 engineered negative cases for V3.0 Agreement/FeedbackRecord/Product shapes"),
     "v2.3-context-pack-runtime.trig": ("read-side", "read-side resolver filter; write-gate shapes out of scope"),
     "v2.1-role-and-acceptance-fixtures.trig": ("legacy", "superseded by v2.3-role-assignment-cases.trig; unreferenced"),
 }
