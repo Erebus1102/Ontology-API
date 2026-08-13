@@ -34,13 +34,15 @@ tkos:graph-candidate-and-dispute {
     tkos:scopeDescription "CEO Agent、CO Agent、Ontology 与 TokenHub 的 MVP 预计在本周产出；具体日期、演示环境、验收人与组件联调顺序待补充。" ;
     tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 .
 
-  tkos:decision-ceo-agent-priority-dual-scenario-validation a tkos:StrategicDecision ;
+  tkos:decision-ceo-agent-priority-dual-scenario-validation a tkos:Agreement ;
     tkos:objectId "decision-ceo-agent-priority-dual-scenario-validation" ;
     tkos:displayName "采用 CEO Agent 优先的词元云集与房懂懂双场景验证路径" ;
     tkos:scopeDescription "验证优先以 CEO Agent 为入口，在词元云集与房懂懂两个场景推进；两个场景按灯塔项目工作计划的同一阶段节奏组织，关联产品 1.0 网页版本与 FE Context 能力。" ;
     tkos:informedBy tkos:issue-product1-lighthouse-synchronous-delivery, tkos:research-product1-lighthouse-validation-options-week1 ;
     tkos:reviewCondition "产品 1.0 MVP 未按本周产出；任一场景无法锁定真实事项、材料或参与者；王总侧无法进入使用；双场景反馈显示方法、产品或 FE Context 不能支撑战略决策闭环。" ;
-    tkos:hasStatus tkos:DecisionPendingConfirmation ;
+    tkos:agreementStatus "go_on" ;
+    tkos:assertedBy tkos:person-liurenhao ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
     tkos:hasConfirmationStatus tkos:Candidate ;
     tkos:sourcedFrom tkos:source-dri-product1-validation-update-2026-08-11 ;
     tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
