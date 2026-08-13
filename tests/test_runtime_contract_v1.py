@@ -45,13 +45,17 @@ def test_resolve_v1_shape_with_scenario(client_with_auth):
     r = client_with_auth.post(
         "/v1/context-packs:resolve",
         headers=_auth_headers(),
-        json={"query": "灯塔项目有哪些风险",
+        json={"query": "灯塔项目进展如何",
               "as_of": "2026-08-11T00:00:00+08:00",
-              "scenario": "strategic_research"},
+              "scenario": "task_followup"},
     )
     assert r.status_code == 200, r.text
-    # scenario-derived purpose flows into the Pack (B1: 记录进 Pack)
-    assert r.json()["purpose"] == "decision_preparation"
+    # scenario-derived purpose flows into the Pack; exercises the non-trivial
+    # task_followup -> mission_review mapping (Reconciliation #7). 查询取
+    # mission_review 可见图（graph-decision-provenance）可覆盖的主题——
+    # "风险" 仅存在于 graph-candidate-and-dispute，mission_review 门禁
+    # 下按认知诚实返回 404 知识缺口。
+    assert r.json()["purpose"] == "mission_review"
 
 
 def test_resolve_legacy_fields_still_accepted(client_with_auth):
@@ -85,14 +89,16 @@ def test_resolve_key_default_scenario_derives_purpose(monkeypatch):
     monkeypatch.delenv("TKOS_API_KEY", raising=False)
     monkeypatch.setenv(
         "TKOS_API_KEYS_JSON",
-        json.dumps({_TEST_KEY: {"default_scenario": "strategic_research"}}),
+        json.dumps({_TEST_KEY: {"default_scenario": "task_followup"}}),
     )
     client = TestClient(create_app())
     r = client.post(
         "/v1/context-packs:resolve",
         headers=_auth_headers(),
-        json={"query": "灯塔项目有哪些风险",
+        json={"query": "灯塔项目进展如何",
               "as_of": "2026-08-11T00:00:00+08:00"},
     )
     assert r.status_code == 200, r.text
-    assert r.json()["purpose"] == "decision_preparation"
+    # Key-default path also exercises the non-trivial task_followup ->
+    # mission_review mapping
+    assert r.json()["purpose"] == "mission_review"
