@@ -65,7 +65,7 @@ def test_resolve_fe_issue_happy_path(client_with_auth):
     assert body["candidate_context"]
     assert body["scope_resolution"]["enforcement"] == "not_enforced"
     assert "graph-sensitive-persona" not in body["contributing_graphs"]
-    assert body["ontology_release_id"] == "2.4.1"
+    assert body["ontology_release_id"] == "3.0.0"
 
 
 def test_resolve_unknown_purpose_is_422(client_with_auth):
@@ -182,7 +182,7 @@ def test_version_returns_fingerprints(monkeypatch):
     resp = client.get("/version", headers=_auth_headers())
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["ontology_release_id"] == "2.4.1"
+    assert body["ontology_release_id"] == "3.0.0"
     assert isinstance(body["dataset_revision"], str) and len(body["dataset_revision"]) > 0
     assert body["code_sha"] == "abc123def456"
     assert body["app_version"] == "0.1.0"

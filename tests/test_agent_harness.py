@@ -109,7 +109,7 @@ def test_pack_is_agent_usable_for_fe_issue(monkeypatch):
         f"expected confirmsEntity edge missing; saw {confirms_edges[:3]}")
 
     # 8. Version metadata present — agent can record what it reasoned against.
-    assert pack["ontology_release_id"] == "2.4.1", pack["ontology_release_id"]
+    assert pack["ontology_release_id"] == "3.0.0", pack["ontology_release_id"]
     assert len(pack["dataset_revision"]) == 64, (
         f"dataset_revision len={len(pack['dataset_revision'])}, expected 64")
     assert pack["policy_version"], "policy_version missing"

@@ -18,7 +18,7 @@
       "@id": "https://ontology.tokenking.ai/tkos#",
       "@type": "owl:Ontology",
       "rdfs:label": [{"@value": "词元云集 TKOS 经营本体", "@language": "zh"}, {"@value": "TokenKing TKOS Operating Ontology", "@language": "en"}],
-      "owl:versionInfo": "2.4.1",
+      "owl:versionInfo": "3.0.0",
       "rdfs:comment": {"@value": "面向一号位 Agent 的共享核心本体。Operating、Decision Provenance 与 Governance 三个模块共享语义，通过命名图治理企业事实、候选判断、敏感个人记录、推导结果与 Context Pack。覆盖 Method Layer 1、Layer 2。", "@language": "zh"},
       "prov:wasDerivedFrom": {"@id": "https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c"},
       "owl:imports": [{"@id": "http://www.w3.org/ns/prov-o#"}, {"@id": "http://www.w3.org/2004/02/skos/core#"}, {"@id":"http://www.w3.org/2006/time#"}, {"@id":"http://www.w3.org/ns/org#"}, {"@id":"http://www.w3.org/ns/odrl/2/"}]

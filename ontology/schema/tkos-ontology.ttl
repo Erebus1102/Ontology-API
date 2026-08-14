@@ -19,7 +19,7 @@ tkos: a owl:Ontology ;
         odrl:,
         org:,
         <http://www.w3.org/ns/prov-o#> ;
-    owl:versionInfo "2.4.1" ;
+    owl:versionInfo "3.0.0" ;
     prov:wasDerivedFrom <https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c> .
 
 tkos:BusinessModel a owl:Class ;
@@ -1229,11 +1229,11 @@ tkos:varCondition a swrl:Variable .
 tkos:DomainOutcome a owl:Class ;
     rdfs:label "业务域目标"@zh ;
     rdfs:subClassOf [ a owl:Restriction ;
-            owl:onProperty tkos:isDeliveredBy ;
-            owl:someValuesFrom tkos:MissionOutcome ],
-        [ a owl:Restriction ;
             owl:onProperty tkos:supports ;
             owl:someValuesFrom tkos:CompanyOutcome ],
+        [ a owl:Restriction ;
+            owl:onProperty tkos:isDeliveredBy ;
+            owl:someValuesFrom tkos:MissionOutcome ],
         tkos:Outcome ;
     owl:disjointWith tkos:MissionOutcome .
 
@@ -1262,16 +1262,16 @@ tkos:Mission a owl:Class ;
             owl:onProperty tkos:hasResponsibleAssignment ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
-            owl:onClass tkos:DomainOutcome ;
-            owl:onProperty tkos:contributesTo ;
-            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
-        [ a owl:Restriction ;
             owl:onClass tkos:MissionOutcome ;
             owl:onProperty tkos:expects ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
             owl:allValuesFrom tkos:MissionStatus ;
             owl:onProperty tkos:hasStatus ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:DomainOutcome ;
+            owl:onProperty tkos:contributesTo ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
             owl:onClass tkos:Domain ;
             owl:onProperty tkos:belongsTo ;

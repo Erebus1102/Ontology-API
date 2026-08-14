@@ -11,7 +11,7 @@ tkos: a owl:Ontology ;
     rdfs:label "TokenKing TKOS Operating Ontology"@en,
         "词元云集 TKOS 经营本体"@zh ;
     rdfs:comment "面向一号位 Agent 的共享核心本体。Operating、Decision Provenance 与 Governance 三个模块共享语义，通过命名图治理企业事实、候选判断、敏感个人记录、推导结果与 Context Pack。覆盖 Method Layer 1、Layer 2。"@zh ;
-    owl:versionInfo "2.4.1" ;
+    owl:versionInfo "3.0.0" ;
     prov:wasDerivedFrom <https://tokenking.feishu.cn/docx/QRSLdn85zo2ujZxCblVc3e50n2c> .
 
 tkos:BusinessModel a owl:Class ;
@@ -1250,23 +1250,23 @@ tkos:Mission a owl:Class ;
     rdfs:label "Mission"@en,
         "经营任务"@zh ;
     rdfs:subClassOf [ a owl:Restriction ;
-            owl:onClass tkos:Domain ;
-            owl:onProperty tkos:belongsTo ;
+            owl:allValuesFrom tkos:MissionStatus ;
+            owl:onProperty tkos:hasStatus ],
+        [ a owl:Restriction ;
+            owl:onClass tkos:RoleAssignment ;
+            owl:onProperty tkos:hasResponsibleAssignment ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
             owl:onClass tkos:DomainOutcome ;
             owl:onProperty tkos:contributesTo ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
-            owl:onClass tkos:MissionOutcome ;
-            owl:onProperty tkos:expects ;
+            owl:onClass tkos:Domain ;
+            owl:onProperty tkos:belongsTo ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
-            owl:allValuesFrom tkos:MissionStatus ;
-            owl:onProperty tkos:hasStatus ],
-        [ a owl:Restriction ;
-            owl:onClass tkos:RoleAssignment ;
-            owl:onProperty tkos:hasResponsibleAssignment ;
+            owl:onClass tkos:MissionOutcome ;
+            owl:onProperty tkos:expects ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         tkos:OperatingEntity .
 

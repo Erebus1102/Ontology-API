@@ -78,7 +78,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/VersionResponse'
               example:
-                ontology_release_id: 2.4.0
+                ontology_release_id: 3.0.0
                 dataset_revision: 25a3dc2dafed3042
                 code_sha: 961ff13
                 policy_version: read-admission/p0-v1

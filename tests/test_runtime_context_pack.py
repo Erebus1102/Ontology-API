@@ -49,7 +49,7 @@ def test_fe_issue_seven_contracts():
     assert pack.scope_resolution.enforcement == "not_enforced"
     assert "graph-sensitive-persona" not in pack.contributing_graphs
     # 7. 版本元数据
-    assert pack.ontology_release_id == "2.4.1" and len(pack.dataset_revision) == 64
+    assert pack.ontology_release_id == "3.0.0" and len(pack.dataset_revision) == 64
 
 def test_confirmed_current_and_expired_omission_with_fixture():
     # 探测查询用 member 精确 displayName（P1 严格规则下"增长"六路并列 → 409，
