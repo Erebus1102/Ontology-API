@@ -8,7 +8,7 @@
 
 **当前进度（Runtime 2.0 基座完成，分支 `runtime-2.0-foundation`，tag `pre-v3.0-surgery` 为手术前回退基线；待合并部署，main 仍为 1.0/P1.1 已部署状态）：**
 
-- ✅ **V3.0 本体手术（A）**：`Agreement`/`FeedbackRecord`/`Product` 落地，`StrategicChoice`/`StrategicDecision`/`OperatingDecision` + `selectedAs`/`decidedAs` 物理删除；SHACL/SWRL/query_plan/roles 全链对齐（类数 103 → 103）。删除清单与迁移映射见 `docs/superpowers/plans/runtime-2.0-artifacts/`。
+- ✅ **V3.0 本体手术（A）**：`Agreement`/`FeedbackRecord`/`Product` 落地，`StrategicChoice`/`StrategicDecision`/`OperatingDecision` + `selectedAs`/`decidedAs` 物理删除；SHACL/SWRL/query_plan/roles 全链对齐（类数 104 → 104）。删除清单与迁移映射见 `docs/superpowers/plans/runtime-2.0-artifacts/`。
 - ✅ **Key 模型（C）**：`Principal{tenant, role(cxo|executor), on_behalf_of, confirmer, default_scenario}`；`TKOS_API_KEYS_JSON`；跨租户 `scopes: []` → 404（不泄漏存在性）。
 - ✅ **v1 契约收敛（B）**：resolve 增 `scenario`/`render:true`/`token_budget`；purpose 由 scenario/Key default 推导；版本固定块 + `request_id` 中间件；旧字段（`enterprise_id`/`organization_scope`/`purpose`/`actor_id`/`persona_id`、独立 `:render`）标 deprecated、过渡期仍接受（不 422），物理删除在迭代 1。
 - ✅ 读路径：`POST /v1/context-packs:resolve`（P1.1 起 409 歧义 `type`+`matched_evidence` / 404 候选建议 / `intent_facets`；v1 起 `render:true` 并入、版本块齐备）；运维 `GET /health` `/ready` `/version`；authN（Bearer）+ authZ（purpose 门禁 + Key 作用域推导）。

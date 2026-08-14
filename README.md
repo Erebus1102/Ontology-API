@@ -18,7 +18,7 @@
 
 **P1.1 契约亮点**：解析器不再对并列候选兜底——得分与名称证据并列时返回 **409 歧义**（候选含本体 `type` + `matched_evidence`）；知识库未覆盖时返回 **404** 并附 `alternatives` 候选建议；命中根议题的 Pack 附 `intent_facets`（entity / requested_role / operation）。
 
-**2.0 基座亮点**：V3.0 本体手术（`Agreement`/`FeedbackRecord`/`Product` 落地，`StrategicChoice`/`StrategicDecision`/`OperatingDecision` 删除，类数 103→103）；Key 即租户/角色/Persona 锚点，purpose 由 `scenario`/`default_scenario` 推导；响应统一携带版本固定块（`api_version`/`request_id`/`ontology_release`/`dataset_revision`/`policy_version`/`query_plan_version`，`X-Request-ID` 回显）；旧字段与独立 `:render` 进入 deprecated 过渡期（仍接受不 422），迭代 1 物理删除。
+**2.0 基座亮点**：V3.0 本体手术（`Agreement`/`FeedbackRecord`/`Product` 落地，`StrategicChoice`/`StrategicDecision`/`OperatingDecision` 删除，类数 104→104）；Key 即租户/角色/Persona 锚点，purpose 由 `scenario`/`default_scenario` 推导；响应统一携带版本固定块（`api_version`/`request_id`/`ontology_release`/`dataset_revision`/`policy_version`/`query_plan_version`，`X-Request-ID` 回显）；旧字段与独立 `:render` 进入 deprecated 过渡期（仍接受不 422），迭代 1 物理删除。
 
 ## 五层架构
 

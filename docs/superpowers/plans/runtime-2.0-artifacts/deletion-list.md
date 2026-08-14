@@ -8,7 +8,9 @@
 
 A3 物理删除 5 个声明（3 个 owl:Class + 2 个 owl:ObjectProperty），全部位于 `ontology/schema/tkos-ontology.jsonld`（人工编辑源）。派生制品 `tkos-ontology.ttl` 与 `views/tkos-ontology-protege-view.ttl` 经 `make generate` 自动同步。删除前 A4 已迁移唯一 `StrategicDecision` 实例 → `Agreement`，故本轮删除零孤儿。
 
-类数变化：103（V2.4.1 `bce5ab8` 基线）− 3 删 + 3 增（A1）= **103 命名类**。
+类数变化：104（V2.4.1 `bce5ab8` 基线）− 3 删 + 3 增（A1）= **104 具名类**。
+
+> **类数口径**：`owl:Class` 具名声明数——`tkos-ontology.jsonld` @graph 中带 `@id` 且 `@type: owl:Class` 的节点；属性 domain/range 内嵌套的匿名 unionOf 闭包不计。基线（`bce5ab8`）与当前均实测为 **104**（含 3 个无 `rdfs:subClassOf` 的顶层类：`BusinessEntity`/`LifecycleStatus`/`ReviewConclusion`）。此前报告写作「103 命名类」系旧口径误计；两侧 Δ=0 结论不受影响。
 
 ## 逐项审计（裁定 = 删除）
 

@@ -223,7 +223,8 @@ tkos:StrategyContent a owl:Class ;
 
 tkos:addressesIssue a owl:ObjectProperty ;
     rdfs:label "针对议题"@zh ;
-    rdfs:domain tkos:Agreement ;
+    rdfs:domain [ a owl:Class ;
+            owl:unionOf ( tkos:StrategicResearch tkos:Judgement tkos:Agreement ) ] ;
     rdfs:range tkos:StrategicIssue .
 
 tkos:adoptsJudgement a owl:ObjectProperty ;
@@ -532,8 +533,7 @@ tkos:produces a owl:ObjectProperty ;
 
 tkos:producesArtifact a owl:ObjectProperty ;
     rdfs:label "产出产物"@zh ;
-    rdfs:domain [ a owl:Class ;
-            owl:unionOf ( tkos:Mission tkos:Agreement ) ] ;
+    rdfs:domain tkos:StrategicResearch ;
     rdfs:range tkos:Artifact .
 
 tkos:proves a owl:ObjectProperty ;
@@ -951,10 +951,6 @@ tkos:IntentAssessment a owl:Class ;
     rdfs:label "意图判定"@zh ;
     rdfs:subClassOf tkos:AttributedAssertion .
 
-tkos:Judgement a owl:Class ;
-    rdfs:label "判断"@zh ;
-    rdfs:subClassOf tkos:AttributedAssertion .
-
 tkos:MissionReview a owl:Class ;
     rdfs:label "Mission 复盘"@zh ;
     rdfs:subClassOf tkos:ContextAsset .
@@ -974,11 +970,6 @@ tkos:Risk a owl:Class ;
 tkos:SourceRecord a owl:Class ;
     rdfs:label "来源记录"@zh ;
     rdfs:subClassOf tkos:ContextAsset .
-
-tkos:StrategicResearch a owl:Class ;
-    rdfs:label "战略研究"@zh ;
-    rdfs:subClassOf tkos:ContextAsset,
-        tkos:StrategicEntity .
 
 tkos:contributesTo a owl:ObjectProperty ;
     rdfs:label "贡献于业务域目标"@zh ;
@@ -1049,6 +1040,10 @@ tkos:FeedbackRecord a owl:Class ;
     rdfs:comment "对目标（产物/共识/任务/Context Pack）的结构化反馈，含质量与经验评分。"@zh ;
     rdfs:subClassOf tkos:ContextAsset .
 
+tkos:Judgement a owl:Class ;
+    rdfs:label "判断"@zh ;
+    rdfs:subClassOf tkos:AttributedAssertion .
+
 tkos:MissionPortfolio a owl:Class ;
     rdfs:label "任务组合"@zh ;
     rdfs:subClassOf tkos:OperatingEntity .
@@ -1100,6 +1095,11 @@ tkos:OperatingAction a owl:Class ;
     rdfs:label "经营动作"@zh ;
     rdfs:subClassOf tkos:OperatingEntity .
 
+tkos:StrategicResearch a owl:Class ;
+    rdfs:label "战略研究"@zh ;
+    rdfs:subClassOf tkos:ContextAsset,
+        tkos:StrategicEntity .
+
 tkos:hasRuleCondition a owl:ObjectProperty ;
     rdfs:label "具有规则条件"@zh ;
     rdfs:domain tkos:Mission ;
@@ -1136,6 +1136,11 @@ tkos:SuccessCriterion a owl:Class ;
     rdfs:label "成功标准"@zh ;
     rdfs:subClassOf tkos:OperatingEntity .
 
+tkos:Agreement a owl:Class ;
+    rdfs:label "共识结论"@zh ;
+    rdfs:comment "战略闭环中唯一落盘的战略结论类：就某战略议题经判断版本链达成的、带确认状态与表达主体的组织共识。"@zh ;
+    rdfs:subClassOf tkos:AttributedAssertion .
+
 tkos:ConfirmationStatus a owl:Class ;
     rdfs:label "确认状态"@zh ;
     rdfs:subClassOf tkos:LifecycleStatus ;
@@ -1151,11 +1156,6 @@ tkos:RoleAssignment a owl:Class ;
     rdfs:label "角色承担"@zh ;
     rdfs:comment "人员在组织、Mission 或 Decision 范围内，于明确有效期承担的角色关系。"@zh ;
     rdfs:subClassOf tkos:GovernanceEntity .
-
-tkos:Agreement a owl:Class ;
-    rdfs:label "共识结论"@zh ;
-    rdfs:comment "战略闭环中唯一落盘的战略结论类：就某战略议题经判断版本链达成的、带确认状态与表达主体的组织共识。"@zh ;
-    rdfs:subClassOf tkos:AttributedAssertion .
 
 tkos:AttributedAssertion a owl:Class ;
     rdfs:label "归属断言"@zh ;
@@ -1250,16 +1250,16 @@ tkos:Mission a owl:Class ;
     rdfs:label "Mission"@en,
         "经营任务"@zh ;
     rdfs:subClassOf [ a owl:Restriction ;
-            owl:onClass tkos:MissionOutcome ;
-            owl:onProperty tkos:expects ;
+            owl:onClass tkos:Domain ;
+            owl:onProperty tkos:belongsTo ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
             owl:onClass tkos:DomainOutcome ;
             owl:onProperty tkos:contributesTo ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
-            owl:onClass tkos:Domain ;
-            owl:onProperty tkos:belongsTo ;
+            owl:onClass tkos:MissionOutcome ;
+            owl:onProperty tkos:expects ;
             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
         [ a owl:Restriction ;
             owl:allValuesFrom tkos:MissionStatus ;
