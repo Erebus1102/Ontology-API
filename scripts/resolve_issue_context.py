@@ -144,7 +144,7 @@ def compact(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     groups = {
         "missions": {"Mission"},
         "outcomes": {"Outcome", "CompanyOutcome", "DomainOutcome", "MissionOutcome"},
-        "candidate_decisions": {"StrategicDecision", "StrategicChoice", "Decision"},
+        "candidate_decisions": {"Decision", "Agreement"},
         "issues": {"StrategicIssue"},
         "risks": {"Risk", "HighRisk"},
         "context_gaps": {"ContextGap"},

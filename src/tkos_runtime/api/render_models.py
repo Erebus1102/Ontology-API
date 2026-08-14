@@ -23,7 +23,11 @@ class RenderOptions(BaseModel):
 
 
 class RenderRequest(BaseModel):
-    pack: Optional[Dict[str, Any]] = None
+    pack: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="2.0 起标 deprecated；用 resolve 的 render:true。迭代 1 删除。",
+        json_schema_extra={"deprecated": True},
+    )
     resolve_request: Optional[Dict[str, Any]] = None
     render_options: RenderOptions = Field(default_factory=RenderOptions)
 

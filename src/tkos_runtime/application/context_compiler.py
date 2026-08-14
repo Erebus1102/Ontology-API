@@ -5,6 +5,7 @@ from datetime import datetime
 from tkos_runtime.domain.models import (RetrievedMember, ContextPackMember, ContextPack,
     IntentAssessment, ScopeResolution, Omission, AdmissionDecision)
 from tkos_runtime.domain.policies import AdmissionPolicy
+from tkos_runtime.domain.query_plan import QUERY_PLAN_VERSION
 
 TKOS = "https://ontology.tokenking.ai/tkos#"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
@@ -71,7 +72,7 @@ class ContextCompiler:
             contributing_graphs=contributing,
             admission_policy=f"purpose={purpose}; read-admission/p0-v1",
             ontology_release_id=metadata["ontology_release_id"], dataset_revision=metadata["dataset_revision"],
-            policy_version="read-admission/p0-v1", query_plan_version="bfs-2gram/p0-v1",
+            policy_version="read-admission/p0-v1", query_plan_version=QUERY_PLAN_VERSION,
             intent_facets=(dataclasses.asdict(intent.intent_facets)
                            if intent.intent_facets else None))
 

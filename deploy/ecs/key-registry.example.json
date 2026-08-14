@@ -1,0 +1,18 @@
+{
+  "REPLACE_WITH_TOKENKING_KEY": {
+    "name": "tokenking-cxo",
+    "tenant": "tokenking",
+    "role": "cxo",
+    "purposes": ["*"],
+    "scopes": null,
+    "default_scenario": "meeting_supervision"
+  },
+  "REPLACE_WITH_OTHER_TENANT_KEY": {
+    "name": "other-executor",
+    "tenant": "other",
+    "role": "executor",
+    "purposes": ["mission_review"],
+    "scopes": [],
+    "default_scenario": null
+  }
+}

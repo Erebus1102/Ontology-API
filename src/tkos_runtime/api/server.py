@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -35,7 +36,7 @@ try:
 except ImportError:
     pass
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from tkos_runtime.adapters.gram_intent_resolver import GramIntentResolver
@@ -43,6 +44,7 @@ from tkos_runtime.adapters.rdflib_dataset_store import RdfDatasetStore
 from tkos_runtime.adapters.rdflib_graph_retriever import RdfGraphRetriever
 from tkos_runtime.application.context_compiler import ContextCompiler
 from tkos_runtime.application.context_pack_resolver import ContextPackResolver
+from tkos_runtime.application.scenarios import resolve_purpose
 from tkos_runtime.domain.models import (
     AmbiguousMatchError, ContextRootMissingError, NoMatchError,
 )
@@ -50,7 +52,7 @@ from tkos_runtime.domain.policies import AdmissionPolicy
 from tkos_runtime.api.models import ResolveRequest
 from tkos_runtime.adapters.openai_text_polisher import OpenAITextPolisher
 from tkos_runtime.api.render_models import RenderRequest
-from tkos_runtime.api.serializer import dict_to_pack, pack_to_dict
+from tkos_runtime.api.serializer import attach_version_block, dict_to_pack, pack_to_dict
 from tkos_runtime.application.context_renderer import render
 from tkos_runtime.domain.render_units import RenderBudgetTooSmall
 
@@ -97,6 +99,41 @@ def _ambiguous_409(exc: AmbiguousMatchError, query: str) -> HTTPException:
             for s, i, n, t, me in exc.candidates
         ],
         "suggested_action": "disambiguate_query"})
+
+
+def _render_exception_to_http(exc: Exception) -> HTTPException:
+    """Map ``render()`` failures to HTTP errors — the single authoritative
+    mapping shared by the resolve ``render:true`` branch and the standalone
+    ``:render`` endpoint (no duplicated mappings). Callers chain via
+    ``raise ... from exc``.
+
+    * ``RenderBudgetTooSmall`` -> 422 {code: render_budget_too_small,
+      requested_max_chars, minimum_required_chars}
+    * ``ContextRootMissingError`` -> 500 {code: context_root_missing,
+      matched_root, stage}（编译期完整性错误，绝不 fallback）
+    * ``ValueError`` -> 422（消息作 detail）
+    * ``RuntimeError`` -> 500（消息作 detail）
+
+    Any other exception type is re-raised unchanged (generic 500).
+    """
+    if isinstance(exc, RenderBudgetTooSmall):
+        return HTTPException(status_code=422, detail={
+            "code": "render_budget_too_small",
+            "requested_max_chars": exc.requested_max_chars,
+            "minimum_required_chars": exc.minimum_required_chars,
+        })
+    if isinstance(exc, ContextRootMissingError):
+        # P0-2: 编译期完整性错误 = 运行时 500，绝不 fallback 到无关对象。
+        return HTTPException(status_code=500, detail={
+            "code": "context_root_missing",
+            "matched_root": exc.matched_root,
+            "stage": exc.stage,
+        })
+    if isinstance(exc, ValueError):
+        return HTTPException(status_code=422, detail=str(exc))
+    if isinstance(exc, RuntimeError):
+        return HTTPException(status_code=500, detail=str(exc))
+    raise exc
 
 # version constants for /version fingerprint aggregation
 from tkos_runtime.application.context_renderer import RENDERER_VERSION
@@ -259,6 +296,15 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
     # ── auth: load credentials onto app state ──
     app.state.principals = _load_credentials()
 
+    # ── request_id middleware: trace every response (version block + header) ──
+    @app.middleware("http")
+    async def _request_id(request: Request, call_next):
+        rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
+        request.state.request_id = rid
+        resp = await call_next(request)
+        resp.headers["X-Request-ID"] = rid
+        return resp
+
     # ── readiness: run optional startup SHACL, then set ready ──
     _state.startup_shacl_status = _run_startup_shacl_if_enabled(store)
     _state.ready = (_state.startup_shacl_status != "fail")
@@ -268,10 +314,32 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
 
     @app.post("/v1/context-packs:resolve")
     def resolve(
+        request: Request,
         req: ResolveRequest,
         principal: Principal = Depends(require_token),
     ) -> dict:
-        assert_purpose(req.purpose, principal)
+        # B1: legacy v0 fields accepted during transition — deprecated, not 422.
+        for field in (
+            "enterprise_id", "organization_scope", "purpose",
+            "actor_id", "persona_id",
+        ):
+            if field in req.model_fields_set:
+                logging.getLogger(__name__).warning(
+                    "deprecated resolve field: %s", field
+                )
+        # purpose 由 scenario + Key 推导；旧请求带 purpose 则兼容（deprecated）
+        try:
+            purpose = (
+                req.purpose
+                if req.purpose is not None
+                else resolve_purpose(req.scenario, principal.default_scenario)
+            )
+        except ValueError as exc:   # 未知 scenario → 422
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "unknown_scenario", "detail": str(exc)},
+            ) from exc
+        assert_purpose(purpose, principal)
         try:
             as_of = datetime.fromisoformat(req.as_of.replace("Z", "+00:00"))
         except ValueError as exc:
@@ -284,9 +352,10 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
         try:
             pack = resolver.resolve(
                 query=req.query,
-                purpose=req.purpose,
+                purpose=purpose,
                 as_of=as_of,
                 organization_scope=list(req.organization_scope),
+                principal_scopes=principal.allowed_scopes,
             )
         except ValueError as exc:
             # AdmissionPolicy.allowed_graphs raises ValueError for unknown purpose.
@@ -295,10 +364,33 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
             raise _knowledge_gap_404(exc, req.query) from exc
         except AmbiguousMatchError as exc:
             raise _ambiguous_409(exc, req.query) from exc
-        return pack_to_dict(pack)
+        # B2: render:true — render 并入 resolve；结构化 pack 始终随附
+        # （structured），渲染失败经共享映射（与 :render 端点同语义）。
+        pack_dict = pack_to_dict(pack)
+        if req.render:
+            try:
+                result = render(
+                    pack,
+                    mode="deterministic",
+                    format="markdown",
+                    max_chars=req.token_budget or 12000,
+                    language="zh-CN",
+                )
+            except RenderBudgetTooSmall as exc:
+                raise _render_exception_to_http(exc) from exc
+            except ContextRootMissingError as exc:
+                raise _render_exception_to_http(exc) from exc
+            except ValueError as exc:
+                raise _render_exception_to_http(exc) from exc
+            except RuntimeError as exc:
+                raise _render_exception_to_http(exc) from exc
+            result["structured"] = pack_dict
+            return attach_version_block(result, request.state.request_id, pack)
+        return attach_version_block(pack_dict, request.state.request_id, pack)
 
     @app.post("/v1/context-packs:render")
     def resolve_and_render(
+        request: Request,
         req: RenderRequest,
         principal: Principal = Depends(require_token),
     ) -> dict:
@@ -329,6 +421,7 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                     purpose=rr.get("purpose", "decision_preparation"),
                     as_of=as_of,
                     organization_scope=list(rr.get("organization_scope", [])),
+                    principal_scopes=principal.allowed_scopes,
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -338,6 +431,10 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 raise _ambiguous_409(exc, rr.get("query", "")) from exc
             pack_origin = "server_resolved"
         else:
+            # B2: client-supplied pack 过渡期保留但标 deprecated（迭代 1 删除）。
+            logging.getLogger(__name__).warning(
+                "deprecated render field: pack — use resolve render:true"
+            )
             try:
                 pack = dict_to_pack(req.pack)  # type: ignore[arg-type]
             except Exception as exc:
@@ -368,26 +465,17 @@ def create_app(store: RdfDatasetStore | None = None) -> FastAPI:
                 pack_origin=pack_origin,
             )
         except RenderBudgetTooSmall as exc:
-            raise HTTPException(status_code=422, detail={
-                "code": "render_budget_too_small",
-                "requested_max_chars": exc.requested_max_chars,
-                "minimum_required_chars": exc.minimum_required_chars,
-            }) from exc
+            raise _render_exception_to_http(exc) from exc
         except ContextRootMissingError as exc:
-            # P0-2: 编译期完整性错误 = 运行时 500，绝不 fallback 到无关对象。
-            raise HTTPException(status_code=500, detail={
-                "code": "context_root_missing",
-                "matched_root": exc.matched_root,
-                "stage": exc.stage,
-            }) from exc
+            raise _render_exception_to_http(exc) from exc
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+            raise _render_exception_to_http(exc) from exc
         except RuntimeError as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise _render_exception_to_http(exc) from exc
 
         if opts.include_structured:
             result["structured"] = pack_to_dict(pack)
-        return result
+        return attach_version_block(result, request.state.request_id, pack)
 
     return app
 

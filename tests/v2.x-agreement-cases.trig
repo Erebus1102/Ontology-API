@@ -1,0 +1,116 @@
+@prefix tkos: <https://ontology.tokenking.ai/tkos#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# V3.0 Agreement / FeedbackRecord / Product SHACL 正负向用例。
+# 关键：pyshacl inference="rdfs", advanced=True 会拿 shapes 文件里【所有】Shape 验证
+# 合并图。故 baseline 与每个 case 的实例都必须满足所有靶向 Shape（ContextAssetShape、
+# AttributedAssertionShape、SourceRecordShape 等），每个负向 case 只留【那一个】预期违规。
+# baseline 实例补全规则：
+#   SourceRecord  → objectId, externalSourceIdentifier, recordedAt
+#   ContextAsset 子类（非 SourceRecord）→ objectId, sourcedFrom, hasConfirmationStatus, validFrom
+#   Agreement（⊂ AttributedAssertion）→ 上述 + assertedBy(Actor), recordedAt, agreementStatus
+
+tkos:test-baseline {
+  tkos:source-test a tkos:SourceRecord ;
+    tkos:objectId "source-test" ;
+    tkos:externalSourceIdentifier "ext-src-test" ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:person-test a tkos:Actor .
+  tkos:issue-x a tkos:StrategicIssue ;
+    tkos:objectId "issue-x" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}
+
+# 正向：合法 Agreement + FeedbackRecord + Product，全字段 → 0 违规
+tkos:agr-positive {
+  tkos:agr-1 a tkos:Agreement ;
+    tkos:objectId "agr-1" ;
+    tkos:assertedBy tkos:person-test ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:agreementStatus "go_on" .
+  tkos:fb-1 a tkos:FeedbackRecord ;
+    tkos:objectId "fb-1" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:evaluatesTarget tkos:agr-1 ;
+    tkos:qualityScore 4 .
+  tkos:prod-1 a tkos:Product ;
+    tkos:objectId "prod-1" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}
+
+# 负向：Agreement 缺 agreementStatus → AgreementShape.agreementStatus minCount 1
+tkos:agr-negative-no-status {
+  tkos:agr-bad a tkos:Agreement ;
+    tkos:objectId "agr-bad" ;
+    tkos:assertedBy tkos:person-test ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}
+
+# 负向：FeedbackRecord 评分越界(9 > maxInclusive 5)
+tkos:agr-negative-score-out-of-range {
+  tkos:fb-bad a tkos:FeedbackRecord ;
+    tkos:objectId "fb-bad" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:evaluatesTarget tkos:issue-x ;
+    tkos:qualityScore 9 .
+}
+
+# 负向：FeedbackRecord 无任何评分 → sparql NOT EXISTS
+tkos:agr-negative-feedback-no-score {
+  tkos:fb-noscore a tkos:FeedbackRecord ;
+    tkos:objectId "fb-noscore" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:evaluatesTarget tkos:issue-x .
+}
+
+# 负向：两个 Product 共 objectId → ProductShape sparql 唯一性（?other < $this 报一次）
+tkos:agr-negative-product-dup-id {
+  tkos:prod-a a tkos:Product ;
+    tkos:objectId "dup" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+  tkos:prod-b a tkos:Product ;
+    tkos:objectId "dup" ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime .
+}
+
+# 负向：同一 issue-x 上两个 go_on Agreement → sparql（?other != $this 报两次）
+tkos:agr-negative-two-go-on-same-issue {
+  tkos:agr-a a tkos:Agreement ;
+    tkos:objectId "agr-a" ;
+    tkos:assertedBy tkos:person-test ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:agreementStatus "go_on" ;
+    tkos:addressesIssue tkos:issue-x .
+  tkos:agr-b a tkos:Agreement ;
+    tkos:objectId "agr-b" ;
+    tkos:assertedBy tkos:person-test ;
+    tkos:sourcedFrom tkos:source-test ;
+    tkos:recordedAt "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:hasConfirmationStatus tkos:Candidate ;
+    tkos:validFrom "2026-08-11T00:00:00+08:00"^^xsd:dateTime ;
+    tkos:agreementStatus "go_on" ;
+    tkos:addressesIssue tkos:issue-x .
+}

@@ -6,14 +6,14 @@
 
 构建可部署的企业 Ontology Runtime，支撑一号位 Agent 走完战略闭环：`Signal → Issue → Research → Judgement 版本链 → Agreement → Mission`，每环可提交、可确认、可追溯、可反馈。MVP 验收载体是**产品 1.0 + 灯塔同季交付**（验收清单见 `docs/mvp/01` §6）。
 
-**当前进度（Runtime 1.0，P1.1，已部署 ECS `115.190.213.44`）：**
+**当前进度（Runtime 2.0 基座完成，分支 `runtime-2.0-foundation`，tag `pre-v3.0-surgery` 为手术前回退基线；待合并部署，main 仍为 1.0/P1.1 已部署状态）：**
 
-- ✅ 读路径：`POST /v1/context-packs:resolve`（议题→结构化 Context Pack）+ `POST /v1/context-packs:render`（附 Markdown）。P1.1 起：409 歧义（候选含 `type`+`matched_evidence`）、404 候选建议（`alternatives` 非空）、`intent_facets`。
-- ✅ 运维：`/health` `/ready` `/version`；authN（Bearer）+ authZ（purpose 门禁）。
-- ✅ 契约同步：`docs/api/tkos-runtime-openapi.yaml` + Apifox 项目 `8708985`（AI 分支 `ai/20260813-from-main-tkos-runtime-api`，13 用例 + 指南文档）。
-- ⏳ 待实现：`lineage` 端点（迭代 1）、`submissions` 写入闭环（迭代 2）；其共同基座（V3.0 本体手术 + v1 契约对齐 + Key 模型）= **2.0 基座迭代**，见 `docs/mvp/04`。
-- 🚧 **2.0 基座执行中**（分支 `runtime-2.0-foundation`，tag `pre-v3.0-surgery` 为手术前可回退基线）：V3.0 本体手术 + Key 模型 + v1 契约对齐；实现计划见 `docs/superpowers/plans/2026-08-13-runtime-2.0-foundation.md`。手术完成前 main 仍为 1.0/P1.1 已部署状态。
-- ⏳ 待实现：在线推理、异步蒸馏 Worker、生产 RDF Store 替换、真实 Agent 端到端联调、Persona 个人决策本体包。
+- ✅ **V3.0 本体手术（A）**：`Agreement`/`FeedbackRecord`/`Product` 落地，`StrategicChoice`/`StrategicDecision`/`OperatingDecision` + `selectedAs`/`decidedAs` 物理删除；SHACL/SWRL/query_plan/roles 全链对齐（类数 104 → 104）。删除清单与迁移映射见 `docs/superpowers/plans/runtime-2.0-artifacts/`。
+- ✅ **Key 模型（C）**：`Principal{tenant, role(cxo|executor), on_behalf_of, confirmer, default_scenario}`；`TKOS_API_KEYS_JSON`；跨租户 `scopes: []` → 404（不泄漏存在性）。
+- ✅ **v1 契约收敛（B）**：resolve 增 `scenario`/`render:true`/`token_budget`；purpose 由 scenario/Key default 推导；版本固定块 + `request_id` 中间件；旧字段（`enterprise_id`/`organization_scope`/`purpose`/`actor_id`/`persona_id`、独立 `:render`）标 deprecated、过渡期仍接受（不 422），物理删除在迭代 1。
+- ✅ 读路径：`POST /v1/context-packs:resolve`（P1.1 起 409 歧义 `type`+`matched_evidence` / 404 候选建议 / `intent_facets`；v1 起 `render:true` 并入、版本块齐备）；运维 `GET /health` `/ready` `/version`；authN（Bearer）+ authZ（purpose 门禁 + Key 作用域推导）。
+- ✅ 契约同步：`docs/api/tkos-runtime-openapi.yaml`（v0.2.0，deprecated 标注）+ Apifox 项目 `8708985`（AI 分支，17 用例 v1 双轨 + 指南文档 v1 收敛）。
+- ⏳ 待实现：`lineage` 端点（迭代 1，含旧字段物理删除）、`submissions` 写入闭环（迭代 2）、在线推理、异步蒸馏 Worker、生产 RDF Store 替换、真实 Agent 端到端联调、Persona 个人决策本体包。
 
 > 文档、占位目录或单元测试不得被描述为已部署能力。当前能力以本节"✅"项为准。
 
@@ -96,20 +96,20 @@ ReleasePublisher    已确认事件 → Current/Derived 图与新 Release ⏳（
 
 | 端点 | 功能 | 状态 |
 |---|---|---|
-| `POST /v1/context-packs:resolve` | 议题→结构化 Context Pack；`render:true` 附 Markdown | ✅（render 2.0 并入） |
+| `POST /v1/context-packs:resolve` | 议题→结构化 Context Pack；`scenario`/`render:true`/`token_budget` v1 形态 + 版本块 | ✅（v1 收敛 2.0 基座） |
 | `GET /v1/assertions/{id}/lineage` | 断言→版本/来源/确认/挑战/反馈图 | ⏳ 迭代 1 |
 | `POST /v1/submissions` | 唯一写入口：候选断言 + 确认/拒绝事件 | ⏳ 迭代 2 |
 | `GET /health` `/ready` `/version` | 运维 | ✅ |
 
 **契约权威**：`docs/api/tkos-runtime-openapi.yaml`（可执行 OpenAPI）+ Apifox 项目 `8708985`。`docs/api/api-contracts-v1.md` 与 `context-pack-render-api.md` 为历史草案（已标过时）。
 
-**认证（当前 → v1 目标）**：`Authorization: Bearer <key>`。当前 `Principal{name, allowed_purposes, allowed_scopes}`；v1 目标增 `tenant`/`role(cxo|executor)`/`on_behalf_of`/`confirmer`/`default_scenario`（Key 注册表，2.0 基座）。`purpose`/作用域最终由 Key + scenario 推导，消除扩权面。
+**认证（Key 注册表，2.0 基座已落地）**：`Authorization: Bearer <key>`。`Principal{name, allowed_purposes, allowed_scopes, tenant, role(cxo|executor), on_behalf_of, confirmer, default_scenario}`（单值 `TKOS_API_KEY` 碰撞时优先）。`purpose`/作用域由 Key + scenario 推导（显式旧字段 `purpose` 过渡期仍优先），消除扩权面。
 
-**版本固定块**（响应统一携带，目标）：`api_version` / `request_id` / `ontology_release{company,persona}` / `dataset_revision`（按租户独立推进）/ `policy_version` / `query_plan_version`。当前 Pack 响应携带 pack 级版本元数据（`ontology_release_id`/`dataset_revision`/`code_sha`）。
+**版本固定块**（v1 收敛起响应统一携带）：`api_version=v1` / `request_id`（响应头 `X-Request-ID` 回显）/ `ontology_release{company, persona:null}` / `dataset_revision`（当前全局哈希，per-tenant 随 submissions 落地）/ `policy_version` / `query_plan_version`。
 
 **错误语义**：401 未认证；403 无确认权；404 无匹配/不可见（知识不可见即不存在，不泄漏存在性）；409 意图歧义（返回 `alternatives`/`candidates`）；422 SHACL 校验失败（附 validation report）。
 
-**兼容规则**：同大版本内允许新增可选字段与新 `extensions` 命名空间；删字段/改含义/收紧枚举/改默认过滤需新大版本；服务须校验调用方版本，无法支持时返回稳定错误码与可用版本；响应不得泄漏内部查询、私有推理或未授权候选内容。移除 `enterprise_id`/`organization_scope`/`purpose`/`persona_id` 与独立 `:render` 端点经一个 deprecated 过渡小版本后删除（2.0 基座交付）。
+**兼容规则**：同大版本内允许新增可选字段与新 `extensions` 命名空间；删字段/改含义/收紧枚举/改默认过滤需新大版本；服务须校验调用方版本，无法支持时返回稳定错误码与可用版本；响应不得泄漏内部查询、私有推理或未授权候选内容。移除 `enterprise_id`/`organization_scope`/`purpose`/`actor_id`/`persona_id` 与独立 `:render` 端点：2.0 基座已实施 deprecated 过渡（旧字段仍接受、仅警告），**物理删除在迭代 1（Lineage）执行**，届时旧字段直接 422。
 
 ## Context Pack 编译顺序（固定）
 
@@ -144,7 +144,7 @@ docs/examples/       人读经营视图与蒸馏示例
 ontology/            规范本体（schema/shapes/datasets/views/catalog）
 data/instances/      真实业务候选实例与确认事件
 src/tkos_runtime/    可部署服务代码（api/application/domain/adapters）
-tests/               语义、约束、API、端到端测试（183 pytest + 4 门禁脚本 + Openllet）
+tests/               语义、约束、API、端到端测试（197 pytest + 5 门禁脚本 + Openllet）
 scripts/             原型与维护脚本
 deploy/ecs/          ECS 单节点部署（systemd + docker-run）
 ```

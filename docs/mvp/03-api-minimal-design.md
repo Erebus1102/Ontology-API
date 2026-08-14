@@ -35,7 +35,7 @@
 ## 2. 认证与通用契约
 
 - `Authorization: Bearer <key>`。Key 解析出 `tenant_scopes`、`role: cxo|executor`、`allowed_purposes`、`on_behalf_of`（确认人与 Persona 锚点）。**`enterprise_id` / `organization_scope` / `persona_id` / `purpose` 均不在请求中**——作用域与 Persona 锚点由 Key 得出，purpose 由 scenario + Key 映射，消除扩权面。
-- 所有响应统一携带版本固定块：
+- 所有成功响应统一携带版本固定块（错误响应见下条）：
 
 ```json
 {
@@ -47,6 +47,8 @@
   "query_plan_version": "…"
 }
 ```
+
+- **错误响应不携带版本固定块**：401/422 等错误多发生在版本解析或查询执行之前，此时 `dataset_revision` / `query_plan_version` 根本未参与——补上即伪造执行痕迹（违反认知诚实）。错误体只含错误语义（`code` / `detail`，422 附 validation report），`request_id` 经响应头 `X-Request-ID` 回显（RFC 7807 惯例：错误语义 + trace id）。该语义由契约测试固定（迭代 1）。
 
 - **scenario 注册表**（唯一权威映射，四场景 id 以文档一 §5 为准）：
 

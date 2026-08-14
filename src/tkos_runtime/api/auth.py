@@ -37,10 +37,23 @@ class Principal:
             ``{"*"}`` means unrestricted.
         allowed_scopes: ``organization_scope`` whitelist;
             ``None`` means no scope restriction (v1 default).
+        tenant: tenancy anchor recorded on the Principal (2.0 Key model);
+            scope narrowing is carried by ``allowed_scopes``.
+        role: ``cxo`` (default, all-visible) or ``executor``.
+        on_behalf_of: Person IRI the Key acts for (optional).
+        confirmer: whether this Principal may confirm submissions
+            (modeled in 2.0; not yet consumed by the read path).
+        default_scenario: scenario id used to derive ``purpose`` when
+            the request omits one (2.0 scenario registry).
     """
     name: str
     allowed_purposes: set[str] = field(default_factory=lambda: {"*"})
     allowed_scopes: Optional[set[str]] = None
+    tenant: str = "default"
+    role: str = "cxo"                       # cxo | executor
+    on_behalf_of: Optional[str] = None      # Person IRI
+    confirmer: bool = False                 # submissions 确认权（本轮建模不消费）
+    default_scenario: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -54,18 +67,22 @@ def _load_credentials() -> dict[str, Principal]:
 
     ``TKOS_API_KEY``
         Single token string → ``Principal(name="default",
-        allowed_purposes={"*"}, allowed_scopes=None)``.
+        allowed_purposes={"*"}, allowed_scopes=None)``.  The 2.0 Key-model
+        fields take their dataclass defaults (``tenant="default"``,
+        ``role="cxo"``, ``on_behalf_of=None``, ``confirmer=False``,
+        ``default_scenario=None``) — i.e. single-key callers stay cxo and
+        all-visible (C.4 backward-compat red line).
     ``TKOS_API_KEYS_JSON``
         JSON: ``{"<token>": {"name":"...", "purposes":[...],
-        "scopes":[...]}}``.  *purposes* and *scopes* are optional;
-        defaults are ``["*"]`` and ``null`` respectively.
+        "scopes":[...], "tenant":"...", "role":"cxo|executor",
+        "on_behalf_of":"...", "confirmer": false,
+        "default_scenario":"..."}}``.  *purposes* and *scopes* are optional;
+        defaults are ``["*"]`` and ``null`` respectively.  The 2.0
+        Key-model fields (``tenant``/``role``/``on_behalf_of``/
+        ``confirmer``/``default_scenario``) are all optional and default
+        to ``"default"`` / ``"cxo"`` / ``None`` / ``False`` / ``None``.
     """
     principals: dict[str, Principal] = {}
-
-    # single shared key (v1 recommended)
-    single = os.environ.get("TKOS_API_KEY", "").strip()
-    if single:
-        principals[single] = Principal(name="default", allowed_purposes={"*"})
 
     # multi-token with fine-grained purposes (v1.1)
     multi_raw = os.environ.get("TKOS_API_KEYS_JSON", "").strip()
@@ -84,8 +101,21 @@ def _load_credentials() -> dict[str, Principal]:
                 scopes_raw = entry.get("scopes")
                 scopes: Optional[set[str]] = set(scopes_raw) if scopes_raw is not None else None
                 principals[token] = Principal(
-                    name=name, allowed_purposes=purposes, allowed_scopes=scopes,
+                    name=name,
+                    allowed_purposes=purposes,
+                    allowed_scopes=scopes,
+                    tenant=entry.get("tenant", "default"),
+                    role=entry.get("role", "cxo"),
+                    on_behalf_of=entry.get("on_behalf_of"),
+                    confirmer=bool(entry.get("confirmer", False)),
+                    default_scenario=entry.get("default_scenario"),
                 )
+
+    # single shared key (v1 recommended) — applied last so it wins on
+    # token collision with TKOS_API_KEYS_JSON (single-token wins, C.4)
+    single = os.environ.get("TKOS_API_KEY", "").strip()
+    if single:
+        principals[single] = Principal(name="default", allowed_purposes={"*"})
 
     return principals
 

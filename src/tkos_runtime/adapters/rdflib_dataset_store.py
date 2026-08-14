@@ -66,8 +66,9 @@ class RdfDatasetStore:
         return h.hexdigest()
 
     # —— 单参 GraphPolicy 端口（应用层使用）——
-    def allowed_graphs(self, purpose: str) -> list[str]:
-        return self._policy.allowed_graphs(purpose, self.registered_partition_ids, self.restricted_partition_ids)
+    def allowed_graphs(self, purpose: str, principal_scopes: set[str] | None = None) -> list[str]:
+        return self._policy.allowed_graphs(
+            purpose, self.registered_partition_ids, self.restricted_partition_ids, principal_scopes)
 
     def _uris(self, graph_ids: list[str]) -> list[str]:
         return [TKOS + f for f in graph_ids if f in self.registered_partition_ids]
