@@ -122,7 +122,9 @@ git remote = 数据备份 + 修订审计
 5. [ ] 镜像 tag 含 V3.0 后的 dataset-rev；`/ready` 的 SHACL 启动校验通过；
 6. [ ] 回滚演练完成：切回上一 tag、验证 FE 场景 resolve、再切回，全程记录；
 7. [ ] journald 持久化生效；拨测告警触达飞书验证一次；
-8. [ ] Apifox 用例（旧字段 deprecated 双轨）对生产 URL 全绿。
+8. [ ] Apifox 用例（旧字段 deprecated 双轨）对生产 URL 全绿；
+9. [ ] Apifox v1 双轨用例（用例 14–15：scenario task_followup→mission_review 版本块断言、render:true）对生产 URL 转绿；
+10. [ ] 发布制品时推进本体 Release 号：V3.0 为破坏性 TBox 变更，`/version` 与 Pack 的 `ontology_release.company` 不得仍为 "2.4.0"——这是部署步骤，不是台账愿望。
 
 ## 6. 与迭代路线图的部署演进对照
 
